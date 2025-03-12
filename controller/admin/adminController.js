@@ -18,6 +18,7 @@ const postAdmin = async (req, res) => {
             });
         }
 
+        //jkhjghgfbxfz
         // Email format validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
