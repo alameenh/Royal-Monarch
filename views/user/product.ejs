@@ -1,0 +1,81 @@
+
+<body class="font-sans">
+  <!-- Navbar -->
+  <nav class="items-center justify-between flex p-4 border-b-2">
+    <div class="items-center flex space-x-4">
+        <a href="#" class="text-black">Home</a>
+        <a href="#" class="text-black">Shop</a>
+        <a href="#" class="text-black">Contact Us</a>
+        <a href="#" class="text-black">About Us</a>
+    </div>
+    <div class="items-center flex mr-40px space-x-2">
+        <img alt="Royal Monarch logo" src="https://placehold.co/40x40" class="h-10"/>
+        <span class="text-black text-lg font-serif">ROYAL MONARCH</span>
+    </div>
+    <div class="items-center flex space-x-8">
+        <a href="#" class="text-black"><i class="fas fa-heart"></i></a>
+        <a href="#" class="text-black"><i class="fas fa-user"></i></a>
+        <a href="#" class="text-black"><i class="fas fa-shopping-cart"></i></a>
+    </div>
+</nav>
+
+  <!-- Main Product Section -->
+  <section class="flex p-8 space-x-8">
+    <!-- Thumbnails -->
+    <div class="flex flex-col space-y-4">
+      <% product.images.forEach((image, index) => { %>
+        <img src="<%= image.path %>" alt="Thumbnail <%= index + 1 %>" class="w-20 h-20 object-cover cursor-pointer thumbnail">
+      <% }) %>
+    </div>
+
+    <!-- Main Image with Zoom -->
+    <div class="relative w-1/2">
+      <div class="main-image-container relative">
+        <img src="<%= product.images[0].path %>" alt="<%= product.name %>" id="main-image" class="w-full h-auto object-cover">
+        <div id="zoom-lens" class="absolute hidden border border-gray-400 bg-white bg-opacity-50"></div>
+      </div>
+      <div id="zoom-result" class="absolute hidden border border-gray-400"></div>
+    </div>
+
+    <!-- Product Details -->
+    <div class="w-1/3">
+      <h1 class="text-2xl font-bold"><%= product.name %></h1>
+      <p class="text-xl font-semibold mt-2">₹<%= product.varient[0].price %> <span class="line-through text-gray-500">₹<%= product.varient[0].price + (product.varient[0].price * product.discount / 100) %></span> <span class="text-red-500"><%= product.discount %>% Off</span></p>
+      <p class="mt-2">⭐ 4.5 (200 reviews)</p>
+      <p class="mt-4"><strong>Category:</strong> <%= product.category.name %></p>
+      <p><strong>Brand:</strong> <%= product.brand %></p>
+      <p><strong>Status:</strong> <%= product.status %></p>
+      <div class="mt-4">
+        <label for="options" class="block mb-2">Select Option:</label>
+        <select id="options" class="border p-2 rounded">
+          <% product.varient.forEach(variant => { %>
+            <option value="<%= variant.options %>"><%= variant.options %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="mt-4 flex space-x-4">
+        <button class="bg-black text-white px-6 py-2 rounded">Buy Now</button>
+        <button class="border border-black px-6 py-2 rounded">Add to Cart</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Similar Collection -->
+  <section class="p-8">
+    <h2 class="text-xl font-bold mb-4">Similar Collection</h2>
+    <div class="overflow-x-auto whitespace-nowrap flex space-x-4 scrollbar-hide">
+      <% similarProducts.forEach(similar => { %>
+        <div class="border p-4 w-60 flex-shrink-0">
+          <img src="<%= similar.images[0].path %>" alt="<%= similar.name %>" class="w-full h-40 object-cover">
+          <h3 class="mt-2 font-semibold"><%= similar.name %></h3>
+          <p class="text-gray-600">₹<%= similar.varient[0].price %></p>
+          <button class="text-gray-600 hover:text-black">❤️</button>
+        </div>
+      <% }) %>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <%- include("../partials/footer") %>
+</body>
+</html>
