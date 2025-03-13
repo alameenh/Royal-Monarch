@@ -10,6 +10,8 @@ const router = express.Router();
 router.get('/login', userMiddleware.isLogin, userController.getLogin);
 router.get('/signup', userMiddleware.isLogin, userController.getSignup);
 router.get('/logout', userMiddleware.checkSession, userController.getLogout);
+router.get('/auth/google', userController.getGoogle);
+router.get('/auth/google/callback', userController.getGoogleCallback);
 
 // Protected routes
 router.get('/home', userMiddleware.checkSession, userController.getHomePage);
@@ -35,5 +37,11 @@ router.get('/api/categories', userMiddleware.checkSession, shopController.getCat
 router.post('/signup', userController.postSignup);
 router.post('/verifyOtp', userController.verifyOtp);
 router.post('/login', userController.postLogin);
+
+// New routes for forgot password
+router.get('/forgot-password', userController.getForgotPassword);
+router.post('/forgot-password', userController.postForgotPassword);
+router.get('/reset-password', userController.getResetPassword);
+router.post('/reset-password', userController.postResetPassword);
 
 export default router;

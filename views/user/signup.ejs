@@ -1,162 +1,140 @@
 <%- include("../partials/navbar") %>
 
-<div class="justify-center items-center h-screen flex">
-    <div class="rounded-lg shadow-lg w-80 border-2 p-8">
-        <h2 class="text-center text-xl font-semibold text-gray-700 mb-4">Sign Up</h2>
-        <form id="signupForm" class="space-y-4">
-            <div class="space-y-4">
-                <input 
-                    id="firstName" 
-                    type="text" 
-                    placeholder="First Name" 
-                    class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black" 
-                    required
-                    minlength="2"
-                />
-                <input 
-                    id="lastName" 
-                    type="text" 
-                    placeholder="Last Name" 
-                    class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black" 
-                    required
-                    minlength="3"
-                />
-                <input 
-                    id="email" 
-                    type="email" 
-                    placeholder="Email" 
-                    class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black" 
-                    required
-                />
-                <input 
-                    id="password" 
-                    type="password" 
-                    placeholder="Password" 
-                    class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black" 
-                    required
-                    pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
-                    title="Must contain at least 8 characters, one uppercase, one lowercase, one number and one special character"
-                />
-                <input 
-                    id="confirmPassword" 
-                    type="password" 
-                    placeholder="Confirm Password" 
-                    class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black" 
-                    required
-                />
+    <div class="justify-center items-center h-screen flex">
+        <div class="rounded-lg shadow-lg w-80 border-2 p-8">
+            <h2 class="text-center text-xl font-semibold text-gray-700 mb-4">Sign Up</h2>
+            <form id="signupForm" class="space-y-4">
+                <div class="space-y-4">
+                    <input id="firstName" type="text" placeholder="First Name"
+                        class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
+                        required minlength="2" />
+                    <input id="lastName" type="text" placeholder="Last Name"
+                        class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
+                        required minlength="3" />
+                    <input id="email" type="email" placeholder="Email"
+                        class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
+                        required />
+                    <input id="password" type="password" placeholder="Password"
+                        class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
+                        required pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
+                        title="Must contain at least 8 characters, one uppercase, one lowercase, one number and one special character" />
+                    <input id="confirmPassword" type="password" placeholder="Confirm Password"
+                        class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
+                        required />
+                </div>
+                <button type="submit" id="signupButton"
+                    class="rounded w-full py-2 mt-4 bg-black text-white hover:bg-gray-800 transition-colors duration-200 disabled:bg-gray-400">
+                    Sign Up
+                </button>
+            </form>
+            <p class="text-center text-gray-700 mt-4">Already have an account?
+                <a href="/login" class="text-black hover:underline">Login</a>
+            </p>
+
+            <!-- Google Sign in -->
+            <div id="google-auth-div">
+                <div class="flex justify-center text-center mt-6 text-gray-500 text-sm">
+                    Or continue with Google
+                </div>
+                <a class="flex justify-center mt-6" href="/auth/google?trigger=signup">
+                    <i class="fa-brands fa-google fa-lg" style="color: #b12020"></i>
+                </a>
             </div>
-            <button 
-                type="submit" 
-                id="signupButton" 
-                class="rounded w-full py-2 mt-4 bg-black text-white hover:bg-gray-800 transition-colors duration-200 disabled:bg-gray-400"
-            >
-                Sign Up
-            </button>
-        </form>
-        <p class="text-center text-gray-700 mt-4">Already have an account? 
-            <a href="/login" class="text-black hover:underline">Login</a>
-        </p>
-        <div class="flex items-center justify-center mt-4">
-            <button class="flex items-center justify-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors duration-200">
-                <img src="/images/google-icon.png" alt="Google logo" class="w-5 h-5"/>
-                <span>Continue with Google</span>
-            </button>
         </div>
     </div>
-</div> 
 
-<%- include("../partials/footer") %>
+    <%- include("../partials/footer") %>
 
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<script>
-    const signupForm = document.getElementById('signupForm');
-    const signupButton = document.getElementById('signupButton');
+        <script>
+            const signupForm = document.getElementById('signupForm');
+            const signupButton = document.getElementById('signupButton');
 
-    const validateInput = {
-        firstName: (value) => {
-            return value.length >= 2 || 'First name must be at least 2 characters long';
-        },
-        lastName: (value) => {
-            return value.length >= 3 || 'Last name must be at least 3 characters long';
-        },
-        email: (value) => {
-            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || 'Invalid email address';
-        },
-        password: (value) => {
-            return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(value) || 
-                'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character';
-        },
-        confirmPassword: (value, password) => {
-            return value === password || 'Passwords do not match';
-        }
-    };
-
-    signupForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        try {
-            signupButton.disabled = true;
-            
-            const formData = {
-                firstName: document.getElementById('firstName').value.trim(),
-                lastName: document.getElementById('lastName').value.trim(),
-                email: document.getElementById('email').value.trim(),
-                password: document.getElementById('password').value.trim(),
-                confirmPassword: document.getElementById('confirmPassword').value.trim()
+            const validateInput = {
+                firstName: (value) => {
+                    return value.length >= 2 || 'First name must be at least 2 characters long';
+                },
+                lastName: (value) => {
+                    return value.length >= 3 || 'Last name must be at least 3 characters long';
+                },
+                email: (value) => {
+                    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || 'Invalid email address';
+                },
+                password: (value) => {
+                    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(value) ||
+                        'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character';
+                },
+                confirmPassword: (value, password) => {
+                    return value === password || 'Passwords do not match';
+                }
             };
 
-            // Validate all fields
-            for (const [field, value] of Object.entries(formData)) {
-                const validationResult = validateInput[field](
-                    value, 
-                    field === 'confirmPassword' ? formData.password : null
-                );
-                
-                if (typeof validationResult === 'string') {
-                    throw new Error(validationResult);
+            signupForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                try {
+                    signupButton.disabled = true;
+
+                    const formData = {
+                        firstName: document.getElementById('firstName').value.trim(),
+                        lastName: document.getElementById('lastName').value.trim(),
+                        email: document.getElementById('email').value.trim(),
+                        password: document.getElementById('password').value.trim(),
+                        confirmPassword: document.getElementById('confirmPassword').value.trim()
+                    };
+
+                    // Validate all fields
+                    for (const [field, value] of Object.entries(formData)) {
+                        const validationResult = validateInput[field](
+                            value,
+                            field === 'confirmPassword' ? formData.password : null
+                        );
+
+                        if (typeof validationResult === 'string') {
+                            throw new Error(validationResult);
+                        }
+                    }
+
+                    const response = await axios.post('/signup', formData);
+
+                    if (response.data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: 'Signup successful. Redirecting to OTP verification...',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.href = '/otpPage';
+                        });
+                    }
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Oops...',
+                        text: error.response?.data?.message || error.message || 'An error occurred during signup',
+                    });
+                } finally {
+                    signupButton.disabled = false;
                 }
-            }
-
-            const response = await axios.post('/signup', formData);
-            
-            if (response.data.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: 'Signup successful. Redirecting to OTP verification...',
-                    timer: 2000,
-                    showConfirmButton: false
-                }).then(() => {
-                    window.location.href = '/otpPage';
-                });
-            }
-        } catch (error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Oops...',
-                text: error.response?.data?.message || error.message || 'An error occurred during signup',
             });
-        } finally {
-            signupButton.disabled = false;
-        }
-    });
 
-    // Real-time validation
-    const inputs = signupForm.querySelectorAll('input');
-    inputs.forEach(input => {
-        input.addEventListener('input', function() {
-            const field = this.id;
-            const value = this.value.trim();
-            
-            if (field === 'confirmPassword') {
-                const validationResult = validateInput[field](value, document.getElementById('password').value.trim());
-                this.setCustomValidity(typeof validationResult === 'string' ? validationResult : '');
-            } else if (validateInput[field]) {
-                const validationResult = validateInput[field](value);
-                this.setCustomValidity(typeof validationResult === 'string' ? validationResult : '');
-            }
-        });
-    });
-</script>
+            // Real-time validation
+            const inputs = signupForm.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.addEventListener('input', function () {
+                    const field = this.id;
+                    const value = this.value.trim();
+
+                    if (field === 'confirmPassword') {
+                        const validationResult = validateInput[field](value, document.getElementById('password').value.trim());
+                        this.setCustomValidity(typeof validationResult === 'string' ? validationResult : '');
+                    } else if (validateInput[field]) {
+                        const validationResult = validateInput[field](value);
+                        this.setCustomValidity(typeof validationResult === 'string' ? validationResult : '');
+                    }
+                });
+            });
+        </script>

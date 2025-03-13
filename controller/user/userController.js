@@ -4,6 +4,7 @@ import { config } from 'dotenv';
 import bcrypt from 'bcrypt';
 import Category from '../../model/categoryModel.js';
 import Product from '../../model/productModel.js';
+import passport from 'passport';
 
 config();
 
@@ -255,4 +256,258 @@ const postLogin = async (req, res) => {
     }
 };
 
-export default { getLogin, getSignup, postSignup, postLogin, getOtpPage, verifyOtp, getHomePage, getLogout };
+const getGoogle = (req, res) => {
+    passport.authenticate("google", {
+        scope: ["email", "profile"],
+        prompt: "select_account"
+    })(req, res);
+};
+
+const getGoogleCallback = (req, res) => {
+    passport.authenticate("google", { failureRedirect: "/login" }, async (err, profile) => {
+        try {
+            if (err || !profile) {
+                console.log("Authentication failed:", err);
+                return res.redirect("/login?message=Authentication failed&alertType=error");
+            }
+
+            // Log the profile data to debug
+            console.log("Google Profile:", profile);
+
+            // Correctly extract email from profile
+            const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+
+            if (!email) {
+                console.log("No email found in profile");
+                return res.redirect("/login?message=Email not provided&alertType=error");
+            }
+
+            const existingUser = await userModel.findOne({ email });
+
+            // Split the display name into first and last name
+            const names = profile.displayName.split(' ');
+            const firstname = names[0];
+            const lastname = names.slice(1).join(' ') || 'Unknown'; // Provide fallback
+
+            // If user exists, update and login
+            if (existingUser) {
+                if (existingUser.status === 'Blocked') {
+                    return res.redirect("/login?message=Your account has been blocked&alertType=error");
+                }
+
+                await userModel.findByIdAndUpdate(existingUser._id, {
+                    $set: { 
+                        googleId: profile.id,
+                        status: 'Active'
+                    }
+                });
+                
+                req.session.userId = existingUser._id;
+                req.session.email = existingUser.email;
+                req.session.isLoggedIn = true;
+                
+                return res.redirect("/home");
+            }
+
+            // Create new user with required fields
+            const newUser = new userModel({
+                firstname,
+                lastname,
+                email,  // Make sure email is included
+                googleId: profile.id,
+                status: 'Active',
+                password: 'google-auth-' + Date.now() // Optional: generate random password
+            });
+
+            console.log("Creating new user:", {
+                firstname,
+                lastname,
+                email,
+                googleId: profile.id
+            });
+
+            await newUser.save();
+            
+            req.session.userId = newUser._id;
+            req.session.email = newUser.email;
+            req.session.isLoggedIn = true;
+
+            return res.redirect("/home");
+
+        } catch (error) {
+            console.error("Google authentication error:", error);
+            return res.redirect("/login?message=Authentication failed&alertType=error");
+        }
+    })(req, res);
+};
+
+const getForgotPassword = (req, res) => {
+    res.render('user/forgotPass.ejs');
+};
+
+const postForgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // Find user by email
+        const user = await userModel.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'No account found with this email'
+            });
+        }
+
+        if (user.status === 'Blocked') {
+            return res.status(403).json({
+                success: false,
+                message: 'Your account has been blocked'
+            });
+        }
+
+        // Generate OTP
+        const otpValue = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Update user with new OTP
+        user.otp = {
+            otpValue,
+            otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes expiry
+            otpAttempts: 0
+        };
+
+        await user.save();
+
+        // Send OTP email
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+            tls: {
+                rejectUnauthorized: false,
+            },
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Password Reset OTP',
+            text: `Your OTP for password reset is ${otpValue}. This OTP will expire in 10 minutes.`,
+            html: `
+                <h2>Password Reset</h2>
+                <p>Your OTP for password reset is: <strong>${otpValue}</strong></p>
+                <p>This OTP will expire in 10 minutes.</p>
+                <p>If you didn't request this, please ignore this email.</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        // Store email in session for verification
+        req.session.resetEmail = email;
+
+        res.json({
+            success: true,
+            message: 'OTP sent to your email'
+        });
+
+    } catch (error) {
+        console.error('Forgot Password Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error processing your request'
+        });
+    }
+};
+
+const getResetPassword = (req, res) => {
+    if (!req.session.resetEmail) {
+        return res.redirect('/forgot-password');
+    }
+    res.render('user/resetPassword.ejs');
+};
+
+const postResetPassword = async (req, res) => {
+    try {
+        const { otp, newPassword } = req.body;
+        const email = req.session.resetEmail;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Reset password session expired'
+            });
+        }
+
+        const user = await userModel.findOne({ email });
+
+        if (!user || !user.otp) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid reset request'
+            });
+        }
+
+        // Verify OTP
+        if (user.otp.otpValue !== otp) {
+            user.otp.otpAttempts += 1;
+            await user.save();
+
+            if (user.otp.otpAttempts >= 3) {
+                user.otp = null;
+                await user.save();
+                delete req.session.resetEmail;
+                
+                return res.status(400).json({
+                    success: false,
+                    message: 'Too many attempts. Please try again.'
+                });
+            }
+
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid OTP'
+            });
+        }
+
+        // Check OTP expiration
+        if (new Date() > user.otp.otpExpiresAt) {
+            user.otp = null;
+            await user.save();
+            delete req.session.resetEmail;
+
+            return res.status(400).json({
+                success: false,
+                message: 'OTP has expired. Please try again.'
+            });
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // Update password and clear OTP
+        user.password = hashedPassword;
+        user.otp = null;
+        await user.save();
+
+        // Clear session
+        delete req.session.resetEmail;
+
+        res.json({
+            success: true,
+            message: 'Password reset successful'
+        });
+
+    } catch (error) {
+        console.error('Reset Password Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error resetting password'
+        });
+    }
+};
+
+export default { getLogin, getSignup, postSignup, postLogin, getOtpPage, verifyOtp, getHomePage, getLogout, getGoogle, getGoogleCallback, getForgotPassword, postForgotPassword, getResetPassword, postResetPassword };

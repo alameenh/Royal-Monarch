@@ -5,11 +5,10 @@ import nocache from "nocache";
 import {config} from "dotenv";
 import adminRoutes from "./routes/adminRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
-
+import './utils/googleAuth.js';
+import passport from "passport";
 
 config();
-
-
 
 const app = express();
 const PORT = process.env.PORT;
@@ -31,17 +30,17 @@ app.use(session({
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+
 app.use('/',userRoutes);
 app.use('/admin',adminRoutes);
 
 
-
-
 connectDb();
 
-app.get('/',(req,res)=>{
-  res.render('admin/login.ejs')
-}) 
  
 app.listen(PORT, () => {
   console.log(`Server is running on ${PORT}`);
