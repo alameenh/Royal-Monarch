@@ -1,30 +1,5 @@
 import mongoose from 'mongoose';
 
-
-const variantSchema = new mongoose.Schema({
-   
-  options: {
-      type: String,
-      enum: ['Full option', 'Base',],
-      required: true
-  },
-  stock: {
-      type: Number,
-      required: true,
-      default: 0
-  },
-  specifications: [{
-    type: String,
-    trim: true
-  }],
-  price: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-});
-
-
 const productSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -54,9 +29,27 @@ const productSchema = new mongoose.Schema({
   },
   images: [{
     path: String,
-    filename: String
+    filename: String,
+    order: Number
   }],
-  varient: [variantSchema],
+  variants: [{
+    options: {
+      type: String,
+      enum: ['Full option', 'Base'],
+      required: true
+    },
+    stock: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    price: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    specifications: [String]
+  }],
   status: {
     type: String,
     enum: ['Active', 'Inactive'],

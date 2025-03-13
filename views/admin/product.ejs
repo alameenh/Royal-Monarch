@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Management</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+</head>
+<body class="bg-zinc-900 text-white min-h-screen">
+    <%- include("../partials/sidebar") %>
+
+    <div class="lg:ml-64 transition-all" id="main-content">
+        <!-- Header -->
+        <header class="flex items-center justify-between mb-8 p-4 lg:p-8 border-b border-gray-700">
+            <h1 class="text-2xl font-semibold text-gray-200">Product Management</h1>
+            <button onclick="openAddProductModal()"
+                class="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors">
+                Add Product
+            </button>
+        </header>
+
+        <!-- Product List -->
+        <main class="p-4 lg:p-8">
+            <div class="bg-zinc-800 rounded-lg p-6 overflow-x-auto">
+                <table class="min-w-full text-left text-gray-400">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="py-3 px-4">Image</th>
+                            <th class="py-3 px-4">Name</th>
+                            <th class="py-3 px-4">Brand</th>
+                            <th class="py-3 px-4">Category</th>
+                            <th class="py-3 px-4">Variants</th>
+                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (products && products.length > 0) { %>
+                            <% products.forEach(product => { %>
+                                <tr class="border-b border-gray-700 hover:bg-zinc-700 transition-colors">
+                                    <td class="py-3 px-4">
+                                        <img src="<%= product.images[0]?.path || '/images/placeholder.jpg' %>" 
+                                             alt="<%= product.name %>"
+                                             class="w-16 h-16 object-cover rounded">
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="text-gray-200"><%= product.name %></div>
+                                        <div class="text-sm text-gray-400">Discount: <%= product.discount %>%</div>
+                                    </td>
+                                    <td class="py-3 px-4"><%= product.brand %></td>
+                                    <td class="py-3 px-4"><%= product.category.name %></td>
+                                    <td class="py-3 px-4">
+                                        <% product.variants.forEach(variant => { %>
+                                            <div class="text-sm">
+                                                <%= variant.options %>: ₹<%= variant.price %> 
+                                                (Stock: <%= variant.stock %>)
+                                            </div>
+                                        <% }) %>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="px-2 py-1 rounded-full text-sm
+                                            <%= product.status === 'Active' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500' %>">
+                                            <%= product.status %>
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4 space-x-2">
+                                        <button onclick="editProduct('<%= JSON.stringify(product).replace(/'/g, '&apos;').replace(/"/g, '&quot;') %>')"
+                                            class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                            Edit
+                                        </button>
+                                        <button onclick="deactivateProduct('<%= product._id %>')"
+                                            class="px-3 py-1 <%= product.status === 'Active' ? 'bg-red-600' : 'bg-green-600' %> text-white rounded-md hover:opacity-90">
+                                            <%= product.status === 'Active' ? 'Deactivate' : 'Activate' %>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="7" class="py-8 text-center text-gray-400">
+                                    <div class="flex flex-col items-center">
+                                        <i class="material-icons text-4xl mb-2">inventory_2</i>
+                                        <p>No products found</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <% if (pagination.totalPages > 1) { %>
+                    <div class="mt-6 flex justify-center">
+                        <nav class="flex items-center gap-2">
+                            <% if (pagination.hasPrevPage) { %>
+                                <a href="?page=<%= pagination.prevPage %>" 
+                                   class="px-3 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600">
+                                    Previous
+                                </a>
+                            <% } %>
+
+                            <% for(let i = 1; i <= pagination.totalPages; i++) { %>
+                                <a href="?page=<%= i %>"
+                                   class="px-3 py-2 rounded-md <%= pagination.currentPage === i ? 'bg-emerald-500 text-white' : 'bg-zinc-700 text-white hover:bg-zinc-600' %>">
+                                    <%= i %>
+                                </a>
+                            <% } %>
+
+                            <% if (pagination.hasNextPage) { %>
+                                <a href="?page=<%= pagination.nextPage %>"
+                                   class="px-3 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600">
+                                    Next
+                                </a>
+                            <% } %>
+                        </nav>
+                    </div>
+                <% } %>
+            </div>
+        </main>
+    </div>
+
+    <!-- Hidden File Input -->
+    <input type="file" id="imageInput" accept="image/*" class="hidden">
+
+    <!-- Product Modal -->
+    <div id="productModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-40">
+        <div class="relative w-11/12 max-w-4xl mx-auto my-6">
+            <div class="bg-zinc-800 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold" id="modalTitle">Add Product</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-white">
+                        <i class="material-icons">close</i>
+                    </button>
+                </div>
+                <form id="productForm" onsubmit="handleSubmit(event)">
+                    <!-- Form content will be injected here -->
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cropper Modal -->
+    <div id="cropperModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+        <div class="relative w-11/12 max-w-4xl mx-auto mt-10 bg-zinc-800 rounded-lg shadow-xl">
+            <div class="p-4 border-b border-gray-700">
+                <h3 class="text-lg font-semibold">Crop Image</h3>
+            </div>
+            <div class="p-4">
+                <div class="relative h-[60vh]">
+                    <img id="cropperImage" class="max-h-full mx-auto">
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-700 flex justify-end gap-2">
+                <button onclick="rotateCropper(-90)" class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">
+                    <i class="material-icons">rotate_left</i>
+                </button>
+                <button onclick="rotateCropper(90)" class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">
+                    <i class="material-icons">rotate_right</i>
+                </button>
+                <button onclick="saveCroppedImage()" class="px-4 py-2 bg-emerald-600 rounded hover:bg-emerald-500">
+                    Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const categories = <%- JSON.stringify(categories || []) %>;
+        
+        let cropper = null;
+        let currentImageIndex = 0;
+        let productImages = Array(4).fill(null);
+        let isEditMode = false;
+        let currentProductId = null;
+
+        function openAddProductModal() {
+            try {
+                console.log('Categories available:', categories); // Debug log
+                console.log('Opening modal...'); // Debug log
+                
+                isEditMode = false;
+                currentProductId = null;
+                productImages = Array(4).fill(null);
+                
+                if (!categories || categories.length === 0) {
+                    throw new Error('No categories available. Please add categories first.');
+                }
+                
+                const modalElement = document.getElementById('productModal');
+                console.log('Modal element:', modalElement); // Debug log
+                
+                document.getElementById('modalTitle').textContent = 'Add Product';
+                document.getElementById('productForm').innerHTML = createFormHTML();
+                modalElement.classList.remove('hidden');
+                
+                console.log('Modal opened successfully'); // Debug log
+            } catch (error) {
+                console.error('Modal Error:', error); // Debug log
+                showError(error.message || 'Error opening add product modal');
+            }
+        }
+
+        function editProduct(productData) {
+            try {
+                // Clean the data string and parse it
+                const cleanData = productData
+                    .replace(/&quot;/g, '"')
+                    .replace(/&apos;/g, "'")
+                    .replace(/\n/g, '\\n');
+                    
+                const product = JSON.parse(cleanData);
+                console.log('Editing product:', product); // Debug log
+
+                isEditMode = true;
+                currentProductId = product._id;
+                
+                // Set existing images with proper checks
+                productImages = (product.images || []).map(img => ({
+                    existing: true,
+                    path: img.path || '',
+                    filename: img.filename || ''
+                }));
+                
+                // Fill remaining image slots with null
+                while (productImages.length < 4) {
+                    productImages.push(null);
+                }
+                
+                document.getElementById('modalTitle').textContent = 'Edit Product';
+                document.getElementById('productForm').innerHTML = createFormHTML(product);
+                document.getElementById('productModal').classList.remove('hidden');
+                
+                // Update image previews
+                updateImagePreviews();
+
+                // Handle variants
+                const variantsList = document.getElementById('variantsList');
+                if (variantsList) {
+                    variantsList.innerHTML = ''; // Clear default variant
+                    if (product.variants && product.variants.length > 0) {
+                        product.variants.forEach(variant => {
+                            variantsList.appendChild(createVariantHTML(variant));
+                        });
+                    } else {
+                        // Add at least one empty variant
+                        variantsList.appendChild(createVariantHTML());
+                    }
+                }
+            } catch (error) {
+                console.error('Edit Product Error:', error);
+                console.error('Product Data:', productData); // Debug log
+                showError('Error loading product data. Please try again.');
+            }
+        }
+
+        function createFormHTML(product = null) {
+            return `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Product Name</label>
+                            <input type="text" name="name" class="w-full p-2 bg-zinc-700 rounded" 
+                                   value="${product?.name || ''}" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Brand</label>
+                            <input type="text" name="brand" class="w-full p-2 bg-zinc-700 rounded" 
+                                   value="${product?.brand || ''}" required>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Description</label>
+                        <textarea name="description" rows="3" class="w-full p-2 bg-zinc-700 rounded" 
+                                  required>${product?.description || ''}</textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Category</label>
+                            <select name="category" class="w-full p-2 bg-zinc-700 rounded" required>
+                                <option value="">Select Category</option>
+                                ${categories.map(cat => `
+                                    <option value="${cat._id}" 
+                                            ${product?.category._id === cat._id ? 'selected' : ''}>
+                                        ${cat.name}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Discount (%)</label>
+                            <input type="number" name="discount" class="w-full p-2 bg-zinc-700 rounded" 
+                                   min="0" max="100" value="${product?.discount || 0}">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Product Images (4 required)</label>
+                        <div class="grid grid-cols-4 gap-4">
+                            ${Array(4).fill().map((_, i) => `
+                                <div class="aspect-square border-2 border-dashed border-gray-600 rounded-lg relative">
+                                    <div id="imagePreview${i}" class="w-full h-full">
+                                        <button type="button" onclick="selectImage(${i})" 
+                                                class="w-full h-full flex items-center justify-center">
+                                            <i class="material-icons">add_photo_alternate</i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div id="variantsContainer">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-sm font-medium">Variants</label>
+                            <button type="button" onclick="addVariant()" 
+                                    class="px-3 py-1 bg-gray-600 rounded text-sm">
+                                Add Variant
+                            </button>
+                        </div>
+                        <div id="variantsList">
+                            ${product?.variants?.length ? 
+                                product.variants.map((v, i) => createVariantHTML(v)).join('') : 
+                                createVariantHTML()}
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="closeModal()" 
+                                class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="px-4 py-2 bg-emerald-600 rounded hover:bg-emerald-500">
+                            ${isEditMode ? 'Update' : 'Add'} Product
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createVariantHTML(variant = null) {
+            const variantDiv = document.createElement('div');
+            variantDiv.className = 'variant-item bg-zinc-700 p-4 rounded-lg mb-2 relative';
+            
+            const variantData = {
+                options: variant?.options || '',
+                stock: variant?.stock || 0,
+                price: variant?.price || 0,
+                specifications: variant?.specifications || []
+            };
+
+            variantDiv.innerHTML = `
+                <div class="grid grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Option</label>
+                        <select name="variant_option" class="w-full p-2 bg-zinc-600 rounded" required>
+                            <option value="">Select Option</option>
+                            <option value="Full option" ${variantData.options === 'Full option' ? 'selected' : ''}>Full option</option>
+                            <option value="Base" ${variantData.options === 'Base' ? 'selected' : ''}>Base</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Stock</label>
+                        <input type="number" name="variant_stock" class="w-full p-2 bg-zinc-600 rounded" 
+                               value="${variantData.stock}" min="0" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Price</label>
+                        <input type="number" name="variant_price" class="w-full p-2 bg-zinc-600 rounded" 
+                               value="${variantData.price}" min="0" step="0.01" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Specifications</label>
+                        <input type="text" name="variant_specs" class="w-full p-2 bg-zinc-600 rounded" 
+                               value="${variantData.specifications.join(', ')}" 
+                               placeholder="Comma-separated">
+                    </div>
+                </div>
+                <button type="button" onclick="removeVariant(this)" 
+                        class="absolute -top-2 -right-2 bg-red-500 rounded-full p-1">
+                    <i class="material-icons text-sm">close</i>
+                </button>
+            `;
+            return variantDiv;
+        }
+
+        function addVariant() {
+            const variantsList = document.getElementById('variantsList');
+            if (variantsList.children.length >= 5) { // Maximum 5 variants
+                showError('Maximum 5 variants allowed');
+                return;
+            }
+            variantsList.appendChild(createVariantHTML());
+        }
+
+        function selectImage(index) {
+            currentImageIndex = index;
+            document.getElementById('imageInput').click();
+        }
+
+        function updateImagePreviews() {
+            productImages.forEach((image, index) => {
+                if (image) {
+                    updateImagePreview(index, image.existing ? image.path : URL.createObjectURL(image));
+                }
+            });
+        }
+
+        async function handleSubmit(event) {
+            event.preventDefault();
+            try {
+                const form = event.target;
+                const formData = new FormData(form);
+                
+                // Basic form validation
+                const name = form.querySelector('[name="name"]')?.value;
+                const brand = form.querySelector('[name="brand"]')?.value;
+                const description = form.querySelector('[name="description"]')?.value;
+                const category = form.querySelector('[name="category"]')?.value;
+
+                if (!name || !brand || !description || !category) {
+                    throw new Error('Please fill in all required fields');
+                }
+
+                // Image validation
+                if (!productImages.some(img => img !== null)) {
+                    throw new Error('At least one product image is required');
+                }
+
+                // Add basic form data
+                formData.append('name', name);
+                formData.append('brand', brand);
+                formData.append('description', description);
+                formData.append('category', category);
+                formData.append('discount', form.querySelector('[name="discount"]')?.value || '0');
+
+                // Add images
+                productImages.forEach((image, index) => {
+                    if (image && !image.existing) {
+                        formData.append('images', image);
+                        formData.append('imageOrder', index);
+                    }
+                });
+
+                // Collect variants
+                const variants = [];
+                const variantItems = document.querySelectorAll('.variant-item');
+                
+                if (!variantItems || variantItems.length === 0) {
+                    throw new Error('At least one variant is required');
+                }
+
+                variantItems.forEach((item, index) => {
+                    const option = item.querySelector('select')?.value;
+                    const stock = item.querySelector('input[name="variant_stock"]')?.value;
+                    const price = item.querySelector('input[name="variant_price"]')?.value;
+                    const specs = item.querySelector('input[name="variant_specs"]')?.value;
+
+                    if (!option || !stock || !price) {
+                        throw new Error(`Please fill in all required fields for variant ${index + 1}`);
+                    }
+
+                    variants.push({
+                        options: option,
+                        stock: parseInt(stock),
+                        price: parseFloat(price),
+                        specifications: specs ? specs.split(',').map(s => s.trim()).filter(s => s) : []
+                    });
+                });
+
+                if (variants.length === 0) {
+                    throw new Error('At least one variant is required');
+                }
+
+                formData.append('variants', JSON.stringify(variants));
+
+                // Handle existing images in edit mode
+                if (isEditMode) {
+                    const existingImages = productImages
+                        .filter(img => img && img.existing)
+                        .map(img => ({
+                            path: img.path,
+                            filename: img.filename
+                        }));
+                    formData.append('existingImages', JSON.stringify(existingImages));
+                }
+
+                // Send the request
+                const url = isEditMode ? `/admin/product/${currentProductId}` : '/admin/product';
+                
+                // Log the request details for debugging
+                console.log('Submitting to:', url);
+                console.log('Method:', isEditMode ? 'PUT' : 'POST');
+                
+                const response = await fetch(url, {
+                    method: isEditMode ? 'PUT' : 'POST',
+                    body: formData
+                });
+
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Server returned invalid response format');
+                }
+
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.message || 'Server error occurred');
+                }
+
+                if (result.success) {
+                    await Swal.fire({
+                        title: 'Success!',
+                        text: result.message || (isEditMode ? 'Product updated successfully' : 'Product added successfully'),
+                        icon: 'success',
+                        background: '#18181B',
+                        color: '#FFFFFF'
+                    });
+                    closeModal();
+                    location.reload();
+                } else {
+                    throw new Error(result.message || 'Operation failed');
+                }
+            } catch (error) {
+                console.error('Submit Error:', error);
+                await Swal.fire({
+                    title: 'Error!',
+                    text: error.message || 'An error occurred',
+                    icon: 'error',
+                    background: '#18181B',
+                    color: '#FFFFFF'
+                });
+            }
+        }
+
+        // Utility functions
+        function closeModal() {
+            document.getElementById('productModal').classList.add('hidden');
+            document.getElementById('cropperModal').classList.add('hidden');
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+        }
+
+        function showSuccess(message) {
+            Swal.fire({
+                title: 'Success!',
+                text: message,
+                icon: 'success',
+                background: '#18181B',
+                color: '#FFFFFF'
+            });
+        }
+
+        function showError(message) {
+            Swal.fire({
+                title: 'Error!',
+                text: message,
+                icon: 'error',
+                background: '#18181B',
+                color: '#FFFFFF'
+            });
+        }
+
+        function updateImagePreview(index, url) {
+            const previewDiv = document.getElementById(`imagePreview${index}`);
+            previewDiv.innerHTML = `
+                <img src="${url}" class="w-full h-full object-cover rounded-lg">
+                <button type="button" onclick="removeImage(${index})" 
+                        class="absolute top-1 right-1 bg-red-500 rounded-full p-1">
+                    <i class="material-icons text-sm">close</i>
+                </button>
+            `;
+        }
+
+        function removeImage(index) {
+            productImages[index] = null;
+            const previewDiv = document.getElementById(`imagePreview${index}`);
+            previewDiv.innerHTML = `
+                <button type="button" onclick="selectImage(${index})" 
+                        class="w-full h-full flex items-center justify-center">
+                    <i class="material-icons">add_photo_alternate</i>
+                </button>
+            `;
+        }
+
+        function rotateCropper(degrees) {
+            if (cropper) {
+                cropper.rotate(degrees);
+            }
+        }
+
+        async function saveCroppedImage() {
+            if (!cropper) return;
+
+            const canvas = cropper.getCroppedCanvas({
+                width: 800,
+                height: 800
+            });
+
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+            const file = new File([blob], `product-image-${currentImageIndex}.jpg`, { type: 'image/jpeg' });
+            
+            productImages[currentImageIndex] = file;
+            updateImagePreview(currentImageIndex, URL.createObjectURL(file));
+            
+            document.getElementById('cropperModal').classList.add('hidden');
+            cropper.destroy();
+            cropper = null;
+        }
+
+        // Event listeners
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                initializeCropper(e.target.files[0]);
+            }
+        });
+
+        function initializeCropper(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const cropperModal = document.getElementById('cropperModal');
+                const cropperImage = document.getElementById('cropperImage');
+                
+                cropperModal.classList.remove('hidden');
+                cropperImage.src = e.target.result;
+                
+                if (cropper) cropper.destroy();
+                
+                cropper = new Cropper(cropperImage, {
+                    aspectRatio: 1,
+                    viewMode: 2,
+                    autoCropArea: 1,
+                    minCropBoxWidth: 400,
+                    minCropBoxHeight: 400
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Close modals when clicking outside
+        document.getElementById('productModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('productModal')) {
+                closeModal();
+            }
+        });
+
+        document.getElementById('cropperModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('cropperModal')) {
+                closeModal();
+            }
+        });
+
+        // Add this new function for removing variants
+        function removeVariant(button) {
+            const variantsList = document.getElementById('variantsList');
+            if (variantsList.children.length > 1) {
+                button.parentElement.remove();
+            } else {
+                showError('At least one variant is required');
+            }
+        }
+
+        async function deactivateProduct(productId) {
+            try {
+                const response = await fetch(`/admin/products/${productId}/toggle-status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Server returned non-JSON response');
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Show success message
+                    Swal.fire({
+                        title: 'Success!',
+                        text: data.message || 'Product status updated successfully',
+                        icon: 'success'
+                    }).then(() => {
+                        // Reload the page to show updated status
+                        window.location.reload();
+                    });
+                } else {
+                    throw new Error(data.message || 'Failed to update product status');
+                }
+            } catch (error) {
+                console.error('Error toggling product status:', error);
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'Failed to update product status. Please try again.',
+                    icon: 'error'
+                });
+            }
+        }
+    </script>
+</body>
+</html>

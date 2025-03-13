@@ -41,10 +41,6 @@ const userSchema = new mongoose.Schema(
         },
         otp: otpSchema,
         
-		referralCode : {
-			type: String,
-			unique: true 
-		}
     },
     { timestamps: true }
 );
