@@ -78,7 +78,8 @@ let currentFilters = {
 
 // Product card template
 const createProductCard = (product) => `
-    <div class="bg-white rounded-lg shadow-md overflow-hidden group">
+    <div class="bg-white rounded-lg shadow-md overflow-hidden group cursor-pointer"
+         onclick="window.location.href='/product/view/${product._id}'">
         <div class="aspect-w-1 aspect-h-1 overflow-hidden">
             <img 
                 src="${product.images[0].path}" 
@@ -96,9 +97,9 @@ const createProductCard = (product) => `
                         `<span class="text-sm text-red-500 ml-2">-${product.discount}%</span>` : 
                         ''}
                 </div>
-                <a href="/product/${product._id}" class="text-black hover:text-gray-700">
-                    <i class="fas fa-arrow-right"></i>
-                </a>
+                <span class="text-black hover:text-gray-700">
+                    <i class="fas fa-eye"></i>
+                </span>
             </div>
         </div>
     </div>

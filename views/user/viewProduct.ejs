@@ -1,0 +1,164 @@
+<%- include("../partials/navbar") %>
+
+<div class="container mx-auto px-4 py-8">
+    <!-- Main Product Section -->
+    <section class="flex flex-col md:flex-row gap-8">
+        <!-- Image Gallery -->
+        <div class="w-full md:w-1/2 flex gap-4">
+            <!-- Thumbnails -->
+            <div class="flex flex-col gap-4">
+                <% product.images.forEach((image, index) => { %>
+                    <img 
+                        src="<%= image.path %>" 
+                        alt="<%= product.name %> thumbnail" 
+                        class="w-20 h-20 object-cover cursor-pointer thumbnail-img"
+                        onclick="updateMainImage(this.src)"
+                    >
+                <% }) %>
+            </div>
+
+            <!-- Main Image -->
+            <div class="flex-grow">
+                <img 
+                    id="mainImage" 
+                    src="<%= product.images[0].path %>" 
+                    alt="<%= product.name %>" 
+                    class="w-full h-auto object-cover rounded-lg"
+                >
+            </div>
+        </div>
+
+        <!-- Product Details -->
+        <div class="w-full md:w-1/2 space-y-6">
+            <h1 class="text-3xl font-bold"><%= product.name %></h1>
+            <p class="text-gray-600"><%= product.description %></p>
+            
+            <div class="space-y-2">
+                <p class="font-semibold">Brand: <span class="text-gray-600"><%= product.brand %></span></p>
+                <p class="font-semibold">Category: <span class="text-gray-600"><%= product.category.name %></span></p>
+            </div>
+
+            <!-- Variant Selection -->
+            <div class="space-y-4">
+                <label class="block font-semibold">Select Variant:</label>
+                <select id="variantSelect" class="w-full p-2 border rounded" onchange="updateVariantDetails()">
+                    <% product.variants.forEach((variant, index) => { %>
+                        <option value="<%= index %>" 
+                                data-price="<%= variant.price %>"
+                                data-discounted="<%= variant.discountedPrice %>"
+                                data-stock="<%= variant.stock %>"
+                                data-specs='<%= JSON.stringify(variant.specifications) %>'>
+                            <%= variant.options %>
+                        </option>
+                    <% }) %>
+                </select>
+            </div>
+
+            <!-- Price Display -->
+            <div class="space-y-2">
+                <div class="flex items-center gap-4">
+                    <span id="currentPrice" class="text-3xl font-bold">₹<%= product.variants[0].discountedPrice %></span>
+                    <% if (product.discount > 0) { %>
+                        <span class="text-xl text-gray-500 line-through">₹<%= product.variants[0].price %></span>
+                        <span class="text-red-500">(<%= product.discount %>% OFF)</span>
+                    <% } %>
+                </div>
+                <p id="stockStatus" class="text-green-600"></p>
+            </div>
+
+            <!-- Specifications -->
+            <div class="space-y-2">
+                <h3 class="font-semibold">Specifications:</h3>
+                <ul id="specsList" class="list-disc list-inside text-gray-600"></ul>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-4">
+                <button onclick="addToCart()" class="flex-1 bg-black text-white py-3 rounded-lg hover:bg-gray-800">
+                    Add to Cart
+                </button>
+                <button onclick="buyNow()" class="flex-1 border-2 border-black py-3 rounded-lg hover:bg-gray-100">
+                    Buy Now
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Similar Products -->
+    <section class="mt-16">
+        <h2 class="text-2xl font-bold mb-6">Similar Products</h2>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <% similarProducts.forEach(similar => { %>
+                <div class="border rounded-lg overflow-hidden group cursor-pointer"
+                     onclick="window.location.href='/product/view/<%= similar._id %>'">
+                    <div class="aspect-w-1 aspect-h-1 overflow-hidden">
+                        <img 
+                            src="<%= similar.images[0].path %>" 
+                            alt="<%= similar.name %>" 
+                            class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        >
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold"><%= similar.name %></h3>
+                        <p class="text-gray-600"><%= similar.brand %></p>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="font-bold">₹<%= similar.variants[0].price %></span>
+                            <i class="fas fa-eye"></i>
+                        </div>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    </section>
+</div>
+
+<%- include("../partials/footer") %>
+
+<script>
+// Image Gallery
+function updateMainImage(src) {
+    document.getElementById('mainImage').src = src;
+}
+
+// Variant Selection
+function updateVariantDetails() {
+    const select = document.getElementById('variantSelect');
+    const option = select.options[select.selectedIndex];
+    const price = option.getAttribute('data-price');
+    const discountedPrice = option.getAttribute('data-discounted');
+    const stock = option.getAttribute('data-stock');
+    const specs = JSON.parse(option.getAttribute('data-specs'));
+
+    document.getElementById('currentPrice').textContent = `₹${discountedPrice}`;
+    document.getElementById('stockStatus').textContent = 
+        stock > 0 ? `In Stock (${stock} available)` : 'Out of Stock';
+    
+    const specsList = document.getElementById('specsList');
+    specsList.innerHTML = specs.map(spec => `<li>${spec}</li>`).join('');
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    updateVariantDetails();
+});
+
+// Cart and Purchase Functions
+function addToCart() {
+    const variantSelect = document.getElementById('variantSelect');
+    const variantIndex = variantSelect.value;
+    // Add your cart logic here
+    Swal.fire({
+        icon: 'success',
+        title: 'Added to Cart!',
+        showConfirmButton: false,
+        timer: 1500
+    });
+}
+
+function buyNow() {
+    const variantSelect = document.getElementById('variantSelect');
+    const variantIndex = variantSelect.value;
+    // Add your purchase logic here
+    window.location.href = '/checkout';
+}
+</script>

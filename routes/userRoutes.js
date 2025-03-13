@@ -2,6 +2,7 @@ import express from 'express';
 import userController from '../controller/user/userController.js';
 import shopController from '../controller/user/shopController.js';
 import userMiddleware from '../middleware/userMiddleware.js';
+import viewProductController from '../controller/user/viewProductController.js';
 
 const router = express.Router();
 
@@ -21,8 +22,10 @@ router.get('/shop/products', userMiddleware.checkSession, shopController.getProd
 // Category routes
 router.get('/shop/category/:categoryId', userMiddleware.checkSession, shopController.getShopPage);
 
-// Product detail route
-router.get('/product/:productId', userMiddleware.checkSession, shopController.getProductDetails);
+// Product viewing routes
+router.get('/product/view/:productId', userMiddleware.checkSession, viewProductController.getProductDetails);
+router.get('/category/:categoryId/products', userMiddleware.checkSession, viewProductController.getProductsByCategory);
+router.get('/products/search', userMiddleware.checkSession, viewProductController.searchProducts);
 
 // API routes for fetch requests
 router.get('/api/products', userMiddleware.checkSession, shopController.getProducts);
