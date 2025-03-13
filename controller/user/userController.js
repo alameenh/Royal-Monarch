@@ -28,7 +28,6 @@ const postSignup = async (req, res) => {
         await userModel.deleteOne({ email });
         existingUser = null;
     }
-    //klkjhgfvd
 
     if (existingUser ) {
         return res.status(400).json({ success: false, message: 'Email already registered' });

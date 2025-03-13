@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Category Management</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body class="bg-zinc-900 text-white min-h-screen">
+    <!-- Include Sidebar -->
+    <%- include("../partials/sidebar") %>
+
+    <!-- Main Content -->
+    <div class="lg:ml-64 transition-all" id="main-content">
+        <!-- Header -->
+        <header class="flex items-center justify-between mb-8 p-4 lg:p-8 border-b border-gray-700">
+            <h1 class="text-2xl font-semibold text-gray-200">Category Management</h1>
+            <button onclick="showAddCategoryModal()"
+                class="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors">
+                Add Category
+            </button>
+        </header>
+
+        <!-- Category Table -->
+        <main class="p-4 lg:p-8">
+            <div class="bg-zinc-800 rounded-lg p-6 overflow-x-auto">
+                <table class="min-w-full text-left text-gray-400">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="py-3 px-4">Name</th>
+                            <th class="py-3 px-4">Description</th>
+                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4">Created Date</th>
+                            <th class="py-3 px-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (categories && categories.length > 0) { %>
+                            <% categories.forEach(category => { %>
+                                <tr class="border-b border-gray-700 hover:bg-zinc-700 transition-colors">
+                                    <td class="py-3 px-4">
+                                        <div class="text-gray-200"><%= category.name %></div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="text-gray-400"><%= category.description %></div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="px-2 py-1 rounded-full text-sm
+                                            <%= category.status === 'Active' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500' %>">
+                                            <%= category.status %>
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="text-gray-400">
+                                            <%= new Date(category.createdAt).toLocaleDateString() %>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <button 
+                                            onclick="updateStatus('<%= category._id %>', '<%= category.status === 'Inactive' ? 'Active' : 'Inactive' %>')"
+                                            class="px-4 py-2 rounded-md text-sm font-medium
+                                            <%= category.status === 'Inactive' ? 
+                                                'bg-green-600 text-white hover:bg-green-700' : 
+                                                'bg-red-600 text-white hover:bg-red-700' %>">
+                                            <%= category.status === 'Inactive' ? 'Activate' : 'Deactivate' %>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="5" class="py-8 text-center text-gray-400">
+                                    <div class="flex flex-col items-center">
+                                        <i class="material-icons text-4xl mb-2">category</i>
+                                        <p>No categories found</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <% if (pagination.totalPages > 1) { %>
+                    <div class="mt-6 flex justify-center">
+                        <nav class="flex items-center gap-2">
+                            <% if (pagination.hasPrevPage) { %>
+                                <a href="?page=<%= pagination.prevPage %>" 
+                                   class="px-3 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-colors">
+                                    Previous
+                                </a>
+                            <% } %>
+
+                            <% for(let i = 1; i <= pagination.totalPages; i++) { %>
+                                <a href="?page=<%= i %>"
+                                   class="px-3 py-2 rounded-md <%= pagination.currentPage === i ? 'bg-emerald-500 text-white' : 'bg-zinc-700 text-white hover:bg-zinc-600' %> transition-colors">
+                                    <%= i %>
+                                </a>
+                            <% } %>
+
+                            <% if (pagination.hasNextPage) { %>
+                                <a href="?page=<%= pagination.nextPage %>"
+                                   class="px-3 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-colors">
+                                    Next
+                                </a>
+                            <% } %>
+                        </nav>
+                    </div>
+                <% } %>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function showAddCategoryModal() {
+            Swal.fire({
+                title: 'Add New Category',
+                html: `
+                    <input type="text" id="categoryName" class="swal2-input" placeholder="Category Name">
+                    <textarea id="categoryDescription" class="swal2-textarea" placeholder="Category Description"></textarea>
+                `,
+                background: '#18181B',
+                color: '#FFFFFF',
+                showCancelButton: true,
+                confirmButtonText: 'Add',
+                confirmButtonColor: '#10B981',
+                cancelButtonColor: '#6B7280',
+                preConfirm: () => {
+                    const name = document.getElementById('categoryName').value;
+                    const description = document.getElementById('categoryDescription').value;
+                    if (!name) {
+                        Swal.showValidationMessage('Please enter category name');
+                        return false;
+                    }
+                    return { name, description };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    addCategory(result.value);
+                }
+            });
+        }
+
+        async function addCategory(data) {
+            try {
+                const response = await fetch('/admin/category', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    await Swal.fire({
+                        title: 'Success!',
+                        text: result.message,
+                        icon: 'success',
+                        background: '#18181B',
+                        color: '#FFFFFF'
+                    });
+                    location.reload();
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                Swal.fire({
+                    title: 'Error!',
+                    text: error.message || 'Something went wrong',
+                    icon: 'error',
+                    background: '#18181B',
+                    color: '#FFFFFF'
+                });
+            }
+        }
+
+        async function updateStatus(categoryId, newStatus) {
+            try {
+                const result = await Swal.fire({
+                    title: 'Are you sure?',
+                    text: `Do you want to ${newStatus.toLowerCase()} this category?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#10B981',
+                    cancelButtonColor: '#6B7280',
+                    confirmButtonText: 'Yes',
+                    background: '#18181B',
+                    color: '#FFFFFF'
+                });
+
+                if (result.isConfirmed) {
+                    const response = await fetch(`/admin/category/${categoryId}/status`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ status: newStatus })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        await Swal.fire({
+                            title: 'Success!',
+                            text: data.message,
+                            icon: 'success',
+                            background: '#18181B',
+                            color: '#FFFFFF'
+                        });
+                        location.reload();
+                    } else {
+                        throw new Error(data.message);
+                    }
+                }
+            } catch (error) {
+                Swal.fire({
+                    title: 'Error!',
+                    text: error.message || 'Something went wrong',
+                    icon: 'error',
+                    background: '#18181B',
+                    color: '#FFFFFF'
+                });
+            }
+        }
+    </script>
+</body>
+
+</html>
