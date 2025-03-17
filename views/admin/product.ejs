@@ -244,11 +244,11 @@
                     variantsList.innerHTML = ''; // Clear default variant
                     if (product.variants && product.variants.length > 0) {
                         product.variants.forEach(variant => {
-                            variantsList.appendChild(createVariantHTML(variant));
+                            variantsList.insertAdjacentHTML('beforeend', createVariantHTML(variant));
                         });
                     } else {
                         // Add at least one empty variant
-                        variantsList.appendChild(createVariantHTML());
+                        variantsList.insertAdjacentHTML('beforeend', createVariantHTML());
                     }
                 }
             } catch (error) {
@@ -346,49 +346,40 @@
         }
 
         function createVariantHTML(variant = null) {
-            const variantDiv = document.createElement('div');
-            variantDiv.className = 'variant-item bg-zinc-700 p-4 rounded-lg mb-2 relative';
-            
-            const variantData = {
-                options: variant?.options || '',
-                stock: variant?.stock || 0,
-                price: variant?.price || 0,
-                specifications: variant?.specifications || []
-            };
-
-            variantDiv.innerHTML = `
-                <div class="grid grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Option</label>
-                        <select name="variant_option" class="w-full p-2 bg-zinc-600 rounded" required>
-                            <option value="">Select Option</option>
-                            <option value="Full option" ${variantData.options === 'Full option' ? 'selected' : ''}>Full option</option>
-                            <option value="Base" ${variantData.options === 'Base' ? 'selected' : ''}>Base</option>
-                        </select>
+            return `
+                <div class="variant-item bg-zinc-700 p-4 rounded-lg mb-2 relative">
+                    <div class="grid grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Option</label>
+                            <select name="variant_option" class="w-full p-2 bg-zinc-600 rounded" required>
+                                <option value="">Select Option</option>
+                                <option value="Full option" ${variant?.options === 'Full option' ? 'selected' : ''}>Full option</option>
+                                <option value="Base" ${variant?.options === 'Base' ? 'selected' : ''}>Base</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Stock</label>
+                            <input type="number" name="variant_stock" class="w-full p-2 bg-zinc-600 rounded" 
+                                   value="${variant?.stock || 0}" min="0" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Price</label>
+                            <input type="number" name="variant_price" class="w-full p-2 bg-zinc-600 rounded" 
+                                   value="${variant?.price || 0}" min="0" step="0.01" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Specifications</label>
+                            <input type="text" name="variant_specs" class="w-full p-2 bg-zinc-600 rounded" 
+                                   value="${variant?.specifications ? variant.specifications.join(', ') : ''}" 
+                                   placeholder="Comma-separated">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Stock</label>
-                        <input type="number" name="variant_stock" class="w-full p-2 bg-zinc-600 rounded" 
-                               value="${variantData.stock}" min="0" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Price</label>
-                        <input type="number" name="variant_price" class="w-full p-2 bg-zinc-600 rounded" 
-                               value="${variantData.price}" min="0" step="0.01" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Specifications</label>
-                        <input type="text" name="variant_specs" class="w-full p-2 bg-zinc-600 rounded" 
-                               value="${variantData.specifications.join(', ')}" 
-                               placeholder="Comma-separated">
-                    </div>
+                    <button type="button" onclick="removeVariant(this)" 
+                            class="absolute -top-2 -right-2 bg-red-500 rounded-full p-1">
+                        <i class="material-icons text-sm">close</i>
+                    </button>
                 </div>
-                <button type="button" onclick="removeVariant(this)" 
-                        class="absolute -top-2 -right-2 bg-red-500 rounded-full p-1">
-                    <i class="material-icons text-sm">close</i>
-                </button>
             `;
-            return variantDiv;
         }
 
         function addVariant() {
@@ -397,7 +388,8 @@
                 showError('Maximum 5 variants allowed');
                 return;
             }
-            variantsList.appendChild(createVariantHTML());
+            // Insert the new variant HTML
+            variantsList.insertAdjacentHTML('beforeend', createVariantHTML());
         }
 
         function selectImage(index) {

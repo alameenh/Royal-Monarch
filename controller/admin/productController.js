@@ -4,7 +4,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-// Multer Configuration
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadDir = 'public/uploads/products';
@@ -57,7 +57,7 @@ const getProducts = async (req, res) => {
 
         const totalPages = Math.ceil(totalProducts / limit);
 
-        res.render('admin/product', {
+        res.render('admin/product.ejs', {
             products,
             categories,
             pagination: {
@@ -90,7 +90,7 @@ const addProduct = async (req, res) => {
             }
 
             try {
-                // Get single values from form data
+
                 const name = req.body.name?.[0] || req.body.name; // Handle both array and single value
                 const description = req.body.description?.[0] || req.body.description;
                 const brand = req.body.brand?.[0] || req.body.brand;
@@ -131,7 +131,7 @@ const addProduct = async (req, res) => {
                     product: newProduct
                 });
             } catch (error) {
-                // Clean up uploaded files if there's an error
+              
                 if (req.files) {
                     req.files.forEach(file => {
                         fs.unlink(file.path, err => {
@@ -248,7 +248,7 @@ const updateProduct = async (req, res) => {
                 });
 
             } catch (error) {
-                // Clean up any newly uploaded files if there's an error
+ 
                 if (req.files) {
                     req.files.forEach(file => {
                         const filePath = 'public/uploads/products/' + file.filename;

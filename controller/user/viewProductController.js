@@ -1,58 +1,86 @@
 import Product from '../../model/productModel.js';
 import Category from '../../model/categoryModel.js';
 import User from '../../model/userModel.js';
+import mongoose from 'mongoose';
 
 const getProductDetails = async (req, res) => {
     try {
         const productId = req.params.productId;
-        const userId = req.session.userId;
+        
+        // Fetch product and check both product and category status
+        const product = await Product.aggregate([
+            {
+                $match: {
+                    _id: new mongoose.Types.ObjectId(productId)
+                }
+            },
+            {
+                $lookup: {
+                    from: 'categories',
+                    localField: 'category',
+                    foreignField: '_id',
+                    as: 'categoryData'
+                }
+            },
+            {
+                $match: {
+                    'categoryData.status': 'Active',  // Only if category is active
+                    status: 'Active'  // Only if product is active
+                }
+            }
+        ]);
 
-        // Get product details with category
-        const product = await Product.findOne({ 
-            _id: productId, 
-            status: 'Active' 
-        }).populate('category');
-
-        if (!product) {
+        if (!product || product.length === 0) {
             return res.status(404).render('error', { 
-                message: 'Product not found' 
+                message: 'Product not found or unavailable' 
             });
         }
 
-        // Get user details (for wishlist check if needed)
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.redirect('/login');
-        }
+        // Get the first (and only) product from aggregate result
+        const productData = product[0];
 
         // Calculate discounted prices for variants
-        const variants = product.variants.map(variant => ({
-            ...variant.toObject(),
-            discountedPrice: Math.round(variant.price - (variant.price * product.discount / 100))
+        productData.variants = productData.variants.map(variant => ({
+            ...variant,
+            discountedPrice: Math.round(variant.price * (1 - productData.discount / 100))
         }));
 
-        // Get similar products
-        const similarProducts = await Product.find({
-            category: product.category._id,
-            _id: { $ne: product._id },
-            status: 'Active'
-        })
-        .populate('category')
-        .limit(4);
-
-        res.render('user/product', {
-            product: {
-                ...product.toObject(),
-                variants
+        // Fetch similar products (also only from active categories)
+        const similarProducts = await Product.aggregate([
+            {
+                $match: {
+                    category: productData.category,
+                    _id: { $ne: new mongoose.Types.ObjectId(productId) },
+                    status: 'Active'
+                }
             },
-            similarProducts,
-            user
+            {
+                $lookup: {
+                    from: 'categories',
+                    localField: 'category',
+                    foreignField: '_id',
+                    as: 'categoryData'
+                }
+            },
+            {
+                $match: {
+                    'categoryData.status': 'Active'
+                }
+            },
+            {
+                $limit: 4
+            }
+        ]);
+
+        return res.render('user/viewProduct', {
+            product: productData,
+            similarProducts
         });
 
     } catch (error) {
         console.error('View Product Error:', error);
-        res.status(500).render('error', {
-            message: 'Error loading product details'
+        return res.status(500).render('error', { 
+            message: 'Error loading product details' 
         });
     }
 };

@@ -20,7 +20,7 @@ const postSignup = async (req, res) => {
     try {
         const { firstName, lastName, email, password } = req.body;
 
-        // Validate input
+
         if (!firstName || !lastName || !email || !password) {
             return res.status(400).json({ success: false, message: 'All fields are required' });
         }
@@ -43,7 +43,7 @@ const postSignup = async (req, res) => {
         // Generate OTP
         const otpValue = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Create new user with hashed password
+        // Create new user
         const newUser = new userModel({
             firstname: firstName,
             lastname: lastName,
@@ -109,8 +109,8 @@ const verifyOtp = async (req, res) => {
     }
 
     if (user.otp.otpValue === otp) {
-        user.status = 'Active'; // Update status to 'Active'
-        user.otp = null; // Clear OTP after successful verification
+        user.status = 'Active';
+        user.otp = null; 
         await user.save();
         return res.json({ success: true, message: 'OTP verified successfully' });
     } else {
@@ -129,26 +129,24 @@ const getOtpPage = async (req, res) => {
     if (!user) {
         return res.redirect('/signup');
     }
-    // Pass otpExpiresAt to the EJS template
-    res.render('user/otp.ejs', { otpExpiresAt: user.otp.otpExpiresAt.toISOString() });
+        res.render('user/otp.ejs', { otpExpiresAt: user.otp.otpExpiresAt.toISOString() });
 };
 
 const getHomePage = async (req, res) => {
     try {
         if (!req.session.email) {
-            return res.redirect('/login');
+            return res.redirect('/');
         }
 
         const user = await userModel.findOne({ email: req.session.email });
         
         if (!user || user.status !== 'Active') {
-            return res.redirect('/login');
+            return res.redirect('/');
         }
-
         // Fetch active categories
         const categories = await Category.find({ status: 'Active' });
 
-        // Fetch featured products (active products with discount)
+
         const featuredProducts = await Product.find({ 
             status: 'Active',
             discount: { $gt: 0 }
@@ -157,7 +155,7 @@ const getHomePage = async (req, res) => {
         .sort({ discount: -1 })
         .limit(8);
 
-        // Fetch new arrivals
+   
         const newArrivals = await Product.find({ status: 'Active' })
         .populate('category')
         .sort({ createdAt: -1 })
@@ -172,20 +170,20 @@ const getHomePage = async (req, res) => {
         
     } catch (error) {
         console.error('Home Page Error:', error);
-        res.redirect('/login');
+        res.redirect('/');
     }
 };
 
 const getLogout = (req, res) => {
     req.session.destroy();
-    res.redirect('/login');
+    res.redirect('/');
 };
 
 const postLogin = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Validate input
+  
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
@@ -264,11 +262,11 @@ const getGoogle = (req, res) => {
 };
 
 const getGoogleCallback = (req, res) => {
-    passport.authenticate("google", { failureRedirect: "/login" }, async (err, profile) => {
+    passport.authenticate("google", { failureRedirect: "/" }, async (err, profile) => {
         try {
             if (err || !profile) {
                 console.log("Authentication failed:", err);
-                return res.redirect("/login?message=Authentication failed&alertType=error");
+                return res.redirect("/?message=Authentication failed&alertType=error");
             }
 
             // Log the profile data to debug
@@ -279,7 +277,7 @@ const getGoogleCallback = (req, res) => {
 
             if (!email) {
                 console.log("No email found in profile");
-                return res.redirect("/login?message=Email not provided&alertType=error");
+                return res.redirect("/?message=Email not provided&alertType=error");
             }
 
             const existingUser = await userModel.findOne({ email });
@@ -292,7 +290,7 @@ const getGoogleCallback = (req, res) => {
             // If user exists, update and login
             if (existingUser) {
                 if (existingUser.status === 'Blocked') {
-                    return res.redirect("/login?message=Your account has been blocked&alertType=error");
+                    return res.redirect("/?message=Your account has been blocked&alertType=error");
                 }
 
                 await userModel.findByIdAndUpdate(existingUser._id, {
@@ -313,10 +311,10 @@ const getGoogleCallback = (req, res) => {
             const newUser = new userModel({
                 firstname,
                 lastname,
-                email,  // Make sure email is included
+                email,  
                 googleId: profile.id,
                 status: 'Active',
-                password: 'google-auth-' + Date.now() // Optional: generate random password
+                password: 'google-auth-' + Date.now() 
             });
 
             console.log("Creating new user:", {
@@ -336,7 +334,7 @@ const getGoogleCallback = (req, res) => {
 
         } catch (error) {
             console.error("Google authentication error:", error);
-            return res.redirect("/login?message=Authentication failed&alertType=error");
+            return res.redirect("/?message=Authentication failed&alertType=error");
         }
     })(req, res);
 };
@@ -405,7 +403,7 @@ const postForgotPassword = async (req, res) => {
 
         await transporter.sendMail(mailOptions);
 
-        // Store email in session for verification
+        // Store email in session 
         req.session.resetEmail = email;
 
         res.json({

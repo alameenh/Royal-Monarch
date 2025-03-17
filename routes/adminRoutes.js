@@ -7,30 +7,29 @@ import productController from '../controller/admin/productController.js';
 
 const router = express.Router();
 
-// Admin Authentication Routes
 router.get('/login', adminMiddleware.isLogin, adminController.getAdmin);
+
 router.post('/login', adminController.postAdmin);
+
 router.get('/dashboard', adminMiddleware.checkSession, adminController.getDashboard);
+
 router.get('/logout', adminMiddleware.checkSession, adminController.getLogout);
 
-// User Management Routes
-router.get('/list-users', userController.getListUser);
-router.post('/user/:id/status', userController.updateUserStatus);
+router.get('/list-users', adminMiddleware.checkSession, userController.getListUser);
 
-// Category Management Routes
-router.get('/category', categoryController.getCategories);
-router.post('/category', categoryController.addCategory);
-router.post('/category/:id/status', categoryController.updateCategoryStatus);
+router.post('/user/:id/status',adminMiddleware.checkSession , userController.updateUserStatus);
 
-// Product Management Routes
-router.get('/product', 
-    productController.getProducts
-);
+router.get('/category', adminMiddleware.checkSession, categoryController.getCategories);
 
-router.post('/product', 
-    productController.addProduct
-);
+router.post('/category', adminMiddleware.checkSession, categoryController.addCategory);
 
+router.put('/category/:id', adminMiddleware.checkSession, categoryController.updateCategory);
+
+router.patch('/category/:id/status', adminMiddleware.checkSession, categoryController.updateCategoryStatus);
+
+router.get('/product',adminMiddleware.checkSession , productController.getProducts);
+
+router.post('/product',productController.addProduct);
 
 router.put('/product/:id', productController.updateProduct);
 

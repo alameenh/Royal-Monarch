@@ -3,7 +3,7 @@ import Category from '../../model/categoryModel.js';
 
 const getShopPage = async (req, res) => {
     try {
-        // Get all categories for filter
+        // Get all categories
         const categories = await Category.find({ status: 'Active' });
         res.render('user/shop', { categories });
     } catch (error) {
@@ -23,12 +23,13 @@ const getProducts = async (req, res) => {
         const minPrice = parseInt(req.query.minPrice) || 0;
         const maxPrice = parseInt(req.query.maxPrice) || Number.MAX_SAFE_INTEGER;
 
-        // Build query
-        const query = {
+        // Build base query
+        let query = {
             status: 'Active',
             'variants.price': { $gte: minPrice, $lte: maxPrice }
         };
 
+        // Add search conditions
         if (search) {
             query.$or = [
                 { name: { $regex: search, $options: 'i' } },
@@ -36,32 +37,80 @@ const getProducts = async (req, res) => {
             ];
         }
 
+        // Add category condition with active status check
         if (category) {
+            // First check if category is active
+            const activeCategory = await Category.findOne({
+                _id: category,
+                status: 'Active'
+            });
+
+            if (!activeCategory) {
+                return res.json({
+                    success: true,
+                    products: [],
+                    pagination: {
+                        currentPage: 1,
+                        totalPages: 0,
+                        totalProducts: 0,
+                        hasNextPage: false,
+                        hasPrevPage: false
+                    }
+                });
+            }
             query.category = category;
         }
 
-        // Build sort object
-        let sortObject = {};
-        switch (sortBy) {
-            case 'price':
-                sortObject['variants.0.price'] = order === 'asc' ? 1 : -1;
-                break;
-            case 'name':
-                sortObject.name = order === 'asc' ? 1 : -1;
-                break;
-            default:
-                sortObject[sortBy] = order === 'asc' ? 1 : -1;
-        }
+        // Add category status check to all queries
+        const products = await Product.aggregate([
+            {
+                $lookup: {
+                    from: 'categories',
+                    localField: 'category',
+                    foreignField: '_id',
+                    as: 'categoryData'
+                }
+            },
+            {
+                $match: {
+                    ...query,
+                    'categoryData.status': 'Active'
+                }
+            },
+            {
+                $sort: { [sortBy]: order === 'desc' ? -1 : 1 }
+            },
+            {
+                $skip: (page - 1) * limit
+            },
+            {
+                $limit: limit
+            }
+        ]);
 
-        const totalProducts = await Product.countDocuments(query);
-        const totalPages = Math.ceil(totalProducts / limit);
-        const skip = (page - 1) * limit;
+        // Get total count for pagination
+        const totalProducts = await Product.aggregate([
+            {
+                $lookup: {
+                    from: 'categories',
+                    localField: 'category',
+                    foreignField: '_id',
+                    as: 'categoryData'
+                }
+            },
+            {
+                $match: {
+                    ...query,
+                    'categoryData.status': 'Active'
+                }
+            },
+            {
+                $count: 'total'
+            }
+        ]);
 
-        const products = await Product.find(query)
-            .populate('category')
-            .sort(sortObject)
-            .skip(skip)
-            .limit(limit);
+        const total = totalProducts[0]?.total || 0;
+        const totalPages = Math.ceil(total / limit);
 
         res.json({
             success: true,
@@ -69,7 +118,7 @@ const getProducts = async (req, res) => {
             pagination: {
                 currentPage: page,
                 totalPages,
-                totalProducts,
+                totalProducts: total,
                 hasNextPage: page < totalPages,
                 hasPrevPage: page > 1
             }
@@ -77,9 +126,9 @@ const getProducts = async (req, res) => {
 
     } catch (error) {
         console.error('Get Products Error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error fetching products' 
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching products'
         });
     }
 };

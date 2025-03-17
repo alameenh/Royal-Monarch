@@ -10,7 +10,6 @@ const postAdmin = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Input validation
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
@@ -18,7 +17,7 @@ const postAdmin = async (req, res) => {
             });
         }
 
-        // Email format validation
+        // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             return res.status(400).json({
@@ -27,7 +26,6 @@ const postAdmin = async (req, res) => {
             });
         }
 
-        // Check credentials against environment variables
         if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
             
             req.session.admin = true;
@@ -62,6 +60,7 @@ const getDashboard = (req, res) => {
     console.log("request to the dashboard")
     res.render('admin/dashboard');
 }
+
 
 
 export default { getAdmin, postAdmin, getLogout,getDashboard }

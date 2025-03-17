@@ -1,5 +1,7 @@
 import User from '../../model/userModel.js';
 
+
+
 const getListUser = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -13,17 +15,18 @@ const getListUser = async (req, res) => {
                 lastname: 1,
                 email: 1,
                 status: 1,
-                createdAt: 1,
-                referralCode: 1
+                createdAt: 1
             })
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
         ]);
 
+        console.log('Users found:', users.length);
+
         const totalPages = Math.ceil(totalUsers / limit);
 
-        const responseData = {
+        return res.render('admin/listUser', {
             users,
             pagination: {
                 currentPage: page,
@@ -33,13 +36,11 @@ const getListUser = async (req, res) => {
                 nextPage: page + 1,
                 prevPage: page - 1
             }
-        };
-
-        res.render('admin/listUser', responseData);
+        });
 
     } catch (error) {
         console.error('List User Error:', error);
-        res.status(500).json({ 
+        return res.status(500).json({ 
             success: false, 
             message: 'Error fetching users' 
         });
@@ -51,7 +52,7 @@ const updateUserStatus = async (req, res) => {
         const userId = req.params.id;
         const newStatus = req.body.status;
 
-        // Validate status value against schema enum
+
         if (!["Pending", "Active", "Blocked"].includes(newStatus)) {
             return res.status(400).json({ 
                 success: false, 
@@ -87,4 +88,4 @@ const updateUserStatus = async (req, res) => {
     }
 };
 
-export default { getListUser, updateUserStatus };
+export default { getListUser, updateUserStatus, };

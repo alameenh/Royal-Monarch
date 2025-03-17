@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 
 <body class="bg-zinc-900 text-white min-h-screen">
@@ -60,7 +61,12 @@
                                             <%= new Date(category.createdAt).toLocaleDateString() %>
                                         </div>
                                     </td>
-                                    <td class="py-3 px-4">
+                                    <td class="py-3 px-4 space-x-2">
+                                        <button 
+                                            onclick="showEditCategoryModal('<%= category._id %>', '<%= category.name %>', '<%= category.description %>')"
+                                            class="px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700">
+                                            Edit
+                                        </button>
                                         <button 
                                             onclick="updateStatus('<%= category._id %>', '<%= category.status === 'Inactive' ? 'Active' : 'Inactive' %>')"
                                             class="px-4 py-2 rounded-md text-sm font-medium
@@ -121,8 +127,19 @@
             Swal.fire({
                 title: 'Add New Category',
                 html: `
-                    <input type="text" id="categoryName" class="swal2-input" placeholder="Category Name">
-                    <textarea id="categoryDescription" class="swal2-textarea" placeholder="Category Description"></textarea>
+                    <input 
+                        type="text" 
+                        id="categoryName" 
+                        class="swal2-input" 
+                        placeholder="Category Name (min 3 characters)"
+                        minlength="3"
+                    >
+                    <textarea 
+                        id="categoryDescription" 
+                        class="swal2-textarea" 
+                        placeholder="Category Description (min 10 characters)"
+                        minlength="10"
+                    ></textarea>
                 `,
                 background: '#18181B',
                 color: '#FFFFFF',
@@ -131,12 +148,27 @@
                 confirmButtonColor: '#10B981',
                 cancelButtonColor: '#6B7280',
                 preConfirm: () => {
-                    const name = document.getElementById('categoryName').value;
-                    const description = document.getElementById('categoryDescription').value;
+                    const name = document.getElementById('categoryName').value.trim();
+                    const description = document.getElementById('categoryDescription').value.trim();
+                    
+                    // Validation
                     if (!name) {
-                        Swal.showValidationMessage('Please enter category name');
+                        Swal.showValidationMessage('Category name is required');
                         return false;
                     }
+                    if (name.length < 3) {
+                        Swal.showValidationMessage('Category name must be at least 3 characters');
+                        return false;
+                    }
+                    if (!description) {
+                        Swal.showValidationMessage('Category description is required');
+                        return false;
+                    }
+                    if (description.length < 10) {
+                        Swal.showValidationMessage('Category description must be at least 10 characters');
+                        return false;
+                    }
+                    
                     return { name, description };
                 }
             }).then((result) => {
@@ -148,32 +180,23 @@
 
         async function addCategory(data) {
             try {
-                const response = await fetch('/admin/category', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                });
+                const { data: response } = await axios.post('/admin/category', data);
 
-                const result = await response.json();
-
-                if (result.success) {
+                if (response.success) {
                     await Swal.fire({
                         title: 'Success!',
-                        text: result.message,
+                        text: response.message,
                         icon: 'success',
                         background: '#18181B',
                         color: '#FFFFFF'
                     });
                     location.reload();
-                } else {
-                    throw new Error(result.message);
                 }
             } catch (error) {
+                console.error('Add Category Error:', error);
                 Swal.fire({
                     title: 'Error!',
-                    text: error.message || 'Something went wrong',
+                    text: error.response?.data?.message || 'Something went wrong',
                     icon: 'error',
                     background: '#18181B',
                     color: '#FFFFFF'
@@ -185,7 +208,11 @@
             try {
                 const result = await Swal.fire({
                     title: 'Are you sure?',
-                    text: `Do you want to ${newStatus.toLowerCase()} this category?`,
+                    text: `Do you want to ${newStatus.toLowerCase()} this category? ${
+                        newStatus === 'Inactive' 
+                            ? 'This will also deactivate all products in this category.' 
+                            : ''
+                    }`,
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#10B981',
@@ -196,15 +223,9 @@
                 });
 
                 if (result.isConfirmed) {
-                    const response = await fetch(`/admin/category/${categoryId}/status`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ status: newStatus })
+                    const { data } = await axios.patch(`/admin/category/${categoryId}/status`, {
+                        status: newStatus
                     });
-
-                    const data = await response.json();
 
                     if (data.success) {
                         await Swal.fire({
@@ -215,14 +236,95 @@
                             color: '#FFFFFF'
                         });
                         location.reload();
-                    } else {
-                        throw new Error(data.message);
                     }
                 }
             } catch (error) {
+                console.error('Update Status Error:', error);
                 Swal.fire({
                     title: 'Error!',
-                    text: error.message || 'Something went wrong',
+                    text: error.response?.data?.message || 'Something went wrong',
+                    icon: 'error',
+                    background: '#18181B',
+                    color: '#FFFFFF'
+                });
+            }
+        }
+
+        function showEditCategoryModal(categoryId, currentName, currentDescription) {
+            Swal.fire({
+                title: 'Edit Category',
+                html: `
+                    <input 
+                        type="text" 
+                        id="categoryName" 
+                        class="swal2-input" 
+                        placeholder="Category Name (min 3 characters)"
+                        minlength="3"
+                        value="${currentName}"
+                    >
+                    <textarea 
+                        id="categoryDescription" 
+                        class="swal2-textarea" 
+                        placeholder="Category Description (min 10 characters)"
+                        minlength="10"
+                    >${currentDescription}</textarea>
+                `,
+                background: '#18181B',
+                color: '#FFFFFF',
+                showCancelButton: true,
+                confirmButtonText: 'Update',
+                confirmButtonColor: '#10B981',
+                cancelButtonColor: '#6B7280',
+                preConfirm: () => {
+                    const name = document.getElementById('categoryName').value.trim();
+                    const description = document.getElementById('categoryDescription').value.trim();
+                    
+                    // Validation
+                    if (!name) {
+                        Swal.showValidationMessage('Category name is required');
+                        return false;
+                    }
+                    if (name.length < 3) {
+                        Swal.showValidationMessage('Category name must be at least 3 characters');
+                        return false;
+                    }
+                    if (!description) {
+                        Swal.showValidationMessage('Category description is required');
+                        return false;
+                    }
+                    if (description.length < 10) {
+                        Swal.showValidationMessage('Category description must be at least 10 characters');
+                        return false;
+                    }
+                    
+                    return { name, description };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    updateCategory(categoryId, result.value);
+                }
+            });
+        }
+
+        async function updateCategory(categoryId, data) {
+            try {
+                const { data: response } = await axios.put(`/admin/category/${categoryId}`, data);
+
+                if (response.success) {
+                    await Swal.fire({
+                        title: 'Success!',
+                        text: response.message,
+                        icon: 'success',
+                        background: '#18181B',
+                        color: '#FFFFFF'
+                    });
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Update Category Error:', error);
+                Swal.fire({
+                    title: 'Error!',
+                    text: error.response?.data?.message || 'Something went wrong',
                     icon: 'error',
                     background: '#18181B',
                     color: '#FFFFFF'
