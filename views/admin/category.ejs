@@ -92,30 +92,52 @@
                 </table>
 
                 <!-- Pagination -->
-                <% if (pagination.totalPages > 1) { %>
-                    <div class="mt-6 flex justify-center">
-                        <nav class="flex items-center gap-2">
+                <% if (typeof pagination !== 'undefined' && pagination.totalPages >= 1) { %>
+                    <div class="mt-8">
+                        <!-- Debug Info (you can remove this later) -->
+                        <div class="text-sm text-gray-400 text-center mb-4">
+                            Page <%= pagination.currentPage %> of <%= pagination.totalPages %> |
+                            Total Items: <%= pagination.totalItems %>
+                        </div>
+
+                        <!-- Pagination Controls -->
+                        <div class="flex justify-center items-center gap-2">
+                            <!-- Previous Button -->
                             <% if (pagination.hasPrevPage) { %>
-                                <a href="?page=<%= pagination.prevPage %>" 
-                                   class="px-3 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-colors">
-                                    Previous
-                                </a>
+                                <form action="/admin/category" method="GET" class="inline">
+                                    <input type="hidden" name="page" value="<%= pagination.currentPage - 1 %>">
+                                    <button type="submit" 
+                                            class="px-4 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-colors">
+                                        Previous
+                                    </button>
+                                </form>
                             <% } %>
 
+                            <!-- Page Numbers -->
                             <% for(let i = 1; i <= pagination.totalPages; i++) { %>
-                                <a href="?page=<%= i %>"
-                                   class="px-3 py-2 rounded-md <%= pagination.currentPage === i ? 'bg-emerald-500 text-white' : 'bg-zinc-700 text-white hover:bg-zinc-600' %> transition-colors">
-                                    <%= i %>
-                                </a>
+                                <form action="/admin/category" method="GET" class="inline">
+                                    <input type="hidden" name="page" value="<%= i %>">
+                                    <button type="submit" 
+                                            class="px-4 py-2 rounded-md <%= pagination.currentPage === i ? 'bg-emerald-500 text-white' : 'bg-zinc-700 text-white hover:bg-zinc-600' %> transition-colors">
+                                        <%= i %>
+                                    </button>
+                                </form>
                             <% } %>
 
+                            <!-- Next Button -->
                             <% if (pagination.hasNextPage) { %>
-                                <a href="?page=<%= pagination.nextPage %>"
-                                   class="px-3 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-colors">
-                                    Next
-                                </a>
+                                <form action="/admin/category" method="GET" class="inline">
+                                    <input type="hidden" name="page" value="<%= pagination.currentPage + 1 %>">
+                                    <button type="submit" 
+                                            class="px-4 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-colors">
+                                        Next
+                                    </button>
+                                </form>
                             <% } %>
-                        </nav>
+                        </div>
+
+                        <!-- Current Page Display -->
+                      
                     </div>
                 <% } %>
             </div>

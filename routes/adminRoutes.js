@@ -27,12 +27,12 @@ router.put('/category/:id', adminMiddleware.checkSession, categoryController.upd
 
 router.patch('/category/:id/status', adminMiddleware.checkSession, categoryController.updateCategoryStatus);
 
-router.get('/product',adminMiddleware.checkSession , productController.getProducts);
+router.get('/product', adminMiddleware.checkSession, productController.getProducts);
 
-router.post('/product',productController.addProduct);
+router.post('/product', adminMiddleware.checkSession, productController.addProduct);
 
-router.put('/product/:id', productController.updateProduct);
+router.put('/product/:id', adminMiddleware.checkSession, productController.updateProduct);
 
-router.patch('/products/:id/toggle-status', productController.toggleProductStatus);
+router.patch('/products/:id/toggle-status', adminMiddleware.checkSession, productController.toggleProductStatus);
 
 export default router; 

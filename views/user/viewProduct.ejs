@@ -35,7 +35,8 @@
             
             <div class="space-y-2">
                 <p class="font-semibold">Brand: <span class="text-gray-600"><%= product.brand %></span></p>
-                <p class="font-semibold">Category: <span class="text-gray-600"><%= product.category.name %></span></p>
+                <p class="font-semibold">Color: <span class="text-gray-600"><%= product.color %></span></p>
+                <p class="font-semibold">Category: <span class="text-gray-600"><%= product.categoryData[0].name %></span></p>
             </div>
 
             <!-- Variant Selection -->
@@ -44,11 +45,12 @@
                 <select id="variantSelect" class="w-full p-2 border rounded" onchange="updateVariantDetails()">
                     <% product.variants.forEach((variant, index) => { %>
                         <option value="<%= index %>" 
+                                data-type="<%= variant.type %>"
                                 data-price="<%= variant.price %>"
-                                data-discounted="<%= variant.discountedPrice %>"
                                 data-stock="<%= variant.stock %>"
+                                data-discount="<%= variant.discount %>"
                                 data-specs='<%= JSON.stringify(variant.specifications) %>'>
-                            <%= variant.options %>
+                            <%= variant.type %> 
                         </option>
                     <% }) %>
                 </select>
@@ -56,14 +58,22 @@
 
             <!-- Price Display -->
             <div class="space-y-2">
-                <div class="flex items-center gap-4">
-                    <span id="currentPrice" class="text-3xl font-bold">₹<%= product.variants[0].discountedPrice %></span>
-                    <% if (product.discount > 0) { %>
-                        <span class="text-xl text-gray-500 line-through">₹<%= product.variants[0].price %></span>
-                        <span class="text-red-500">(<%= product.discount %>% OFF)</span>
+                <div class="flex items-center gap-4 flex-wrap">
+                    <% const firstVariant = product.variants[0]; %>
+                    <% const discountedPrice = Math.round(firstVariant.price * (1 - firstVariant.discount/100)); %>
+                    <div class="flex items-baseline gap-3">
+                        <span id="currentPrice" class="text-3xl font-bold text-gray-900">₹<%= discountedPrice %></span>
+                        <% if (firstVariant.discount > 0) { %>
+                            <span id="originalPrice" class="text-xl text-gray-500 line-through">₹<%= firstVariant.price %></span>
+                        <% } %>
+                    </div>
+                    <% if (firstVariant.discount > 0) { %>
+                        <span id="discountBadge" class="px-2 py-1 bg-red-100 text-red-700 rounded-md text-sm font-medium">
+                            <%= firstVariant.discount %>% OFF
+                        </span>
                     <% } %>
                 </div>
-                <p id="stockStatus" class="text-green-600"></p>
+                <p id="stockStatus" class="font-medium mt-2"></p>
             </div>
 
             <!-- Specifications -->
@@ -74,10 +84,12 @@
 
             <!-- Action Buttons -->
             <div class="flex gap-4">
-                <button onclick="addToCart()" class="flex-1 bg-black text-white py-3 rounded-lg hover:bg-gray-800">
+                <button id="addToCartBtn" onclick="addToCart('<%= product._id %>')" 
+                        class="flex-1 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors disabled:bg-gray-400">
                     Add to Cart
                 </button>
-                <button onclick="buyNow()" class="flex-1 border-2 border-black py-3 rounded-lg hover:bg-gray-100">
+                <button id="buyNowBtn" onclick="buyNow('<%= product._id %>')" 
+                        class="flex-1 border-2 border-black py-3 rounded-lg hover:bg-gray-100 transition-colors disabled:border-gray-400 disabled:text-gray-400">
                     Buy Now
                 </button>
             </div>
@@ -89,7 +101,7 @@
         <h2 class="text-2xl font-bold mb-6">Similar Products</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
             <% similarProducts.forEach(similar => { %>
-                <div class="border rounded-lg overflow-hidden group cursor-pointer"
+                <div class="border rounded-lg overflow-hidden group cursor-pointer hover:shadow-lg transition-shadow"
                      onclick="window.location.href='/product/view/<%= similar._id %>'">
                     <div class="aspect-w-1 aspect-h-1 overflow-hidden">
                         <img 
@@ -98,12 +110,18 @@
                             class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                         >
                     </div>
-                    <div class="p-4">
-                        <h3 class="font-semibold"><%= similar.name %></h3>
+                    <div class="p-4 space-y-2">
+                        <h3 class="font-semibold text-lg truncate"><%= similar.name %></h3>
                         <p class="text-gray-600"><%= similar.brand %></p>
-                        <div class="flex justify-between items-center mt-2">
-                            <span class="font-bold">₹<%= similar.variants[0].price %></span>
-                            <i class="fas fa-eye"></i>
+                        
+                        <div class="flex items-center gap-2">
+                            <% const similarVariant = similar.variants[0]; %>
+                            <% const similarDiscountedPrice = Math.round(similarVariant.price * (1 - similarVariant.discount/100)); %>
+                            <span class="text-lg font-bold">₹<%= similarDiscountedPrice %></span>
+                            <% if (similarVariant.discount > 0) { %>
+                                <span class="text-sm text-gray-500 line-through">₹<%= similarVariant.price %></span>
+                                <span class="text-sm text-red-600 font-medium">(<%= similarVariant.discount %>% OFF)</span>
+                            <% } %>
                         </div>
                     </div>
                 </div>
@@ -115,26 +133,69 @@
 <%- include("../partials/footer") %>
 
 <script>
-// Image Gallery
 function updateMainImage(src) {
     document.getElementById('mainImage').src = src;
 }
 
-// Variant Selection
 function updateVariantDetails() {
     const select = document.getElementById('variantSelect');
     const option = select.options[select.selectedIndex];
-    const price = option.getAttribute('data-price');
-    const discountedPrice = option.getAttribute('data-discounted');
-    const stock = option.getAttribute('data-stock');
-    const specs = JSON.parse(option.getAttribute('data-specs'));
-
-    document.getElementById('currentPrice').textContent = `₹${discountedPrice}`;
-    document.getElementById('stockStatus').textContent = 
-        stock > 0 ? `In Stock (${stock} available)` : 'Out of Stock';
     
+    const price = parseInt(option.getAttribute('data-price'));
+    const stock = parseInt(option.getAttribute('data-stock'));
+    const specs = JSON.parse(option.getAttribute('data-specs'));
+    const type = option.getAttribute('data-type');
+    const discount = parseInt(option.getAttribute('data-discount') || '0');
+    
+    // Calculate discounted price
+    const discountedPrice = Math.round(price * (1 - discount/100));
+
+    // Update prices and discount
+    const priceDisplay = document.getElementById('currentPrice');
+    const originalPriceDisplay = document.getElementById('originalPrice');
+    const discountBadge = document.getElementById('discountBadge');
+
+    priceDisplay.textContent = `₹${discountedPrice}`;
+    
+    if (discount > 0) {
+        // Show original price with strikethrough
+        originalPriceDisplay.textContent = `₹${price}`;
+        originalPriceDisplay.style.display = 'inline';
+        
+        // Show discount badge
+        discountBadge.textContent = `${discount}% OFF`;
+        discountBadge.style.display = 'inline-block';
+    } else {
+        // Hide original price and discount badge if no discount
+        originalPriceDisplay.style.display = 'none';
+        discountBadge.style.display = 'none';
+    }
+    
+    // Update stock status
+    const stockStatus = document.getElementById('stockStatus');
+    if (stock > 0) {
+        stockStatus.textContent = `In Stock (${stock} available)`;
+        stockStatus.className = 'font-medium text-green-600 mt-2';
+    } else {
+        stockStatus.textContent = 'Out of Stock';
+        stockStatus.className = 'font-medium text-red-600 mt-2';
+    }
+    
+    // Update specifications
     const specsList = document.getElementById('specsList');
     specsList.innerHTML = specs.map(spec => `<li>${spec}</li>`).join('');
+
+    // Update button states
+    const addToCartBtn = document.getElementById('addToCartBtn');
+    const buyNowBtn = document.getElementById('buyNowBtn');
+    
+    if (stock === 0) {
+        addToCartBtn.disabled = true;
+        buyNowBtn.disabled = true;
+    } else {
+        addToCartBtn.disabled = false;
+        buyNowBtn.disabled = false;
+    }
 }
 
 // Initialize on page load
@@ -142,23 +203,61 @@ document.addEventListener('DOMContentLoaded', () => {
     updateVariantDetails();
 });
 
-// Cart and Purchase Functions
-function addToCart() {
-    const variantSelect = document.getElementById('variantSelect');
-    const variantIndex = variantSelect.value;
-    // Add your cart logic here
-    Swal.fire({
-        icon: 'success',
-        title: 'Added to Cart!',
-        showConfirmButton: false,
-        timer: 1500
-    });
+async function addToCart(productId) {
+    try {
+        const variantSelect = document.getElementById('variantSelect');
+        const selectedVariant = variantSelect.options[variantSelect.selectedIndex];
+        const variantType = selectedVariant.getAttribute('data-type');
+
+        const response = await fetch('/cart/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                productId,
+                variantType
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Added to Cart!',
+                showConfirmButton: false,
+                timer: 1500
+            });
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: error.message || 'Failed to add to cart'
+        });
+    }
 }
 
-function buyNow() {
-    const variantSelect = document.getElementById('variantSelect');
-    const variantIndex = variantSelect.value;
-    // Add your purchase logic here
-    window.location.href = '/checkout';
+async function buyNow(productId) {
+    try {
+        const variantSelect = document.getElementById('variantSelect');
+        const selectedVariant = variantSelect.options[variantSelect.selectedIndex];
+        const variantType = selectedVariant.getAttribute('data-type');
+
+        // First add to cart
+        await addToCart(productId);
+        
+        // Then redirect to checkout
+        window.location.href = '/checkout';
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: error.message || 'Failed to process purchase'
+        });
+    }
 }
 </script>

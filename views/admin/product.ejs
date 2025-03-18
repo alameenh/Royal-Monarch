@@ -50,15 +50,18 @@
                                     </td>
                                     <td class="py-3 px-4">
                                         <div class="text-gray-200"><%= product.name %></div>
-                                        <div class="text-sm text-gray-400">Discount: <%= product.discount %>%</div>
                                     </td>
                                     <td class="py-3 px-4"><%= product.brand %></td>
                                     <td class="py-3 px-4"><%= product.category.name %></td>
                                     <td class="py-3 px-4">
                                         <% product.variants.forEach(variant => { %>
-                                            <div class="text-sm">
-                                                <%= variant.options %>: ₹<%= variant.price %> 
-                                                (Stock: <%= variant.stock %>)
+                                            <div class="text-sm mb-1">
+                                                <span class="font-medium text-gray-300"><%= variant.type %>:</span>
+                                                ₹<%= variant.price %> 
+                                                (Stock: <%= variant.stock %> 
+                                                <% if (variant.stock === 0) { %>
+                                                    <span class="text-red-500 font-bold">*</span>
+                                                <% } %>)
                                             </div>
                                         <% }) %>
                                     </td>
@@ -68,15 +71,17 @@
                                             <%= product.status %>
                                         </span>
                                     </td>
-                                    <td class="py-3 px-4 space-x-2">
-                                        <button onclick="editProduct('<%= JSON.stringify(product).replace(/'/g, '&apos;').replace(/"/g, '&quot;') %>')"
-                                            class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                                            Edit
-                                        </button>
-                                        <button onclick="deactivateProduct('<%= product._id %>')"
-                                            class="px-3 py-1 <%= product.status === 'Active' ? 'bg-red-600' : 'bg-green-600' %> text-white rounded-md hover:opacity-90">
-                                            <%= product.status === 'Active' ? 'Deactivate' : 'Activate' %>
-                                        </button>
+                                    <td class="py-3 px-4 w-[250px]">
+                                        <div class="flex items-center gap-2 justify-start">
+                                            <button onclick="editProduct('<%= JSON.stringify(product).replace(/'/g, '&apos;').replace(/"/g, '&quot;') %>')"
+                                                class="w-24 px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                                                Edit
+                                            </button>
+                                            <button onclick="deactivateProduct('<%= product._id %>')"
+                                                class="w-28 px-4 py-2 rounded-md text-sm font-medium <%= product.status === 'Active' ? 'bg-red-600' : 'bg-green-600' %> text-white hover:opacity-90 transition-colors">
+                                                <%= product.status === 'Active' ? 'Deactivate' : 'Activate' %>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             <% }); %>
@@ -94,30 +99,50 @@
                 </table>
 
                 <!-- Pagination -->
-                <% if (pagination.totalPages > 1) { %>
-                    <div class="mt-6 flex justify-center">
-                        <nav class="flex items-center gap-2">
+                <% if (typeof pagination !== 'undefined' && pagination.totalPages >= 1) { %>
+                    <div class="mt-8">
+                        <!-- Debug Info (you can remove this later) -->
+                        <div class="text-sm text-gray-400 text-center mb-4">
+                            Page <%= pagination.currentPage %> of <%= pagination.totalPages %> |
+                            Total Items: <%= pagination.totalItems %>
+                        </div>
+
+                        <!-- Pagination Controls -->
+                        <div class="flex justify-center items-center gap-2">
+                            <!-- Previous Button -->
                             <% if (pagination.hasPrevPage) { %>
-                                <a href="?page=<%= pagination.prevPage %>" 
-                                   class="px-3 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600">
-                                    Previous
-                                </a>
+                                <form action="/admin/product" method="GET" class="inline">
+                                    <input type="hidden" name="page" value="<%= pagination.currentPage - 1 %>">
+                                    <button type="submit" 
+                                            class="px-4 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-colors">
+                                        Previous
+                                    </button>
+                                </form>
                             <% } %>
 
+                            <!-- Page Numbers -->
                             <% for(let i = 1; i <= pagination.totalPages; i++) { %>
-                                <a href="?page=<%= i %>"
-                                   class="px-3 py-2 rounded-md <%= pagination.currentPage === i ? 'bg-emerald-500 text-white' : 'bg-zinc-700 text-white hover:bg-zinc-600' %>">
-                                    <%= i %>
-                                </a>
+                                <form action="/admin/product" method="GET" class="inline">
+                                    <input type="hidden" name="page" value="<%= i %>">
+                                    <button type="submit" 
+                                            class="px-4 py-2 rounded-md <%= pagination.currentPage === i ? 'bg-emerald-500 text-white' : 'bg-zinc-700 text-white hover:bg-zinc-600' %> transition-colors">
+                                        <%= i %>
+                                    </button>
+                                </form>
                             <% } %>
 
+                            <!-- Next Button -->
                             <% if (pagination.hasNextPage) { %>
-                                <a href="?page=<%= pagination.nextPage %>"
-                                   class="px-3 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600">
-                                    Next
-                                </a>
+                                <form action="/admin/product" method="GET" class="inline">
+                                    <input type="hidden" name="page" value="<%= pagination.currentPage + 1 %>">
+                                    <button type="submit" 
+                                            class="px-4 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-colors">
+                                        Next
+                                    </button>
+                                </form>
                             <% } %>
-                        </nav>
+                        </div>
+
                     </div>
                 <% } %>
             </div>
@@ -219,7 +244,7 @@
                 isEditMode = true;
                 currentProductId = product._id;
                 
-                // Set existing images with proper checks
+                // Set existing images
                 productImages = (product.images || []).map(img => ({
                     existing: true,
                     path: img.path || '',
@@ -241,19 +266,18 @@
                 // Handle variants
                 const variantsList = document.getElementById('variantsList');
                 if (variantsList) {
-                    variantsList.innerHTML = ''; // Clear default variant
+                    variantsList.innerHTML = ''; // Clear existing variants
                     if (product.variants && product.variants.length > 0) {
                         product.variants.forEach(variant => {
                             variantsList.insertAdjacentHTML('beforeend', createVariantHTML(variant));
                         });
                     } else {
-                        // Add at least one empty variant
+                        // Add one empty variant if none exist
                         variantsList.insertAdjacentHTML('beforeend', createVariantHTML());
                     }
                 }
             } catch (error) {
                 console.error('Edit Product Error:', error);
-                console.error('Product Data:', productData); // Debug log
                 showError('Error loading product data. Please try again.');
             }
         }
@@ -282,6 +306,11 @@
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
+                            <label class="block text-sm font-medium mb-1">Color</label>
+                            <input type="text" name="color" class="w-full p-2 bg-zinc-700 rounded" 
+                                   value="${product?.color || ''}" required>
+                        </div>
+                        <div>
                             <label class="block text-sm font-medium mb-1">Category</label>
                             <select name="category" class="w-full p-2 bg-zinc-700 rounded" required>
                                 <option value="">Select Category</option>
@@ -293,13 +322,22 @@
                                 `).join('')}
                             </select>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Discount (%)</label>
-                            <input type="number" name="discount" class="w-full p-2 bg-zinc-700 rounded" 
-                                   min="0" max="100" value="${product?.discount || 0}">
+                    </div>
+
+                    <!-- Variants Section -->
+                    <div class="space-y-4">
+                        <div class="border-b border-gray-700 pb-4">
+                            <h3 class="text-lg font-medium mb-4">Full Option Variant</h3>
+                            ${createVariantHTML('Full option', product?.variants?.find(v => v.type === 'Full option'))}
+                        </div>
+
+                        <div class="border-b border-gray-700 pb-4">
+                            <h3 class="text-lg font-medium mb-4">Base Variant</h3>
+                            ${createVariantHTML('Base', product?.variants?.find(v => v.type === 'Base'))}
                         </div>
                     </div>
 
+                    <!-- Images Section -->
                     <div>
                         <label class="block text-sm font-medium mb-2">Product Images (4 required)</label>
                         <div class="grid grid-cols-4 gap-4">
@@ -313,21 +351,6 @@
                                     </div>
                                 </div>
                             `).join('')}
-                        </div>
-                    </div>
-
-                    <div id="variantsContainer">
-                        <div class="flex justify-between items-center mb-2">
-                            <label class="block text-sm font-medium">Variants</label>
-                            <button type="button" onclick="addVariant()" 
-                                    class="px-3 py-1 bg-gray-600 rounded text-sm">
-                                Add Variant
-                            </button>
-                        </div>
-                        <div id="variantsList">
-                            ${product?.variants?.length ? 
-                                product.variants.map((v, i) => createVariantHTML(v)).join('') : 
-                                createVariantHTML()}
                         </div>
                     </div>
 
@@ -345,51 +368,42 @@
             `;
         }
 
-        function createVariantHTML(variant = null) {
+        function createVariantHTML(type, variant = null) {
             return `
-                <div class="variant-item bg-zinc-700 p-4 rounded-lg mb-2 relative">
-                    <div class="grid grid-cols-4 gap-4">
+                <div class="variant-item bg-zinc-700 p-4 rounded-lg">
+                    <input type="hidden" name="variant_type" value="${type}">
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium mb-1">Option</label>
-                            <select name="variant_option" class="w-full p-2 bg-zinc-600 rounded" required>
-                                <option value="">Select Option</option>
-                                <option value="Full option" ${variant?.options === 'Full option' ? 'selected' : ''}>Full option</option>
-                                <option value="Base" ${variant?.options === 'Base' ? 'selected' : ''}>Base</option>
-                            </select>
+                            <label class="block text-sm font-medium mb-1">Price</label>
+                            <input type="number" name="variant_price_${type}" 
+                                   class="w-full p-2 bg-zinc-600 rounded" 
+                                   value="${variant?.price || ''}" 
+                                   min="0" step="0.01" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Stock</label>
-                            <input type="number" name="variant_stock" class="w-full p-2 bg-zinc-600 rounded" 
-                                   value="${variant?.stock || 0}" min="0" required>
+                            <input type="number" name="variant_stock_${type}" 
+                                   class="w-full p-2 bg-zinc-600 rounded" 
+                                   value="${variant?.stock || ''}" 
+                                   min="0" required>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium mb-1">Price</label>
-                            <input type="number" name="variant_price" class="w-full p-2 bg-zinc-600 rounded" 
-                                   value="${variant?.price || 0}" min="0" step="0.01" required>
+                            <label class="block text-sm font-medium mb-1">Discount (%)</label>
+                            <input type="number" name="variant_discount_${type}" 
+                                   class="w-full p-2 bg-zinc-600 rounded" 
+                                   value="${variant?.discount || ''}" 
+                                   min="0" max="100">
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Specifications</label>
-                            <input type="text" name="variant_specs" class="w-full p-2 bg-zinc-600 rounded" 
+                            <input type="text" name="variant_specs_${type}" 
+                                   class="w-full p-2 bg-zinc-600 rounded" 
                                    value="${variant?.specifications ? variant.specifications.join(', ') : ''}" 
                                    placeholder="Comma-separated">
                         </div>
                     </div>
-                    <button type="button" onclick="removeVariant(this)" 
-                            class="absolute -top-2 -right-2 bg-red-500 rounded-full p-1">
-                        <i class="material-icons text-sm">close</i>
-                    </button>
                 </div>
             `;
-        }
-
-        function addVariant() {
-            const variantsList = document.getElementById('variantsList');
-            if (variantsList.children.length >= 5) { // Maximum 5 variants
-                showError('Maximum 5 variants allowed');
-                return;
-            }
-            // Insert the new variant HTML
-            variantsList.insertAdjacentHTML('beforeend', createVariantHTML());
         }
 
         function selectImage(index) {
@@ -411,13 +425,14 @@
                 const form = event.target;
                 const formData = new FormData(form);
                 
-                // Basic form validation
-                const name = form.querySelector('[name="name"]')?.value;
-                const brand = form.querySelector('[name="brand"]')?.value;
-                const description = form.querySelector('[name="description"]')?.value;
-                const category = form.querySelector('[name="category"]')?.value;
+                // Basic validation
+                const name = form.querySelector('[name="name"]').value.trim();
+                const brand = form.querySelector('[name="brand"]').value.trim();
+                const description = form.querySelector('[name="description"]').value.trim();
+                const color = form.querySelector('[name="color"]').value.trim();
+                const category = form.querySelector('[name="category"]').value;
 
-                if (!name || !brand || !description || !category) {
+                if (!name || !brand || !description || !color || !category) {
                     throw new Error('Please fill in all required fields');
                 }
 
@@ -426,10 +441,11 @@
                     throw new Error('At least one product image is required');
                 }
 
-                // Add basic form data
+                // Add form data
                 formData.append('name', name);
                 formData.append('brand', brand);
                 formData.append('description', description);
+                formData.append('color', color);
                 formData.append('category', category);
                 formData.append('discount', form.querySelector('[name="discount"]')?.value || '0');
 
@@ -441,35 +457,26 @@
                     }
                 });
 
-                // Collect variants
-                const variants = [];
-                const variantItems = document.querySelectorAll('.variant-item');
-                
-                if (!variantItems || variantItems.length === 0) {
-                    throw new Error('At least one variant is required');
-                }
+                // Collect variants data
+                const variants = ['Full option', 'Base'].map(type => ({
+                    type,
+                    price: parseFloat(form.querySelector(`[name="variant_price_${type}"]`).value),
+                    stock: parseInt(form.querySelector(`[name="variant_stock_${type}"]`).value),
+                    discount: parseInt(form.querySelector(`[name="variant_discount_${type}"]`).value || '0'),
+                    specifications: form.querySelector(`[name="variant_specs_${type}"]`).value
+                        ? form.querySelector(`[name="variant_specs_${type}"]`).value
+                            .split(',')
+                            .map(s => s.trim())
+                            .filter(s => s)
+                        : []
+                }));
 
-                variantItems.forEach((item, index) => {
-                    const option = item.querySelector('select')?.value;
-                    const stock = item.querySelector('input[name="variant_stock"]')?.value;
-                    const price = item.querySelector('input[name="variant_price"]')?.value;
-                    const specs = item.querySelector('input[name="variant_specs"]')?.value;
-
-                    if (!option || !stock || !price) {
-                        throw new Error(`Please fill in all required fields for variant ${index + 1}`);
+                // Validate both variants are filled
+                variants.forEach(variant => {
+                    if (!variant.price || !variant.stock) {
+                        throw new Error(`Please fill in all required fields for ${variant.type} variant`);
                     }
-
-                    variants.push({
-                        options: option,
-                        stock: parseInt(stock),
-                        price: parseFloat(price),
-                        specifications: specs ? specs.split(',').map(s => s.trim()).filter(s => s) : []
-                    });
                 });
-
-                if (variants.length === 0) {
-                    throw new Error('At least one variant is required');
-                }
 
                 formData.append('variants', JSON.stringify(variants));
 
@@ -652,52 +659,71 @@
             }
         });
 
-        // Add this new function for removing variants
-        function removeVariant(button) {
-            const variantsList = document.getElementById('variantsList');
-            if (variantsList.children.length > 1) {
-                button.parentElement.remove();
-            } else {
-                showError('At least one variant is required');
-            }
-        }
-
         async function deactivateProduct(productId) {
             try {
-                const response = await fetch(`/admin/products/${productId}/toggle-status`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                // Get the current button element to determine the action
+                const button = event.target;
+                const currentStatus = button.textContent.trim();
+                const isActivating = currentStatus === 'Activate';
+
+                // Show confirmation dialog
+                const result = await Swal.fire({
+                    title: 'Are you sure?',
+                    text: isActivating 
+                        ? 'This will activate the product and make it visible to customers.'
+                        : 'This will deactivate the product and hide it from customers.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: isActivating ? '#059669' : '#DC2626', // green for activate, red for deactivate
+                    cancelButtonColor: '#4B5563',
+                    confirmButtonText: isActivating ? 'Yes, activate it!' : 'Yes, deactivate it!',
+                    cancelButtonText: 'Cancel',
+                    background: '#18181B',
+                    color: '#FFFFFF'
                 });
 
-                // Check if response is JSON
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    throw new Error('Server returned non-JSON response');
-                }
+                // If user confirms
+                if (result.isConfirmed) {
+                    const response = await fetch(`/admin/products/${productId}/toggle-status`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
 
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Show success message
-                    Swal.fire({
-                        title: 'Success!',
-                        text: data.message || 'Product status updated successfully',
-                        icon: 'success'
-                    }).then(() => {
+                    // Check if response is JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Server returned non-JSON response');
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Show success message
+                        await Swal.fire({
+                            title: 'Success!',
+                            text: isActivating 
+                                ? 'Product has been activated successfully.'
+                                : 'Product has been deactivated successfully.',
+                            icon: 'success',
+                            background: '#18181B',
+                            color: '#FFFFFF'
+                        });
                         // Reload the page to show updated status
                         window.location.reload();
-                    });
-                } else {
-                    throw new Error(data.message || 'Failed to update product status');
+                    } else {
+                        throw new Error(data.message || 'Failed to update product status');
+                    }
                 }
             } catch (error) {
                 console.error('Error toggling product status:', error);
-                Swal.fire({
+                await Swal.fire({
                     title: 'Error!',
                     text: 'Failed to update product status. Please try again.',
-                    icon: 'error'
+                    icon: 'error',
+                    background: '#18181B',
+                    color: '#FFFFFF'
                 });
             }
         }

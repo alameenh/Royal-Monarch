@@ -7,37 +7,28 @@
                 <div class="space-y-4">
                     <input id="firstName" type="text" placeholder="First Name"
                         class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
-                         minlength="2" />
+                        required minlength="2" />
                     <input id="lastName" type="text" placeholder="Last Name"
                         class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
-                         minlength="3" />
+                        required minlength="3" />
                     <input id="email" type="email" placeholder="Email"
                         class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
-                         />
+                        required />
                     <input id="password" type="password" placeholder="Password"
                         class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
-                         pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
+                        required pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
                         title="Must contain at least 8 characters, one uppercase, one lowercase, one number and one special character" />
                     <input id="confirmPassword" type="password" placeholder="Confirm Password"
                         class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
-                         />
+                        required />
                 </div>
-                <button 
-                    type="submit" 
-                    id="signupButton"
-                    class="rounded w-full py-2 mt-4 bg-black text-white hover:bg-gray-800 transition-colors duration-200 disabled:bg-gray-400 flex items-center justify-center"
-                >
-                    <span>Sign Up</span>
-                    <div id="loadingSpinner" class="hidden ml-2">
-                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                    </div>
+                <button type="submit" id="signupButton"
+                    class="rounded w-full py-2 mt-4 bg-black text-white hover:bg-gray-800 transition-colors duration-200 disabled:bg-gray-400">
+                    Sign Up
                 </button>
             </form>
             <p class="text-center text-gray-700 mt-4">Already have an account?
-                <a href="/" class="text-black hover:underline">Login</a>
+                <a href="/login" class="text-black hover:underline">Login</a>
             </p>
 
             <!-- Google Sign in -->
@@ -60,8 +51,6 @@
         <script>
             const signupForm = document.getElementById('signupForm');
             const signupButton = document.getElementById('signupButton');
-            const loadingSpinner = document.getElementById('loadingSpinner');
-            const buttonText = signupButton.querySelector('span');
 
             const validateInput = {
                 firstName: (value) => {
@@ -86,10 +75,7 @@
                 e.preventDefault();
 
                 try {
-                    // Disable button and show loading state
                     signupButton.disabled = true;
-                    buttonText.textContent = 'Signing up...';
-                    loadingSpinner.classList.remove('hidden');
 
                     const formData = {
                         firstName: document.getElementById('firstName').value.trim(),
@@ -111,34 +97,27 @@
                         }
                     }
 
-                    console.log('Sending signup request:', formData); // Debug log
-
                     const response = await axios.post('/signup', formData);
-                    console.log('Signup response:', response.data); // Debug log
 
                     if (response.data.success) {
-                        await Swal.fire({
+                        Swal.fire({
                             icon: 'success',
                             title: 'Success!',
                             text: 'Signup successful. Redirecting to OTP verification...',
                             timer: 2000,
                             showConfirmButton: false
+                        }).then(() => {
+                            window.location.href = '/otpPage';
                         });
-                        window.location.href = '/otpPage';
                     }
                 } catch (error) {
-                    console.error('Signup error:', error); // Debug log
-                    await Swal.fire({
+                    Swal.fire({
                         icon: 'error',
-                        title: 'Signup Failed',
+                        title: 'Oops...',
                         text: error.response?.data?.message || error.message || 'An error occurred during signup',
-                        confirmButtonColor: '#000'
                     });
                 } finally {
-                    // Reset button state
                     signupButton.disabled = false;
-                    buttonText.textContent = 'Sign Up';
-                    loadingSpinner.classList.add('hidden');
                 }
             });
 

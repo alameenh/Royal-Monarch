@@ -4,9 +4,10 @@ import Product from '../../model/productModel.js';
 const getCategories = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = 10;
+        const limit = 5; // Show 5 items per page
         const skip = (page - 1) * limit;
 
+        // Get total count and categories with pagination
         const [totalCategories, categories] = await Promise.all([
             Category.countDocuments(),
             Category.find()
@@ -17,19 +18,22 @@ const getCategories = async (req, res) => {
 
         const totalPages = Math.ceil(totalCategories / limit);
 
-        const responseData = {
-            categories,
-            pagination: {
-                currentPage: page,
-                totalPages,
-                hasNextPage: page < totalPages,
-                hasPrevPage: page > 1,
-                nextPage: page + 1,
-                prevPage: page - 1
-            }
+        // Create pagination object
+        const pagination = {
+            currentPage: page,
+            totalPages: totalPages,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1,
+            totalItems: totalCategories,
+            limit: limit
         };
 
-        res.render('admin/category.ejs', responseData);
+        console.log('Pagination:', pagination); // Debug log
+
+        res.render('admin/category', {
+            categories,
+            pagination
+        });
 
     } catch (error) {
         console.error('Category List Error:', error);

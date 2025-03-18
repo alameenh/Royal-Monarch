@@ -90,10 +90,10 @@ const addProduct = async (req, res) => {
             }
 
             try {
-
-                const name = req.body.name?.[0] || req.body.name; // Handle both array and single value
+                const name = req.body.name?.[0] || req.body.name;
                 const description = req.body.description?.[0] || req.body.description;
                 const brand = req.body.brand?.[0] || req.body.brand;
+                const color = req.body.color?.[0] || req.body.color;
                 const category = req.body.category?.[0] || req.body.category;
                 const discount = parseInt(req.body.discount?.[0] || req.body.discount || '0');
 
@@ -111,11 +111,12 @@ const addProduct = async (req, res) => {
                     order: req.body.imageOrder?.[index] || index
                 }));
 
-                // Create new product with sanitized data
+                // Create new product with color field
                 const newProduct = new Product({
                     name,
                     description,
                     brand,
+                    color,
                     category,
                     discount,
                     images,
@@ -177,10 +178,11 @@ const updateProduct = async (req, res) => {
                     });
                 }
 
-                // Get form data
+                // Get form data including color
                 const name = req.body.name?.[0] || req.body.name;
                 const description = req.body.description?.[0] || req.body.description;
                 const brand = req.body.brand?.[0] || req.body.brand;
+                const color = req.body.color?.[0] || req.body.color;
                 const category = req.body.category?.[0] || req.body.category;
                 const discount = parseInt(req.body.discount?.[0] || req.body.discount || '0');
 
@@ -226,13 +228,14 @@ const updateProduct = async (req, res) => {
                     images = [...images, ...newImages];
                 }
 
-                // Update product
+                // Update product with color field
                 const updatedProduct = await Product.findByIdAndUpdate(
                     productId,
                     {
                         name,
                         description,
                         brand,
+                        color,
                         category,
                         discount,
                         images,
