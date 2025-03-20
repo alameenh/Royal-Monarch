@@ -3,7 +3,8 @@ import userController from '../controller/user/userController.js';
 import shopController from '../controller/user/shopController.js';
 import userMiddleware from '../middleware/userMiddleware.js';
 import viewProductController from '../controller/user/viewProductController.js';
-import profileController from '../controller/user/profileController.js';
+import { profileController, upload } from '../controller/user/profileController.js';
+
 
 const router = express.Router();
 
@@ -53,6 +54,11 @@ router.get('/reset-password', userController.getResetPassword);
 router.post('/reset-password', userController.postResetPassword);
 
 router.get('/profile', userMiddleware.checkSession, profileController.getProfile);
-router.post('/profile/update', userMiddleware.checkSession, profileController.updateProfile);
+router.get('/profile/edit', userMiddleware.checkSession, profileController.getEditProfile);
+router.post('/profile/update', 
+    userMiddleware.checkSession, 
+    upload.single('profileImage'), 
+    profileController.updateProfile
+);
 
 export default router;
