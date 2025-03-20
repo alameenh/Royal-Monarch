@@ -1,0 +1,40 @@
+<div class="w-64 bg-white shadow-lg p-6">
+    <div class="flex items-center space-x-4">
+        <img src="<%= user.image %>" alt="Profile Picture" class="w-12 h-12 rounded-full shadow-md">
+        <div>
+            <h4 class="text-lg font-semibold text-gray-700"><%= user.firstname %> <%= user.lastname %></h4>
+            <p class="text-sm text-gray-500"><%= user.email %></p>
+        </div>
+    </div>
+    <div class="mt-6">
+        <nav class="space-y-4">
+            <a href="/profile" class="flex items-center px-4 py-2 rounded <%= currentPage === 'profile' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
+                <i class="fas fa-user mr-2"></i> Profile
+            </a>
+            <a href="/orders" class="flex items-center px-4 py-2 rounded <%= currentPage === 'orders' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
+                <i class="fas fa-box mr-2"></i> Orders
+            </a>
+            <a href="/cart" class="flex items-center px-4 py-2 rounded <%= currentPage === 'cart' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
+                <i class="fas fa-shopping-cart mr-2"></i> Cart
+            </a>
+            <a href="/wishlist" class="flex items-center px-4 py-2 rounded <%= currentPage === 'wishlist' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
+                <i class="fas fa-heart mr-2"></i> Wishlist
+            </a>
+            <a href="/addresses" class="flex items-center px-4 py-2 rounded <%= currentPage === 'addresses' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
+                <i class="fas fa-map-marker-alt mr-2"></i> Address Management
+            </a>
+            <a href="/wallet" class="flex items-center px-4 py-2 rounded <%= currentPage === 'wallet' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
+                <i class="fas fa-wallet mr-2"></i> Wallet
+            </a>
+            <a href="/coupons" class="flex items-center px-4 py-2 rounded <%= currentPage === 'coupons' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
+                <i class="fas fa-ticket-alt mr-2"></i> Coupons
+            </a>
+            <a href="/changepassword" class="flex items-center px-4 py-2 rounded <%= currentPage === 'changepassword' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
+                <i class="fas fa-key mr-2"></i> Change Password
+            </a>
+            <a href="/logout" class="flex items-center px-4 py-2 rounded text-red-600 hover:bg-red-100">
+                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+            </a>
+        </nav>
+    </div>
+</div>
