@@ -4,6 +4,7 @@ import shopController from '../controller/user/shopController.js';
 import userMiddleware from '../middleware/userMiddleware.js';
 import viewProductController from '../controller/user/viewProductController.js';
 import { profileController, upload } from '../controller/user/profileController.js';
+import addressController from '../controller/user/addressController.js';
 
 
 const router = express.Router();
@@ -55,10 +56,13 @@ router.post('/reset-password', userController.postResetPassword);
 
 router.get('/profile', userMiddleware.checkSession, profileController.getProfile);
 router.get('/profile/edit', userMiddleware.checkSession, profileController.getEditProfile);
-router.post('/profile/update', 
-    userMiddleware.checkSession, 
-    upload.single('profileImage'), 
-    profileController.updateProfile
-);
+router.post('/profile/update', userMiddleware.checkSession, upload.single('profileImage'), profileController.updateProfile);
+
+// Address routes
+router.get('/address', userMiddleware.checkSession, addressController.getAddressPage);
+router.post('/address/add', userMiddleware.checkSession, addressController.addAddress);
+router.get('/address/:id', userMiddleware.checkSession, addressController.getAddressById);
+router.post('/address/update', userMiddleware.checkSession, addressController.updateAddress);
+router.post('/address/delete', userMiddleware.checkSession, addressController.deleteAddress);
 
 export default router;

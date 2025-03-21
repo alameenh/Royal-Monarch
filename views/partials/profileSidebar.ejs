@@ -1,9 +1,9 @@
 <div class="w-64 bg-white shadow-lg p-6">
     <div class="flex items-center space-x-4">
-        <img src="<%= user.image %>" alt="Profile Picture" class="w-12 h-12 rounded-full shadow-md">
+        <img src="<%= user?.profileImage || '/images/default-profile.png' %>" alt="Profile Picture" class="w-12 h-12 rounded-full shadow-md">
         <div>
-            <h4 class="text-lg font-semibold text-gray-700"><%= user.firstname %> <%= user.lastname %></h4>
-            <p class="text-sm text-gray-500"><%= user.email %></p>
+            <h4 class="text-lg font-semibold text-gray-700"><%= user?.firstname %> <%= user?.lastname %></h4>
+            <p class="text-sm text-gray-500"><%= user?.email %></p>
         </div>
     </div>
     <div class="mt-6">
@@ -20,7 +20,7 @@
             <a href="/wishlist" class="flex items-center px-4 py-2 rounded <%= currentPage === 'wishlist' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
                 <i class="fas fa-heart mr-2"></i> Wishlist
             </a>
-            <a href="/addresses" class="flex items-center px-4 py-2 rounded <%= currentPage === 'addresses' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
+            <a href="/address" class="flex items-center px-4 py-2 rounded <%= currentPage === 'address' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
                 <i class="fas fa-map-marker-alt mr-2"></i> Address Management
             </a>
             <a href="/wallet" class="flex items-center px-4 py-2 rounded <%= currentPage === 'wallet' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
