@@ -230,7 +230,7 @@ const postLogin = async (req, res) => {
         }
 
         // Set session
-        req.session.userId = user._id;
+        req.session.userId = userId;
         req.session.email = user.email;
         req.session.isLoggedIn = true;
         req.session.user = {

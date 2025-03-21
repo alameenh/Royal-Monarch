@@ -1,0 +1,207 @@
+<%- include("../partials/navbar") %>
+
+<div class="container mx-auto px-4 py-8">
+    <div class="flex flex-col md:flex-row gap-8">
+        <!-- Sidebar -->
+        <div class="md:w-1/4">
+            <%- include("../partials/profileSidebar", { currentPage: 'wishlist', user: user }) %>
+        </div>
+
+        <!-- Main Content -->
+        <div class="md:w-3/4">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold">My Wishlist</h1>
+                    <p class="text-gray-600 mt-2">Your favorite items (<%= wishlistItems.length %> items)</p>
+                </div>
+
+                <% if (wishlistItems && wishlistItems.length > 0) { %>
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        <% wishlistItems.forEach(item => { %>
+                            <div class="border rounded-lg overflow-hidden group hover:shadow-lg transition-shadow">
+                                <!-- Product Card -->
+                                <div class="relative">
+                                    <!-- Product Image -->
+                                    <a href="/product/view/<%= item._id %>">
+                                        <div class="aspect-w-1 aspect-h-1 overflow-hidden">
+                                            <img 
+                                                src="<%= item.images[0].path %>" 
+                                                alt="<%= item.name %>" 
+                                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            >
+                                        </div>
+                                    </a>
+
+                                    <!-- Remove from Wishlist Button -->
+                                    <button 
+                                        onclick="removeFromWishlist('<%= item._id %>')"
+                                        class="absolute top-2 right-2 p-2 rounded-full bg-white shadow-md hover:bg-gray-100 transition-colors"
+                                    >
+                                        <i class="fas fa-heart text-red-500"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Product Details -->
+                                <div class="p-4 space-y-2">
+                                    <h3 class="font-semibold text-lg truncate">
+                                        <a href="/product/view/<%= item._id %>" class="hover:text-blue-600">
+                                            <%= item.name %>
+                                        </a>
+                                    </h3>
+                                    <p class="text-gray-600"><%= item.brand %></p>
+                                    
+                                    <!-- Variant Selection -->
+                                    <div class="mt-2">
+                                        <label class="text-sm text-gray-600">Select Variant:</label>
+                                        <select class="w-full mt-1 p-2 border rounded text-sm" 
+                                                onchange='updateVariantPrice(this, <%- JSON.stringify(item.variants) %>)'
+                                                data-product-id="<%= item._id %>"
+                                                data-discount="<%= item.variants[0].discount %>">
+                                            <% item.variants.forEach((variant, index) => { %>
+                                                <option value="<%= index %>">
+                                                    <%= variant.type %> 
+                                                </option>
+                                            <% }); %>
+                                        </select>
+                                    </div>
+
+                                    <!-- Price Display -->
+                                    <% const variant = item.variants[0]; %>
+                                    <% const discountedPrice = Math.round(variant.price * (1 - variant.discount/100)); %>
+                                    <div class="flex items-center justify-between mt-3" id="price-<%= item._id %>">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-lg font-bold text-gray-900">₹<%= discountedPrice %></span>
+                                            <% if (variant.discount > 0) { %>
+                                                <span class="text-sm text-gray-500 line-through">₹<%= variant.price %></span>
+                                            <% } %>
+                                        </div>
+                                        <% if (variant.discount > 0) { %>
+                                            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-medium">
+                                                <%= variant.discount %>% OFF
+                                            </span>
+                                        <% } %>
+                                    </div>
+
+                                    <!-- Add to Cart Button -->
+                                    <button 
+                                        onclick="addToCart('<%= item._id %>', this.closest('.p-4').querySelector('select').value)"
+                                        class="w-full mt-4 bg-black text-white py-2 rounded-lg hover:bg-gray-800 transition-colors"
+                                    >
+                                        Add to Cart
+                                    </button>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } else { %>
+                    <div class="text-center py-16">
+                        <div class="text-gray-400 mb-4">
+                            <i class="fas fa-heart text-6xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-semibold text-gray-600 mb-4">Your wishlist is empty</h2>
+                        <p class="text-gray-500 mb-8">Browse our products and add your favorites to the wishlist!</p>
+                        <a href="/" class="inline-block bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors">
+                            Continue Shopping
+                        </a>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include("../partials/footer") %>
+
+<script>
+async function removeFromWishlist(productId) {
+    try {
+        const response = await fetch(`/wishlist/remove/${productId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Refresh the page to update the wishlist
+            location.reload();
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to remove item from wishlist'
+        });
+    }
+}
+
+function updateVariantPrice(select, variants) {
+    const selectedVariant = variants[select.value];
+    const productId = select.dataset.productId;
+    const discount = selectedVariant.discount;
+    const priceContainer = document.getElementById(`price-${productId}`);
+    
+    const originalPrice = selectedVariant.price;
+    const discountedPrice = Math.round(originalPrice * (1 - discount/100));
+
+    let priceHTML = `
+        <div class="flex items-center gap-2">
+            <span class="text-lg font-bold text-gray-900">₹${discountedPrice}</span>
+            ${discount > 0 ? `
+                <span class="text-sm text-gray-500 line-through">₹${originalPrice}</span>
+            ` : ''}
+        </div>
+        ${discount > 0 ? `
+            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-medium">
+                ${discount}% OFF
+            </span>
+        ` : ''}
+    `;
+    
+    priceContainer.innerHTML = priceHTML;
+    priceContainer.className = 'flex items-center justify-between mt-3';
+}
+
+// Update addToCart function to use selected variant
+async function addToCart(productId, variantIndex) {
+    try {
+        const select = document.querySelector(`select[data-product-id="${productId}"]`);
+        const selectedOption = select.options[select.selectedIndex];
+        const variantType = selectedOption.text.split(' - ')[0]; // Get variant type from option text
+
+        const response = await fetch('/cart/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                productId,
+                variantType
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Added to Cart!',
+                showConfirmButton: false,
+                timer: 1500
+            });
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to add to cart'
+        });
+    }
+}
+</script>

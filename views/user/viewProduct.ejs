@@ -18,19 +18,26 @@
             </div>
 
             <!-- Main Image -->
-            <div class="flex-grow">
-                <img 
-                    id="mainImage" 
-                    src="<%= product.images[0].path %>" 
-                    alt="<%= product.name %>" 
-                    class="w-full h-auto object-cover rounded-lg"
-                >
+            <div class="flex-grow relative overflow-hidden">
+                <div class="image-zoom-container w-full">
+                    <img 
+                        id="mainImage" 
+                        src="<%= product.images[0].path %>" 
+                        alt="<%= product.name %>" 
+                        class="w-full h-auto object-cover rounded-lg"
+                    >
+                </div>
             </div>
         </div>
 
         <!-- Product Details -->
         <div class="w-full md:w-1/2 space-y-6">
-            <h1 class="text-3xl font-bold"><%= product.name %></h1>
+            <div class="flex items-center justify-between mb-4">
+                <h1 class="text-3xl font-bold"><%= product.name %></h1>
+                <button id="wishlistBtn" class="focus:outline-none" onclick="toggleWishlist('<%= product._id %>')">
+                    <i class="fas fa-heart text-2xl <%= isInWishlist ? 'text-red-500' : 'text-gray-400' %>"></i>
+                </button>
+            </div>
             <p class="text-gray-600"><%= product.description %></p>
             
             <div class="space-y-2">
@@ -132,9 +139,31 @@
 
 <%- include("../partials/footer") %>
 
+<style>
+.image-zoom-container {
+    position: relative;
+    overflow: hidden;
+    cursor: zoom-in;
+}
+
+.image-zoom-container img {
+    transition: transform 0.3s ease;
+    transform-origin: center center;
+}
+
+.zoomed {
+    position: relative;
+    transform: scale(2);
+}
+</style>
+
 <script>
 function updateMainImage(src) {
-    document.getElementById('mainImage').src = src;
+    const mainImage = document.getElementById('mainImage');
+    mainImage.src = src;
+    // Reset zoom state when changing images
+    mainImage.classList.remove('zoomed');
+    mainImage.style.transformOrigin = 'center center';
 }
 
 function updateVariantDetails() {
@@ -260,4 +289,97 @@ async function buyNow(productId) {
         });
     }
 }
+
+function toggleWishlist(productId) {
+    fetch(`/wishlist/toggle/${productId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const wishlistBtn = document.getElementById('wishlistBtn').querySelector('i');
+            
+            if (data.added) {
+                // Product was added to wishlist
+                wishlistBtn.classList.remove('text-gray-400');
+                wishlistBtn.classList.add('text-red-500');
+                
+                // Show success message
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Added to Wishlist',
+                    text: 'This product has been added to your wishlist',
+                    confirmButtonColor: '#3085d6',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+            } else {
+                // Product was removed from wishlist
+                wishlistBtn.classList.remove('text-red-500');
+                wishlistBtn.classList.add('text-gray-400');
+                
+                // Show removed message
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Removed from Wishlist',
+                    text: 'This product has been removed from your wishlist',
+                    confirmButtonColor: '#3085d6',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+            }
+        } else {
+            // Show error message
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.message || 'Something went wrong',
+                confirmButtonColor: '#3085d6'
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error toggling wishlist:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to update wishlist. Please try again.',
+            confirmButtonColor: '#3085d6'
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.querySelector('.image-zoom-container');
+    const img = document.getElementById('mainImage');
+    
+    container.addEventListener('mousemove', function(e) {
+        if (!img.classList.contains('zoomed')) {
+            img.classList.add('zoomed');
+        }
+        
+        const rect = container.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        // Calculate the position in percentages
+        const xPercent = (x / rect.width) * 100;
+        const yPercent = (y / rect.height) * 100;
+        
+        // Update transform origin based on mouse position
+        img.style.transformOrigin = `${xPercent}% ${yPercent}%`;
+    });
+    
+    container.addEventListener('mouseleave', function() {
+        img.classList.remove('zoomed');
+        img.style.transformOrigin = 'center center';
+    });
+});
 </script>

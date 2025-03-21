@@ -5,6 +5,7 @@ import userMiddleware from '../middleware/userMiddleware.js';
 import viewProductController from '../controller/user/viewProductController.js';
 import { profileController, upload } from '../controller/user/profileController.js';
 import addressController from '../controller/user/addressController.js';
+import wishlistController from '../controller/user/wishlistController.js';
 
 
 const router = express.Router();
@@ -64,5 +65,10 @@ router.post('/address/add', userMiddleware.checkSession, addressController.addAd
 router.get('/address/:id', userMiddleware.checkSession, addressController.getAddressById);
 router.post('/address/update', userMiddleware.checkSession, addressController.updateAddress);
 router.post('/address/delete', userMiddleware.checkSession, addressController.deleteAddress);
+
+// Wishlist routes
+router.post('/wishlist/toggle/:productId', userMiddleware.checkSession, viewProductController.toggleWishlist);
+router.get('/wishlist', userMiddleware.checkSession, wishlistController.getWishlist);
+router.delete('/wishlist/remove/:productId', userMiddleware.checkSession, wishlistController.removeFromWishlist);
 
 export default router;

@@ -1,11 +1,13 @@
 import Product from '../../model/productModel.js';
 import Category from '../../model/categoryModel.js';
 import User from '../../model/userModel.js';
+import Wishlist from '../../model/wishlistModel.js';
 import mongoose from 'mongoose';
 
 const getProductDetails = async (req, res) => {
     try {
         const productId = req.params.productId;
+        const userId = req.session.userId;
         
         // Fetch product and check both product and category status
         const product = await Product.aggregate([
@@ -45,6 +47,16 @@ const getProductDetails = async (req, res) => {
             discountedPrice: Math.round(variant.price * (1 - productData.discount / 100))
         }));
 
+        // Check if the product is in user's wishlist
+        let isInWishlist = false;
+        if (userId) {
+            const wishlist = await Wishlist.findOne({ 
+                userId: userId,
+                products: new mongoose.Types.ObjectId(productId)
+            });
+            isInWishlist = !!wishlist;
+        }
+
         // Fetch similar products (also only from active categories)
         const similarProducts = await Product.aggregate([
             {
@@ -74,7 +86,8 @@ const getProductDetails = async (req, res) => {
 
         return res.render('user/viewProduct', {
             product: productData,
-            similarProducts
+            similarProducts,
+            isInWishlist: isInWishlist
         });
 
     } catch (error) {
@@ -183,8 +196,79 @@ const searchProducts = async (req, res) => {
     }
 };
 
+// Add a new method to toggle wishlist status
+const toggleWishlist = async (req, res) => {
+    try {
+        const productId = req.params.productId;
+        const userId = req.session.userId;
+        const WISHLIST_LIMIT = 10;  // Define the wishlist limit
+        
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Please login to add items to wishlist'
+            });
+        }
+        
+        // Find user's wishlist
+        let wishlist = await Wishlist.findOne({ userId });
+        
+        // If no wishlist exists, create one
+        if (!wishlist) {
+            wishlist = new Wishlist({
+                userId,
+                products: [productId]
+            });
+            await wishlist.save();
+            return res.json({
+                success: true,
+                added: true,
+                message: 'Product added to wishlist'
+            });
+        }
+        
+        // Check if product is already in wishlist
+        const productIndex = wishlist.products.indexOf(productId);
+        
+        if (productIndex > -1) {
+            // Remove from wishlist
+            wishlist.products.splice(productIndex, 1);
+            await wishlist.save();
+            return res.json({
+                success: true,
+                added: false,
+                message: 'Product removed from wishlist'
+            });
+        } else {
+            // Check wishlist limit before adding
+            if (wishlist.products.length >= WISHLIST_LIMIT) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Wishlist limit reached (maximum 10 items)'
+                });
+            }
+            
+            // Add to wishlist
+            wishlist.products.push(productId);
+            await wishlist.save();
+            return res.json({
+                success: true,
+                added: true,
+                message: 'Product added to wishlist'
+            });
+        }
+    } catch (error) {
+        console.error('Toggle Wishlist Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error updating wishlist'
+        });
+    }
+};
+
 export default {
     getProductDetails,
     getProductsByCategory,
-    searchProducts
+    searchProducts,
+    toggleWishlist
 };
