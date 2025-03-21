@@ -2,6 +2,7 @@ import Product from '../../model/productModel.js';
 import Category from '../../model/categoryModel.js';
 import User from '../../model/userModel.js';
 import Wishlist from '../../model/wishlistModel.js';
+import CartItem from '../../model/cartModel.js';
 import mongoose from 'mongoose';
 
 const getProductDetails = async (req, res) => {
@@ -41,10 +42,22 @@ const getProductDetails = async (req, res) => {
         // Get the first (and only) product from aggregate result
         const productData = product[0];
 
-        // Calculate discounted prices for variants
+        // Update the cart items query to include variant information
+        const cartItems = await CartItem.find({ 
+            userId: userId,
+            productId: productId
+        });
+
+        // Create a map of variant types in cart
+        const cartVariants = cartItems.reduce((acc, item) => {
+            acc[item.variantType] = true;
+            return acc;
+        }, {});
+
+        // Add inCart status to variants
         productData.variants = productData.variants.map(variant => ({
             ...variant,
-            discountedPrice: Math.round(variant.price * (1 - productData.discount / 100))
+            inCart: !!cartVariants[variant.type]
         }));
 
         // Check if the product is in user's wishlist

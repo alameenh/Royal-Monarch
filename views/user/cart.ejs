@@ -1,0 +1,219 @@
+<%- include('../partials/navbar') %>
+
+<div class="container mx-auto px-4 py-8">
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Sidebar -->
+        <div class="lg:w-1/4">
+            <%- include('../partials/profileSidebar') %>
+        </div>
+
+        <!-- Main Content -->
+        <div class="lg:w-3/4">
+            <div class="flex flex-col md:flex-row gap-8">
+                <!-- Cart Items -->
+                <div class="md:w-2/3">
+                    <h2 class="text-2xl font-bold mb-6">Shopping Cart</h2>
+                    
+                    <% if (cartItems && cartItems.length > 0) { %>
+                        <div class="space-y-4">
+                            <% cartItems.forEach(item => { %>
+                                <% if (item.productId && item.productId.status === 'Active') { %>
+                                    <div class="flex flex-col md:flex-row gap-4 p-4 border rounded-lg shadow-sm">
+                                        <!-- Product Image -->
+                                        <div class="w-full md:w-32 h-32">
+                                            <img src="<%= item.productId.images[0].path %>" 
+                                                 alt="<%= item.productId.name %>"
+                                                 class="w-full h-full object-cover rounded">
+                                        </div>
+
+                                        <!-- Product Details -->
+                                        <div class="flex-grow space-y-2">
+                                            <h3 class="text-lg font-semibold"><%= item.productId.name %></h3>
+                                            <p class="text-gray-600">Variant: <%= item.variantType %></p>
+                                            
+                                            <!-- Add stock information -->
+                                            <p class="text-sm <%= item.stock < 5 ? 'text-red-600' : 'text-green-600' %>">
+                                                <% if (item.stock === 0) { %>
+                                                    Out of Stock
+                                                <% } else { %>
+                                                    <%= item.stock %> units available
+                                                <% } %>
+                                            </p>
+                                            
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-lg font-bold">₹<%= item.discountedPrice %></span>
+                                                <% if (item.discount > 0) { %>
+                                                    <span class="text-sm text-gray-500 line-through">₹<%= item.price %></span>
+                                                    <span class="text-sm text-red-600">(<%= item.discount %>% OFF)</span>
+                                                <% } %>
+                                            </div>
+
+                                            <!-- Update quantity controls to consider stock -->
+                                            <div class="flex items-center gap-4">
+                                                <label class="text-sm text-gray-600">Quantity:</label>
+                                                <div class="flex items-center border rounded">
+                                                    <button onclick="updateQuantity('<%= item.productId._id %>', '<%= item.variantType %>', <%= item.quantity - 1 %>)"
+                                                            class="px-3 py-1 border-r hover:bg-gray-100 <%= item.quantity <= 1 ? 'opacity-50 cursor-not-allowed' : '' %>"
+                                                            <%= item.quantity <= 1 ? 'disabled' : '' %>>
+                                                        -
+                                                    </button>
+                                                    <span class="px-4 py-1"><%= item.quantity %></span>
+                                                    <button onclick="updateQuantity('<%= item.productId._id %>', '<%= item.variantType %>', <%= item.quantity + 1 %>)"
+                                                            class="px-3 py-1 border-l hover:bg-gray-100 <%= (item.quantity >= 4 || item.quantity >= item.stock) ? 'opacity-50 cursor-not-allowed' : '' %>"
+                                                            <%= (item.quantity >= 4 || item.quantity >= item.stock) ? 'disabled' : '' %>>
+                                                        +
+                                                    </button>
+                                                </div>
+                                                <% if (item.stock < item.quantity) { %>
+                                                    <p class="text-sm text-red-600">
+                                                        Quantity adjusted due to stock availability
+                                                    </p>
+                                                <% } %>
+                                            </div>
+
+                                            <p class="font-semibold">Total: ₹<%= item.totalPrice %></p>
+
+                                            <!-- Remove Button -->
+                                            <button onclick="removeFromCart('<%= item.productId._id %>', '<%= item.variantType %>')"
+                                                    class="text-red-600 hover:text-red-800">
+                                                <i class="fas fa-trash"></i> Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                <% } %>
+                            <% }); %>
+                        </div>
+                    <% } else { %>
+                        <div class="text-center py-8">
+                            <i class="fas fa-shopping-cart text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-gray-600">Your cart is empty</p>
+                            <a href="/shop" class="inline-block mt-4 px-6 py-2 bg-black text-white rounded hover:bg-gray-800">
+                                Continue Shopping
+                            </a>
+                        </div>
+                    <% } %>
+                </div>
+
+                <!-- Order Summary -->
+                <div class="md:w-1/3">
+                    <div class="bg-gray-50 p-6 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-bold mb-4">Order Summary</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span>Subtotal</span>
+                                <span>₹<%= subtotal %></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Shipping</span>
+                                <span>₹<%= shippingCost %></span>
+                            </div>
+                            <div class="border-t pt-3">
+                                <div class="flex justify-between font-bold">
+                                    <span>Total</span>
+                                    <span>₹<%= total %></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <% 
+                        // Check if there are any active products in cart
+                        const hasActiveProducts = cartItems.some(item => 
+                            item.productId && item.productId.status === 'Active'
+                        ); 
+                        %>
+
+                        <% if (hasActiveProducts) { %>
+                            <button onclick="proceedToCheckout()"
+                                    class="w-full mt-6 px-6 py-3 bg-black text-white rounded hover:bg-gray-800 transition-colors">
+                                Proceed to Checkout
+                            </button>
+                        <% } else if (cartItems.length > 0) { %>
+                            <p class="text-red-600 text-sm mt-4 text-center">
+                                No active products in cart. Please remove inactive items or add new products.
+                            </p>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>
+
+<script>
+async function updateQuantity(productId, variantType, newQuantity) {
+    if (newQuantity < 1 || newQuantity > 4) return;
+
+    try {
+        const response = await fetch('/cart/update-quantity', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                productId,
+                variantType,
+                quantity: newQuantity
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            location.reload();
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to update quantity'
+        });
+    }
+}
+
+async function removeFromCart(productId, variantType) {
+    try {
+        const result = await Swal.fire({
+            title: 'Remove Item?',
+            text: 'Are you sure you want to remove this item from your cart?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, remove it!'
+        });
+
+        if (result.isConfirmed) {
+            const response = await fetch('/cart/remove', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    productId,
+                    variantType
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                location.reload();
+            } else {
+                throw new Error(data.message);
+            }
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to remove item'
+        });
+    }
+}
+
+function proceedToCheckout() {
+    window.location.href = '/checkout';
+}
+</script>
