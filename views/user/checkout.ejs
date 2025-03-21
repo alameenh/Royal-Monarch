@@ -1,0 +1,190 @@
+<%- include('../partials/navbar') %>
+
+<div class="container mx-auto px-4 py-8">
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Sidebar -->
+        <div class="lg:w-1/4">
+            <%- include('../partials/profileSidebar') %>
+        </div>
+
+        <!-- Main Content -->
+        <div class="lg:w-3/4">
+            <h1 class="text-2xl font-bold mb-6">Checkout</h1>
+
+            <!-- Shipping Address Section -->
+            <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-xl font-semibold">Shipping Address</h2>
+                    <a href="/address" class="text-blue-600 hover:text-blue-800 text-sm">
+                        Add New Address
+                    </a>
+                </div>
+
+                <div class="space-y-3">
+                    <% if (addresses && addresses.length > 0) { %>
+                        <% addresses.forEach(address => { %>
+                            <div class="border rounded-lg p-3 hover:border-black transition-colors">
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input type="radio" 
+                                           name="selectedAddress" 
+                                           value="<%= address._id %>"
+                                           class="mt-1"
+                                           required>
+                                    <div class="text-sm">
+                                        <p class="font-semibold"><%= address.name %></p>
+                                        <p class="text-gray-600">
+                                            <%= address.houseName %>, 
+                                            <%= address.localityStreet %>, 
+                                            <%= address.city %>, 
+                                            <%= address.state %> - <%= address.pincode %>
+                                        </p>
+                                        <p class="text-gray-600">
+                                            Ph: <%= address.phone %>
+                                            <% if (address.alternatePhone) { %>
+                                                | Alt: <%= address.alternatePhone %>
+                                            <% } %>
+                                        </p>
+                                    </div>
+                                </label>
+                            </div>
+                        <% }); %>
+                    <% } else { %>
+                        <p class="text-center text-gray-600 text-sm py-2">
+                            No addresses found. Please add a delivery address.
+                        </p>
+                    <% } %>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-8">
+                <!-- Order Items -->
+                <div class="md:w-2/3">
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h2 class="text-xl font-semibold mb-4">Order Items</h2>
+                        <div class="space-y-4">
+                            <% cartItems.forEach(item => { %>
+                                <div class="flex gap-4 border-b pb-4">
+                                    <img src="<%= item.productId.images[0].path %>" 
+                                         alt="<%= item.productId.name %>"
+                                         class="w-20 h-20 object-cover rounded">
+                                    <div class="flex-grow">
+                                        <h3 class="font-semibold"><%= item.productId.name %></h3>
+                                        <p class="text-gray-600">Variant: <%= item.variantType %></p>
+                                        <p class="text-gray-600">Quantity: <%= item.quantity %></p>
+                                        <p class="font-semibold">₹<%= item.totalPrice %></p>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Summary -->
+                <div class="md:w-1/3">
+                    <div class="bg-white p-6 rounded-lg shadow-md sticky top-4">
+                        <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span>Subtotal</span>
+                                <span>₹<%= subtotal %></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Shipping</span>
+                                <span>₹<%= shippingCost %></span>
+                            </div>
+                            <div class="border-t pt-3">
+                                <div class="flex justify-between font-bold">
+                                    <span>Total</span>
+                                    <span>₹<%= total %></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Method Selection -->
+                        <div class="mt-6">
+                            <h3 class="font-semibold mb-3">Payment Method</h3>
+                            <div class="space-y-2">
+                                <label class="flex items-center gap-2">
+                                    <input type="radio" name="paymentMethod" value="cod" checked>
+                                    <span>Cash on Delivery</span>
+                                </label>
+                                <label class="flex items-center gap-2">
+                                    <input type="radio" name="paymentMethod" value="online">
+                                    <span>Online Payment</span>
+                                </label>
+                                <label class="flex items-center gap-2">
+                                    <input type="radio" name="paymentMethod" value="wallet">
+                                    <span>Wallet</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Place Order Button -->
+                        <button onclick="placeOrder()"
+                                class="w-full mt-6 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors">
+                            Place Order
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function placeOrder() {
+    try {
+        const selectedAddress = document.querySelector('input[name="selectedAddress"]:checked');
+        const selectedPaymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
+
+        if (!selectedAddress) {
+            throw new Error('Please select a delivery address');
+        }
+
+        if (!selectedPaymentMethod) {
+            throw new Error('Please select a payment method');
+        }
+
+        const response = await fetch('/order/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                addressId: selectedAddress.value,
+                paymentMethod: selectedPaymentMethod.value
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            if (data.paymentMethod === 'online') {
+                // Handle online payment
+                // Implement Razorpay integration here
+            } else {
+                // For COD and wallet payments
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Order Placed Successfully!',
+                    text: 'Thank you for your order',
+                    showConfirmButton: false,
+                    timer: 2000
+                }).then(() => {
+                    window.location.href = `/order/${data.orderId}`;
+                });
+            }
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to place order'
+        });
+    }
+}
+</script>
+
+<%- include('../partials/footer') %>

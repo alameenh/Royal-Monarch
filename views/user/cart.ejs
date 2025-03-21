@@ -18,7 +18,13 @@
                         <div class="space-y-4">
                             <% cartItems.forEach(item => { %>
                                 <% if (item.productId && item.productId.status === 'Active') { %>
-                                    <div class="flex flex-col md:flex-row gap-4 p-4 border rounded-lg shadow-sm">
+                                    <div class="flex flex-col md:flex-row gap-4 p-4 border rounded-lg shadow-sm relative">
+                                        <!-- Replace the current remove button -->
+                                        <button onclick="removeFromCart('<%= item.productId._id %>', '<%= item.variantType %>')"
+                                                class="absolute top-2 right-2 text-red-600 hover:text-red-800 p-2">
+                                            <i class="fas fa-trash"></i> Remove
+                                        </button>
+
                                         <!-- Product Image -->
                                         <div class="w-full md:w-32 h-32">
                                             <img src="<%= item.productId.images[0].path %>" 
@@ -48,7 +54,7 @@
                                                 <% } %>
                                             </div>
 
-                                            <!-- Update quantity controls to consider stock -->
+                                            <!-- Quantity Controls -->
                                             <div class="flex items-center gap-4">
                                                 <label class="text-sm text-gray-600">Quantity:</label>
                                                 <div class="flex items-center border rounded">
@@ -72,12 +78,6 @@
                                             </div>
 
                                             <p class="font-semibold">Total: ₹<%= item.totalPrice %></p>
-
-                                            <!-- Remove Button -->
-                                            <button onclick="removeFromCart('<%= item.productId._id %>', '<%= item.variantType %>')"
-                                                    class="text-red-600 hover:text-red-800">
-                                                <i class="fas fa-trash"></i> Remove
-                                            </button>
                                         </div>
                                     </div>
                                 <% } %>

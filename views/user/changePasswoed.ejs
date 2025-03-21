@@ -1,0 +1,160 @@
+<%- include('../partials/navbar') %>
+
+<div class="container mx-auto px-4 py-8">
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Sidebar -->
+        <div class="lg:w-1/4">
+            <%- include('../partials/profileSidebar') %>
+        </div>
+
+        <!-- Main Content -->
+        <div class="lg:w-3/4">
+            <div class="bg-white p-6 rounded-lg shadow-md max-w-md mx-auto">
+                <h2 class="text-2xl font-bold mb-6">Change Password</h2>
+                
+                <form id="changePasswordForm" class="space-y-4">
+                    <!-- Current Password -->
+                    <div>
+                        <label for="currentPassword" class="block text-sm font-medium text-gray-700 mb-1">
+                            Current Password
+                        </label>
+                        <div class="relative">
+                            <input type="password" 
+                                   id="currentPassword" 
+                                   name="currentPassword"
+                                   class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black pr-10"
+                                   required>
+                            <button type="button" 
+                                    onclick="togglePassword('currentPassword')"
+                                    class="absolute inset-y-0 right-0 px-3 flex items-center">
+                                <i class="fas fa-eye text-gray-400 hover:text-gray-600" id="currentPassword-icon"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- New Password -->
+                    <div>
+                        <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-1">
+                            New Password
+                        </label>
+                        <div class="relative">
+                            <input type="password" 
+                                   id="newPassword" 
+                                   name="newPassword"
+                                   class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black pr-10"
+                                   required
+                                   minlength="6">
+                            <button type="button" 
+                                    onclick="togglePassword('newPassword')"
+                                    class="absolute inset-y-0 right-0 px-3 flex items-center">
+                                <i class="fas fa-eye text-gray-400 hover:text-gray-600" id="newPassword-icon"></i>
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Password must be at least 6 characters long
+                        </p>
+                    </div>
+
+                    <!-- Confirm New Password -->
+                    <div>
+                        <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">
+                            Confirm New Password
+                        </label>
+                        <div class="relative">
+                            <input type="password" 
+                                   id="confirmPassword" 
+                                   name="confirmPassword"
+                                   class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black pr-10"
+                                   required>
+                            <button type="button" 
+                                    onclick="togglePassword('confirmPassword')"
+                                    class="absolute inset-y-0 right-0 px-3 flex items-center">
+                                <i class="fas fa-eye text-gray-400 hover:text-gray-600" id="confirmPassword-icon"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit"
+                            class="w-full bg-black text-white py-2 px-4 rounded-md hover:bg-gray-800 transition-colors">
+                        Update Password
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>
+
+<script>
+document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    // Client-side validation
+    if (newPassword !== confirmPassword) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Password Mismatch',
+            text: 'New password and confirm password do not match'
+        });
+        return;
+    }
+
+    try {
+        const response = await fetch('/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                currentPassword,
+                newPassword,
+                confirmPassword
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: data.message,
+                showConfirmButton: false,
+                timer: 1500
+            }).then(() => {
+                // Clear form
+                e.target.reset();
+            });
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to update password'
+        });
+    }
+});
+
+function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(`${inputId}-icon`);
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+</script>

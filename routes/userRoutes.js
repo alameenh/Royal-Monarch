@@ -7,6 +7,7 @@ import { profileController, upload } from '../controller/user/profileController.
 import addressController from '../controller/user/addressController.js';
 import wishlistController from '../controller/user/wishlistController.js';
 import cartController from '../controller/user/cartController.js';
+import orderController from '../controller/user/orderController.js';
 
 
 const router = express.Router();
@@ -77,5 +78,13 @@ router.get('/cart', userMiddleware.checkSession, cartController.getCart);
 router.post('/cart/add', userMiddleware.checkSession, cartController.addToCart);
 router.post('/cart/remove', userMiddleware.checkSession, cartController.removeFromCart);
 router.post('/cart/update-quantity', userMiddleware.checkSession, cartController.updateQuantity);
+
+// Add these routes
+router.get('/change-password', userMiddleware.checkSession, userController.getChangePassword);
+router.post('/change-password', userMiddleware.checkSession, userController.postChangePassword);
+
+// Order routes
+router.get('/checkout', userMiddleware.checkSession, orderController.getCheckout);
+router.post('/order/create', userMiddleware.checkSession, orderController.createOrder);
 
 export default router;
