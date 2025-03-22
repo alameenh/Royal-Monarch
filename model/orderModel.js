@@ -10,7 +10,17 @@ const orderItemSchema = new mongoose.Schema({
   discount: { type: Number, default: 0 },
   status: {
     type: String,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'return requested', 'returned'],
+    enum: [
+      'pending',           // Initial status when order is placed
+      'processing',        // Admin started processing the order
+      'shipped',          // Order has been shipped
+      'delivered',        // Order has been delivered
+      'cancelled',        // User cancelled the order
+      'order rejected',   // Admin rejected the order
+      'return requested', // User requested a return
+      'returned',         // Return accepted and completed
+      'return rejected'   // Return request was rejected
+    ],
     default: 'pending'
   },
   shippedDate: { type: Date },

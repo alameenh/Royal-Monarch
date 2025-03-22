@@ -20,7 +20,7 @@ const postSignup = async (req, res) => {
     try {
         const { firstName, lastName, email, password } = req.body;
 
-
+        console.log("email in post signup",req.body.email);
         if (!firstName || !lastName || !email || !password) {
             return res.status(400).json({ success: false, message: 'All fields are required' });
         }
@@ -111,6 +111,9 @@ const verifyOtp = async (req, res) => {
     if (user.otp.otpValue === otp) {
         user.status = 'Active';
         user.otp = null; 
+        req.session.userId = user._id;
+        req.session.email = user.email;
+        req.session.isLoggedIn = true;
         await user.save();
         return res.json({ success: true, message: 'OTP verified successfully' });
     } else {
@@ -230,7 +233,7 @@ const postLogin = async (req, res) => {
         }
 
         // Set session
-        req.session.userId = userId;
+        req.session.userId =user._id;
         req.session.email = user.email;
         req.session.isLoggedIn = true;
         req.session.user = {

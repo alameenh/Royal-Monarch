@@ -4,6 +4,8 @@
     <title>Admin Dashboard</title>
     <!-- Add Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
     <!-- Add SweetAlert2 for better alerts -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Add Font Awesome for icons -->
@@ -12,39 +14,8 @@
 <body class="flex h-screen bg-gray-100">
     <!-- Sidebar -->
     <div class="w-64 bg-black text-white h-full">
-        <div class="p-4">
-            <h2 class="text-2xl font-bold mb-6 text-center">Admin Panel</h2>
-            <nav class="space-y-2">
-                <a href="/admin/dashboard" class="flex items-center space-x-2 p-2 hover:bg-gray-800 rounded transition-colors">
-                    <i class="fas fa-tachometer-alt w-6"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="/admin/list-users" class="flex items-center space-x-2 p-2 hover:bg-gray-800 rounded transition-colors">
-                    <i class="fas fa-users w-6"></i>
-                    <span>Users</span>
-                </a>
-                <a href="/admin/category" class="flex items-center space-x-2 p-2 hover:bg-gray-800 rounded transition-colors">
-                    <i class="fas fa-list w-6"></i>
-                    <span>Categories</span>
-                </a>
-                <a href="/admin/product" class="flex items-center space-x-2 p-2 hover:bg-gray-800 rounded transition-colors">
-                    <i class="fas fa-box w-6"></i>
-                    <span>Products</span>
-                </a>
-                <a href="/admin/orders" class="flex items-center space-x-2 p-2 hover:bg-gray-800 rounded transition-colors">
-                    <i class="fas fa-shopping-cart w-6"></i>
-                    <span>Orders</span>
-                </a>
-                <a href="/admin/coupons" class="flex items-center space-x-2 p-2 hover:bg-gray-800 rounded transition-colors">
-                    <i class="fas fa-ticket-alt w-6"></i>
-                    <span>Coupons</span>
-                </a>
-                <a href="/admin/sales-report" class="flex items-center space-x-2 p-2 hover:bg-gray-800 rounded transition-colors">
-                    <i class="fas fa-chart-line w-6"></i>
-                    <span>Sales Report</span>
-                </a>
-            </nav>
-        </div>
+        <%- include("../partials/sidebar") %>
+
         <!-- Logout button at bottom of sidebar -->
         <div class="absolute bottom-0 w-64 p-4">
             <button 

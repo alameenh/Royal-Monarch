@@ -87,4 +87,13 @@ router.post('/change-password', userMiddleware.checkSession, userController.post
 router.get('/checkout', userMiddleware.checkSession, orderController.getCheckout);
 router.post('/order/create', userMiddleware.checkSession, orderController.createOrder);
 
+// Order management routes
+router.get('/orders', userMiddleware.checkSession, orderController.getOrders);
+router.post('/order/:orderId/cancel/:itemId', userMiddleware.checkSession, orderController.cancelOrderItem);
+router.post('/order/:orderId/return/:itemId', userMiddleware.checkSession, orderController.requestReturn);
+
+// Add this route
+router.get('/order/success/:orderId', userMiddleware.checkSession, orderController.getOrderSuccess);
+router.get('/order/:orderId/invoice/:itemId', userMiddleware.checkSession, orderController.generateInvoice);
+
 export default router;

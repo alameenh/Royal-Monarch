@@ -1,5 +1,6 @@
 import Product from '../../model/productModel.js';
 import Category from '../../model/categoryModel.js';
+import mongoose from 'mongoose';
 
 const getShopPage = async (req, res) => {
     try {
@@ -20,48 +21,42 @@ const getProducts = async (req, res) => {
         const category = req.query.category || '';
         const sortBy = req.query.sortBy || 'createdAt';
         const order = req.query.order || 'desc';
-        const minPrice = parseInt(req.query.minPrice) || 0;
-        const maxPrice = parseInt(req.query.maxPrice) || Number.MAX_SAFE_INTEGER;
+        const minPrice = req.query.minPrice ? parseInt(req.query.minPrice) : 0;
+        const maxPrice = req.query.maxPrice ? parseInt(req.query.maxPrice) : Number.MAX_SAFE_INTEGER;
 
         // Build base query
-        let query = {
-            status: 'Active',
-            'variants.price': { $gte: minPrice, $lte: maxPrice }
-        };
+        let query = { status: 'Active' };
+
+        // Add price filter
+        if (minPrice || maxPrice) {
+            query['variants.0.price'] = { 
+                $gte: minPrice, 
+                $lte: maxPrice 
+            };
+        }
 
         // Add search conditions
         if (search) {
             query.$or = [
                 { name: { $regex: search, $options: 'i' } },
-                { brand: { $regex: search, $options: 'i' } }
+                { brand: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } }
             ];
         }
 
-        // Add category condition with active status check
+        // Add category filter
         if (category) {
-            // First check if category is active
-            const activeCategory = await Category.findOne({
-                _id: category,
-                status: 'Active'
-            });
-
-            if (!activeCategory) {
-                return res.json({
-                    success: true,
-                    products: [],
-                    pagination: {
-                        currentPage: 1,
-                        totalPages: 0,
-                        totalProducts: 0,
-                        hasNextPage: false,
-                        hasPrevPage: false
-                    }
-                });
-            }
-            query.category = category;
+            query.category = new mongoose.Types.ObjectId(category);
         }
 
-        // Add category status check to all queries
+        // Build sort configuration
+        let sortConfig = {};
+        if (sortBy === 'price') {
+            sortConfig['variants.0.price'] = order === 'desc' ? -1 : 1;
+        } else {
+            sortConfig[sortBy] = order === 'desc' ? -1 : 1;
+        }
+
         const products = await Product.aggregate([
             {
                 $lookup: {
@@ -72,13 +67,16 @@ const getProducts = async (req, res) => {
                 }
             },
             {
+                $unwind: '$categoryData'
+            },
+            {
                 $match: {
                     ...query,
                     'categoryData.status': 'Active'
                 }
             },
             {
-                $sort: { [sortBy]: order === 'desc' ? -1 : 1 }
+                $sort: sortConfig
             },
             {
                 $skip: (page - 1) * limit
@@ -88,7 +86,7 @@ const getProducts = async (req, res) => {
             }
         ]);
 
-        // Get total count for pagination
+        // Get total count
         const totalProducts = await Product.aggregate([
             {
                 $lookup: {
@@ -97,6 +95,9 @@ const getProducts = async (req, res) => {
                     foreignField: '_id',
                     as: 'categoryData'
                 }
+            },
+            {
+                $unwind: '$categoryData'
             },
             {
                 $match: {

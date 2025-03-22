@@ -4,6 +4,7 @@ import adminMiddleware from '../middleware/adminMiddleware.js';
 import userController from '../controller/admin/listUserController.js';
 import categoryController from '../controller/admin/categoryController.js';
 import productController from '../controller/admin/productController.js';
+import orderController from '../controller/admin/adminOrderController.js';
 
 const router = express.Router();
 
@@ -34,5 +35,9 @@ router.post('/product', adminMiddleware.checkSession, productController.addProdu
 router.put('/product/:id', adminMiddleware.checkSession, productController.updateProduct);
 
 router.patch('/products/:id/toggle-status', adminMiddleware.checkSession, productController.toggleProductStatus);
+
+router.get('/orders', adminMiddleware.checkSession, orderController.getOrders);
+router.get('/orders/search', adminMiddleware.checkSession, orderController.searchOrders);
+router.patch('/orders/:orderId/status', adminMiddleware.checkSession, orderController.updateOrderStatus);
 
 export default router; 

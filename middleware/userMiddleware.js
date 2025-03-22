@@ -26,10 +26,10 @@ const checkSession = async (req, res, next) => {
 
         if (user.status === 'Blocked') {
             req.session.destroy();
-            req.session.alert = {
-                message: 'Your account has been blocked',
-                type: 'error'
-            };
+            // req.session.alert = {
+            //     message: 'Your account has been blocked',
+            //     type: 'error'
+            // };
             return res.redirect('/');
         }
 

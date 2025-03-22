@@ -164,15 +164,7 @@ async function placeOrder() {
                 // Implement Razorpay integration here
             } else {
                 // For COD and wallet payments
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Order Placed Successfully!',
-                    text: 'Thank you for your order',
-                    showConfirmButton: false,
-                    timer: 2000
-                }).then(() => {
-                    window.location.href = `/order/${data.orderId}`;
-                });
+                window.location.href = data.redirect;
             }
         } else {
             throw new Error(data.message);

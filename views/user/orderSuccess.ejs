@@ -1,0 +1,52 @@
+<%- include('../partials/navbar') %>
+
+<div class="min-h-screen bg-gray-50 py-12">
+    <div class="container mx-auto px-4">
+        <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
+            <!-- Success Icon -->
+            <div class="w-20 h-20 mx-auto mb-6 bg-green-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-check-circle text-4xl text-green-500"></i>
+            </div>
+
+            <!-- Success Message -->
+            <h1 class="text-3xl font-bold text-gray-800 mb-4">
+                Order Placed Successfully!
+            </h1>
+            <p class="text-gray-600 mb-2">
+                Thank you for shopping with us.
+            </p>
+            <p class="text-gray-600 mb-6">
+                Your order ID is: <span class="font-semibold">#<%= orderId %></span>
+            </p>
+
+            <!-- Order Details -->
+            <div class="mb-8 text-left bg-gray-50 p-4 rounded-lg">
+                <h2 class="font-semibold text-gray-700 mb-2">Order Details:</h2>
+                <div class="space-y-2 text-sm text-gray-600">
+                    <p>Total Amount: ₹<%= totalAmount %></p>
+                    <p>Payment Method: <%= paymentMethod.toUpperCase() %></p>
+                    <p>Payment Status: 
+                        <span class="<%= paymentStatus === 'paid' ? 'text-green-600' : 'text-orange-600' %>">
+                            <%= paymentStatus.toUpperCase() %>
+                        </span>
+                    </p>
+                    <p>Expected Delivery: <%= expectedDeliveryDate.toLocaleDateString() %></p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="/orders" 
+                   class="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors">
+                    View Orders
+                </a>
+                <a href="/shop" 
+                   class="px-6 py-3 border border-black text-black rounded-lg hover:bg-gray-100 transition-colors">
+                    Continue Shopping
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>
