@@ -8,131 +8,80 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- Add this script in the head -->
-    <script>
-        // Define these functions globally first
-        function openAddModal() {
-            const modal = document.getElementById('addModal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-            }
-        }
-
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.classList.add('hidden');
-                document.body.style.overflow = 'auto';
-            }
-        }
-
-        let selectedProducts = new Set();
-
-        function toggleProduct(id, name) {
-            const existingProduct = Array.from(selectedProducts).find(p => p.id === id);
-            if (existingProduct) {
-                selectedProducts.delete(existingProduct);
-            } else {
-                selectedProducts.add({ id, name });
-            }
-            updateSelectedProductsDisplay();
-        }
-
-        function updateSelectedProductsDisplay() {
-            const container = document.getElementById('selectedProducts');
-            if (container) {
-                if (selectedProducts.size === 0) {
-                    container.innerHTML = '<div class="text-gray-400 text-sm p-2">No products selected</div>';
-                    return;
-                }
-                
-                container.innerHTML = Array.from(selectedProducts).map(product => `
-                    <div class="flex items-center justify-between bg-zinc-600 p-2 rounded mb-2">
-                        <span class="text-sm">${product.name}</span>
-                        <button type="button" onclick="toggleProduct('${product.id}')" 
-                                class="text-red-400 hover:text-red-500">
-                            <i class="material-icons text-sm">close</i>
-                        </button>
-                    </div>
-                `).join('');
-            }
-        }
-
-        function toggleTypeFields() {
-            const type = document.querySelector('select[name="type"]').value;
-            document.getElementById('productField').classList.toggle('hidden', type === 'category');
-            document.getElementById('categoryField').classList.toggle('hidden', type === 'product');
-        }
-    </script>
 </head>
 <body class="bg-zinc-900 text-white min-h-screen">
-    <!-- Include Sidebar -->
     <%- include("../partials/sidebar") %>
 
-    <!-- Main Content -->
     <div class="lg:ml-64 transition-all" id="main-content">
         <!-- Header -->
         <header class="flex items-center justify-between mb-8 p-4 lg:p-8 border-b border-gray-700">
             <h1 class="text-2xl font-semibold text-gray-200">Offer Management</h1>
-            <button onclick="openAddModal()" 
-                    class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
-                <i class="material-icons align-middle mr-1">add</i>
-                Add New Offer
+            <button onclick="openAddOfferModal()"
+                class="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors">
+                Add Offer
             </button>
         </header>
 
+        <!-- Offer List -->
         <main class="p-4 lg:p-8">
-            <!-- Offers Table -->
             <div class="bg-zinc-800 rounded-lg p-6 overflow-x-auto">
                 <table class="min-w-full text-left text-gray-400">
                     <thead>
                         <tr class="border-b border-gray-700">
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Name</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Type</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Discount</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Start Date</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">End Date</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+                            <th class="py-3 px-4">Name</th>
+                            <th class="py-3 px-4">Type</th>
+                            <th class="py-3 px-4">Discount</th>
+                            <th class="py-3 px-4">Applied To</th>
+                            <th class="py-3 px-4">Duration</th>
+                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-700">
+                    <tbody>
                         <% if (offers && offers.length > 0) { %>
                             <% offers.forEach(offer => { %>
-                                <tr class="hover:bg-zinc-700 transition-colors">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-200"><%= offer.name %></div>
+                                <tr class="border-b border-gray-700 hover:bg-zinc-700 transition-colors">
+                                    <td class="py-3 px-4">
+                                        <div class="text-gray-200"><%= offer.name %></div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-200"><%= offer.type %></div>
+                                    <td class="py-3 px-4">
+                                        <span class="capitalize"><%= offer.type %></span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-200"><%= offer.discount %>%</div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-200"><%= new Date(offer.startDate).toLocaleDateString() %></div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-200"><%= new Date(offer.endDate).toLocaleDateString() %></div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <% if (new Date() < new Date(offer.endDate)) { %>
-                                            <span class="px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-500">Active</span>
+                                    <td class="py-3 px-4"><%= offer.discount %>%</td>
+                                    <td class="py-3 px-4">
+                                        <% if (offer.type === 'product') { %>
+                                            <div class="text-sm">
+                                                <% offer.productIds.forEach(product => { %>
+                                                    <div class="mb-1"><%= product.name %></div>
+                                                <% }) %>
+                                            </div>
                                         <% } else { %>
-                                            <span class="px-2 py-1 text-xs rounded-full bg-red-500/20 text-red-500">Expired</span>
+                                            <%= offer.categoryId?.name || 'N/A' %>
                                         <% } %>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <button onclick="openEditModal('<%= JSON.stringify(offer) %>')" 
-                                                class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors mr-2">
-                                            Edit
-                                        </button>
-                                        <button onclick="deleteOffer('<%= offer._id %>')" 
-                                                class="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
-                                            Delete
-                                        </button>
+                                    <td class="py-3 px-4">
+                                        <div class="text-sm">
+                                            <div>Start: <%= new Date(offer.startDate).toLocaleDateString() %></div>
+                                            <div>End: <%= new Date(offer.endDate).toLocaleDateString() %></div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="px-2 py-1 rounded-full text-sm
+                                            <%= offer.isActive ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500' %>">
+                                            <%= offer.isActive ? 'Active' : 'Inactive' %>
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center gap-2">
+                                            <button onclick="editOffer('<%= JSON.stringify(offer).replace(/'/g, '&apos;').replace(/"/g, '&quot;') %>')"
+                                                class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                                                Edit
+                                            </button>
+                                            <button onclick="toggleOfferStatus('<%= offer._id %>', <%= offer.isActive %>)"
+                                                class="px-3 py-1 <%= offer.isActive ? 'bg-red-600' : 'bg-green-600' %> text-white rounded-md hover:opacity-90 transition-colors">
+                                                <%= offer.isActive ? 'Deactivate' : 'Activate' %>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             <% }); %>
@@ -149,175 +98,241 @@
                     </tbody>
                 </table>
             </div>
-
-            <!-- Add Offer Modal -->
-            <div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-                <div class="bg-zinc-800 p-6 rounded-lg w-[500px] mx-auto mt-20 text-gray-200">
-                    <h3 class="text-xl font-semibold mb-4">Add New Offer</h3>
-                    <form id="addOfferForm" class="space-y-4">
-                        <div>
-                            <label class="block mb-2 text-sm">Name</label>
-                            <input type="text" name="name" required 
-                                   class="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                        </div>
-                        <div class="mb-4">
-                            <label class="block mb-2">Type</label>
-                            <select name="type" onchange="toggleTypeFields()" required class="w-full border p-2 rounded">
-                                <option value="product">Product</option>
-                                <option value="category">Category</option>
-                            </select>
-                        </div>
-                        <div class="mb-4">
-                            <label class="block mb-2">Discount (%)</label>
-                            <input type="number" name="discount" min="0" max="100" required class="w-full border p-2 rounded">
-                        </div>
-                        <div id="productField" class="mb-4">
-                            <label class="block mb-2">Products</label>
-                            <input type="text" id="productSearch" placeholder="Search products..." class="w-full border p-2 rounded mb-2">
-                            <div id="productResults" class="max-h-32 overflow-y-auto"></div>
-                            <div id="selectedProducts" class="mt-2"></div>
-                        </div>
-                        <div id="categoryField" class="mb-4 hidden">
-                            <label class="block mb-2">Category</label>
-                            <select name="categoryId" class="w-full border p-2 rounded">
-                                <% categories.forEach(category => { %>
-                                    <option value="<%= category._id %>"><%= category.name %></option>
-                                <% }) %>
-                            </select>
-                        </div>
-                        <div class="mb-4">
-                            <label class="block mb-2">Start Date</label>
-                            <input type="datetime-local" name="startDate" required class="w-full border p-2 rounded">
-                        </div>
-                        <div class="mb-4">
-                            <label class="block mb-2">End Date</label>
-                            <input type="datetime-local" name="endDate" required class="w-full border p-2 rounded">
-                        </div>
-                        <div class="flex justify-end">
-                            <button type="button" onclick="closeModal('addModal')" class="bg-gray-500 text-white px-4 py-2 rounded mr-2">Cancel</button>
-                            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Save</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Edit Offer Modal -->
-            <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-                <!-- Similar structure to add modal with pre-filled values -->
-            </div>
         </main>
     </div>
 
+    <!-- Offer Modal -->
+    <div id="offerModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-40">
+        <div class="relative w-11/12 max-w-2xl mx-auto my-6">
+            <div class="bg-zinc-800 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold" id="modalTitle">Add Offer</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-white">
+                        <i class="material-icons">close</i>
+                    </button>
+                </div>
+                <form id="offerForm" onsubmit="handleSubmit(event)">
+                    <!-- Form content will be injected here -->
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Add click event for closing modal when clicking outside
-        const addModal = document.getElementById('addModal');
-        if (addModal) {
-            addModal.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    closeModal('addModal');
-                }
-            });
+        let isEditMode = false;
+        let currentOfferId = null;
+        const categories = <%- JSON.stringify(categories || []) %>;
+        const products = <%- JSON.stringify(products || []) %>;
+
+        function createFormHTML(offer = null) {
+            const today = new Date().toISOString().split('T')[0];
+            return `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Offer Name</label>
+                        <input type="text" name="name" class="w-full p-2 bg-zinc-700 rounded" 
+                               value="${offer?.name || ''}" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Offer Type</label>
+                        <select name="type" class="w-full p-2 bg-zinc-700 rounded" 
+                                onchange="handleTypeChange(this.value)" required>
+                            <option value="">Select Type</option>
+                            <option value="product" ${offer?.type === 'product' ? 'selected' : ''}>Product</option>
+                            <option value="category" ${offer?.type === 'category' ? 'selected' : ''}>Category</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Discount Percentage</label>
+                        <input type="number" name="discount" class="w-full p-2 bg-zinc-700 rounded" 
+                               value="${offer?.discount || ''}" min="0" max="100" required>
+                    </div>
+
+                    <div id="productSelection" class="${offer?.type === 'product' ? '' : 'hidden'}">
+                        <label class="block text-sm font-medium mb-1">Select Products</label>
+                        <select name="productIds" multiple class="w-full p-2 bg-zinc-700 rounded" size="5">
+                            ${products.map(product => `
+                                <option value="${product._id}" 
+                                    ${offer?.productIds?.some(p => p._id === product._id) ? 'selected' : ''}>
+                                    ${product.name}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+
+                    <div id="categorySelection" class="${offer?.type === 'category' ? '' : 'hidden'}">
+                        <label class="block text-sm font-medium mb-1">Select Category</label>
+                        <select name="categoryId" class="w-full p-2 bg-zinc-700 rounded">
+                            <option value="">Select Category</option>
+                            ${categories.map(category => `
+                                <option value="${category._id}" 
+                                    ${offer?.categoryId?._id === category._id ? 'selected' : ''}>
+                                    ${category.name}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Start Date</label>
+                            <input type="date" name="startDate" class="w-full p-2 bg-zinc-700 rounded" 
+                                   value="${offer?.startDate?.split('T')[0] || today}" min="${today}" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">End Date</label>
+                            <input type="date" name="endDate" class="w-full p-2 bg-zinc-700 rounded" 
+                                   value="${offer?.endDate?.split('T')[0] || ''}" min="${today}" required>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="closeModal()" 
+                                class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="px-4 py-2 bg-emerald-600 rounded hover:bg-emerald-500">
+                            ${isEditMode ? 'Update' : 'Add'} Offer
+                        </button>
+                    </div>
+                </div>
+            `;
         }
 
-        // Product search functionality
-        let searchTimeout;
-        const productSearch = document.getElementById('productSearch');
-        if (productSearch) {
-            productSearch.addEventListener('input', (e) => {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    const searchQuery = e.target.value;
-                    if (searchQuery.length >= 2) {
-                        fetch(`/admin/offers/search-products?q=${searchQuery}`)
-                            .then(res => res.json())
-                            .then(products => {
-                                const resultsDiv = document.getElementById('productResults');
-                                resultsDiv.innerHTML = products.map(product => {
-                                    const isSelected = Array.from(selectedProducts).some(p => p.id === product._id);
-                                    return `
-                                        <div class="flex items-center p-2 hover:bg-zinc-600 cursor-pointer">
-                                            <input type="checkbox" 
-                                                   ${isSelected ? 'checked' : ''} 
-                                                   onchange="toggleProduct('${product._id}', '${product.name}')"
-                                                   class="mr-2 text-emerald-500 focus:ring-emerald-500">
-                                            <label class="text-sm">${product.name}</label>
-                                        </div>
-                                    `;
-                                }).join('');
-                            });
-                    }
-                }, 300);
-            });
+        function openAddOfferModal() {
+            isEditMode = false;
+            currentOfferId = null;
+            document.getElementById('modalTitle').textContent = 'Add Offer';
+            document.getElementById('offerForm').innerHTML = createFormHTML();
+            document.getElementById('offerModal').classList.remove('hidden');
         }
 
-        // Form submission
-        const addOfferForm = document.getElementById('addOfferForm');
-        if (addOfferForm) {
-            addOfferForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
+        function editOffer(offerData) {
+            try {
+                const offer = JSON.parse(offerData.replace(/&quot;/g, '"').replace(/&apos;/g, "'"));
+                isEditMode = true;
+                currentOfferId = offer._id;
+                document.getElementById('modalTitle').textContent = 'Edit Offer';
+                document.getElementById('offerForm').innerHTML = createFormHTML(offer);
+                document.getElementById('offerModal').classList.remove('hidden');
+            } catch (error) {
+                showError('Error loading offer data');
+            }
+        }
+
+        function handleTypeChange(type) {
+            document.getElementById('productSelection').classList.toggle('hidden', type !== 'product');
+            document.getElementById('categorySelection').classList.toggle('hidden', type !== 'category');
+        }
+
+        async function handleSubmit(event) {
+            event.preventDefault();
+            try {
+                const formData = new FormData(event.target);
                 const data = {
                     name: formData.get('name'),
                     type: formData.get('type'),
-                    discount: formData.get('discount'),
+                    discount: Number(formData.get('discount')),
                     startDate: formData.get('startDate'),
-                    endDate: formData.get('endDate'),
-                    productIds: Array.from(selectedProducts).map(p => p.id),
-                    categoryId: formData.get('categoryId')
+                    endDate: formData.get('endDate')
                 };
 
-                try {
-                    const response = await fetch('/admin/offers', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
+                if (data.type === 'product') {
+                    data.productIds = Array.from(event.target.productIds.selectedOptions).map(option => option.value);
+                } else {
+                    data.categoryId = formData.get('categoryId');
+                }
+
+                const url = isEditMode ? `/admin/offers/${currentOfferId}` : '/admin/offers';
+                const method = isEditMode ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to save offer');
+                }
+
+                await Swal.fire({
+                    title: 'Success!',
+                    text: isEditMode ? 'Offer updated successfully' : 'Offer created successfully',
+                    icon: 'success',
+                    background: '#18181B',
+                    color: '#FFFFFF'
+                });
+
+                window.location.reload();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function toggleOfferStatus(offerId, currentStatus) {
+            try {
+                const result = await Swal.fire({
+                    title: 'Are you sure?',
+                    text: currentStatus ? 'This will deactivate the offer' : 'This will activate the offer',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: currentStatus ? '#DC2626' : '#059669',
+                    cancelButtonColor: '#4B5563',
+                    confirmButtonText: currentStatus ? 'Yes, deactivate it!' : 'Yes, activate it!',
+                    background: '#18181B',
+                    color: '#FFFFFF'
+                });
+
+                if (result.isConfirmed) {
+                    const response = await fetch(`/admin/offers/${offerId}`, {
+                        method: 'DELETE'
                     });
 
-                    const result = await response.json();
-
                     if (!response.ok) {
-                        throw new Error(result.error || 'Failed to create offer');
+                        throw new Error('Failed to update offer status');
                     }
 
                     await Swal.fire({
                         title: 'Success!',
-                        text: 'Offer created successfully',
+                        text: currentStatus ? 'Offer deactivated successfully' : 'Offer activated successfully',
                         icon: 'success',
                         background: '#18181B',
                         color: '#FFFFFF'
                     });
-                    
-                    location.reload();
-                } catch (error) {
-                    Swal.fire({
-                        title: 'Error!',
-                        text: error.message,
-                        icon: 'error',
-                        background: '#18181B',
-                        color: '#FFFFFF'
-                    });
+
+                    window.location.reload();
                 }
-            });
-        }
-    });
-
-    async function deleteOffer(id) {
-        if (confirm('Are you sure you want to delete this offer?')) {
-            try {
-                const response = await fetch(`/admin/offers/${id}`, {
-                    method: 'DELETE'
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to delete offer');
-                }
-
-                location.reload();
             } catch (error) {
-                alert(error.message);
+                showError(error.message);
             }
         }
+
+        function closeModal() {
+            document.getElementById('offerModal').classList.add('hidden');
+        }
+
+        function showError(message) {
+            Swal.fire({
+                title: 'Error!',
+                text: message,
+                icon: 'error',
+                background: '#18181B',
+                color: '#FFFFFF'
+            });
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('offerModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('offerModal')) {
+                closeModal();
+            }
+        });
     </script>
 </body>
 </html>
