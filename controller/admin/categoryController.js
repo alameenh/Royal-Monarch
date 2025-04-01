@@ -4,7 +4,7 @@ import Product from '../../model/productModel.js';
 const getCategories = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = 5; // Show 5 items per page
+        const limit = 5; 
         const skip = (page - 1) * limit;
 
         // Get total count and categories with pagination
@@ -28,7 +28,7 @@ const getCategories = async (req, res) => {
             limit: limit
         };
 
-        console.log('Pagination:', pagination); // Debug log
+        console.log('Pagination:', pagination); 
 
         res.render('admin/category', {
             categories,
@@ -122,7 +122,7 @@ const updateCategoryStatus = async (req, res) => {
         const categoryId = req.params.id;
         const { status } = req.body;
 
-        console.log('Updating category status:', { categoryId, status }); // Debug log
+        console.log('Updating category status:', { categoryId, status });
 
         if (!["Active", "Inactive"].includes(status)) {
             return res.status(400).json({
@@ -152,7 +152,7 @@ const updateCategoryStatus = async (req, res) => {
                     { category: categoryId },
                     { $set: { status: 'Inactive' } }
                 );
-                console.log('Products updated:', result); // Debug log
+                console.log('Products updated:', result); 
             } catch (error) {
                 console.error('Error updating products:', error);
             }

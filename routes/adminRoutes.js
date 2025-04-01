@@ -5,6 +5,7 @@ import userController from '../controller/admin/listUserController.js';
 import categoryController from '../controller/admin/categoryController.js';
 import productController from '../controller/admin/productController.js';
 import orderController from '../controller/admin/adminOrderController.js';
+import offerController from '../controller/admin/offerController.js';
 
 const router = express.Router();
 
@@ -39,5 +40,11 @@ router.patch('/products/:id/toggle-status', adminMiddleware.checkSession, produc
 router.get('/orders', adminMiddleware.checkSession, orderController.getOrders);
 router.get('/orders/search', adminMiddleware.checkSession, orderController.searchOrders);
 router.patch('/orders/:orderId/status', adminMiddleware.checkSession, orderController.updateOrderStatus);
+
+router.get('/offers', adminMiddleware.checkSession, offerController.getOffers);
+router.post('/offers', adminMiddleware.checkSession, offerController.createOffer);
+router.put('/offers/:id', adminMiddleware.checkSession, offerController.updateOffer);
+router.delete('/offers/:id', adminMiddleware.checkSession, offerController.deleteOffer);
+router.get('/offers/search-products', adminMiddleware.checkSession, offerController.searchProducts);
 
 export default router; 

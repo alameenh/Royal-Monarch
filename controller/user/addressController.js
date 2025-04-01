@@ -93,19 +93,19 @@ const addressController = {
             const userId = req.session.userId;
             const addressId = req.params.id;
             
-            console.log("Fetching address:", addressId, "for user:", userId); // Debug log
+            console.log("Fetching address:", addressId, "for user:", userId); 
             
             const address = await Address.findOne({ _id: addressId, userId });
             
             if (!address) {
-                console.log("Address not found"); // Debug log
+                console.log("Address not found"); 
                 return res.status(404).json({ 
                     success: false, 
                     message: 'Address not found' 
                 });
             }
             
-            console.log("Found address:", address); // Debug log
+            console.log("Found address:", address); 
             res.json(address);
         } catch (error) {
             console.error('Error fetching address by ID:', error);

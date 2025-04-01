@@ -3,7 +3,7 @@ const viewProduct = async (req, res) => {
         const productId = req.params.id;
         // Make sure to populate the category field
         const product = await Product.findById(productId)
-            .populate('category', 'name') // This is important to get category name
+            .populate('category', 'name') 
             .exec();
 
         const similarProducts = await Product.find({

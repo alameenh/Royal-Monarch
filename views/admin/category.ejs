@@ -34,10 +34,10 @@
                     <thead>
                         <tr class="border-b border-gray-700">
                             <th class="py-3 px-4">Name</th>
-                            <th class="py-3 px-4">Description</th>
+                            <th class="py-3 px-4 w-1/3">Description</th>
                             <th class="py-3 px-4">Status</th>
                             <th class="py-3 px-4">Created Date</th>
-                            <th class="py-3 px-4">Actions</th>
+                            <th class="py-3 px-4 text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -48,7 +48,9 @@
                                         <div class="text-gray-200"><%= category.name %></div>
                                     </td>
                                     <td class="py-3 px-4">
-                                        <div class="text-gray-400"><%= category.description %></div>
+                                        <div class="text-gray-400 truncate max-w-xs">
+                                            <%= category.description %>
+                                        </div>
                                     </td>
                                     <td class="py-3 px-4">
                                         <span class="px-2 py-1 rounded-full text-sm
@@ -61,20 +63,22 @@
                                             <%= new Date(category.createdAt).toLocaleDateString() %>
                                         </div>
                                     </td>
-                                    <td class="py-3 px-4 space-x-2">
-                                        <button 
-                                            onclick="showEditCategoryModal('<%= category._id %>', '<%= category.name %>', '<%= category.description %>')"
-                                            class="px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700">
-                                            Edit
-                                        </button>
-                                        <button 
-                                            onclick="updateStatus('<%= category._id %>', '<%= category.status === 'Inactive' ? 'Active' : 'Inactive' %>')"
-                                            class="px-4 py-2 rounded-md text-sm font-medium
-                                            <%= category.status === 'Inactive' ? 
-                                                'bg-green-600 text-white hover:bg-green-700' : 
-                                                'bg-red-600 text-white hover:bg-red-700' %>">
-                                            <%= category.status === 'Inactive' ? 'Activate' : 'Deactivate' %>
-                                        </button>
+                                    <td class="py-3 px-4">
+                                        <div class="flex justify-center gap-2">
+                                            <button 
+                                                onclick="showEditCategoryModal('<%= category._id %>', '<%= category.name %>', '<%= category.description %>')"
+                                                class="px-3 py-1.5 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                                                Edit
+                                            </button>
+                                            <button 
+                                                onclick="updateStatus('<%= category._id %>', '<%= category.status === 'Inactive' ? 'Active' : 'Inactive' %>')"
+                                                class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors
+                                                <%= category.status === 'Inactive' ? 
+                                                    'bg-green-600 text-white hover:bg-green-700' : 
+                                                    'bg-red-600 text-white hover:bg-red-700' %>">
+                                                <%= category.status === 'Inactive' ? 'Activate' : 'Deactivate' %>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             <% }); %>
