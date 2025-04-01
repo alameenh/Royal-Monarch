@@ -19,12 +19,32 @@ const offerController = {
     searchProducts: async (req, res) => {
         try {
             const searchQuery = req.query.q;
+            console.log('Search Query:', searchQuery);
+
             const products = await Product.find({
-                name: { $regex: searchQuery, $options: 'i' },
-                isActive: true
-            }).limit(10);
-            res.json(products);
+                name: { $regex: new RegExp(searchQuery, 'i') },
+                isActive: { $ne: false }
+            })
+            .select('name brand color _id variants')
+            .limit(10);
+
+            console.log('Found Products:', products);
+
+            if (!products || products.length === 0) {
+                return res.status(404).json({ message: 'No products found' });
+            }
+
+            const formattedProducts = products.map(product => ({
+                _id: product._id,
+                name: product.name || 'Unnamed Product',
+                brand: product.brand || '',
+                color: product.color || '',
+                variants: product.variants || []
+            }));
+
+            res.json(formattedProducts);
         } catch (error) {
+            console.error('Search Error:', error);
             res.status(500).json({ error: 'Failed to search products' });
         }
     },

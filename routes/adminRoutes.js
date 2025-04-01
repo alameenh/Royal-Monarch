@@ -45,6 +45,7 @@ router.get('/offers', adminMiddleware.checkSession, offerController.getOffers);
 router.post('/offers', adminMiddleware.checkSession, offerController.createOffer);
 router.put('/offers/:id', adminMiddleware.checkSession, offerController.updateOffer);
 router.delete('/offers/:id', adminMiddleware.checkSession, offerController.deleteOffer);
-router.get('/offers/search-products', adminMiddleware.checkSession, offerController.searchProducts);
+router.get('/offers/search-products', offerController.searchProducts);
+
 
 export default router; 

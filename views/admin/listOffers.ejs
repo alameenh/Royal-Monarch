@@ -124,7 +124,19 @@
         const categories = <%- JSON.stringify(categories || []) %>;
         const products = <%- JSON.stringify(products || []) %>;
 
+        // Add these new variables
+        let selectedProducts = new Set();
+        let searchTimeout;
+
         function createFormHTML(offer = null) {
+            // Initialize selectedProducts if editing an offer
+            if (offer?.productIds) {
+                selectedProducts = new Set(offer.productIds.map(p => p._id));
+                setTimeout(() => updateSelectedProductsDisplay(), 0);
+            } else {
+                selectedProducts = new Set();
+            }
+
             const today = new Date().toISOString().split('T')[0];
             return `
                 <div class="space-y-4">
@@ -151,15 +163,23 @@
                     </div>
 
                     <div id="productSelection" class="${offer?.type === 'product' ? '' : 'hidden'}">
-                        <label class="block text-sm font-medium mb-1">Select Products</label>
-                        <select name="productIds" multiple class="w-full p-2 bg-zinc-700 rounded" size="5">
-                            ${products.map(product => `
-                                <option value="${product._id}" 
-                                    ${offer?.productIds?.some(p => p._id === product._id) ? 'selected' : ''}>
-                                    ${product.name}
-                                </option>
-                            `).join('')}
-                        </select>
+                        <label class="block text-sm font-medium mb-1">Search & Select Products</label>
+                        <div class="space-y-3">
+                            <div class="relative">
+                                <input type="text" 
+                                       id="productSearch" 
+                                       class="w-full p-2 bg-zinc-700 rounded" 
+                                       placeholder="Search products by name..."
+                                       autocomplete="off"
+                                       oninput="debounceSearch(this.value)">
+                                <div id="productSearchResults" 
+                                     class="hidden absolute z-50 w-full mt-1 bg-zinc-800 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                </div>
+                            </div>
+                            <div id="selectedProducts" class="space-y-2">
+                                <!-- Selected products will be displayed here -->
+                            </div>
+                        </div>
                     </div>
 
                     <div id="categorySelection" class="${offer?.type === 'category' ? '' : 'hidden'}">
@@ -228,6 +248,159 @@
             document.getElementById('categorySelection').classList.toggle('hidden', type !== 'category');
         }
 
+        // Add debounce function
+        function debounceSearch(query) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchProducts(query);
+            }, 300);
+        }
+
+        // Update the search function
+        async function searchProducts(query) {
+            const resultsDiv = document.getElementById('productSearchResults');
+            
+            if (!query.trim()) {
+                resultsDiv.classList.add('hidden');
+                return;
+            }
+
+            try {
+                resultsDiv.innerHTML = `
+                    <div class="p-3 text-gray-400 text-center">
+                        Searching...
+                    </div>
+                `;
+                resultsDiv.classList.remove('hidden');
+
+                const response = await fetch(`/admin/offers/search-products?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Search failed');
+                }
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="p-3 text-gray-400 text-center">
+                            No products found
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Add search results to products array if they don't exist
+                data.forEach(product => {
+                    if (!products.find(p => p._id === product._id)) {
+                        products.push(product);
+                    }
+                });
+
+                resultsDiv.innerHTML = data.map(product => `
+                    <div class="product-item p-2 hover:bg-zinc-700 cursor-pointer border-b border-zinc-700 last:border-0" 
+                         data-product-id="${product._id}"
+                         onclick="toggleProduct('${product._id}', null, event)"
+                    >
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" 
+                                   ${selectedProducts.has(product._id) ? 'checked' : ''}
+                                   onclick="toggleProduct('${product._id}', null, event)"
+                            >
+                            <div class="flex-1">
+                                <div class="font-medium text-white">${product.name || 'Unnamed Product'}</div>
+                                <div class="text-sm text-gray-400">
+                                    ${[product.brand, product.color].filter(Boolean).join(' - ') || 'No details available'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                resultsDiv.classList.remove('hidden');
+            } catch (error) {
+                console.error('Search Error:', error);
+                resultsDiv.innerHTML = `
+                    <div class="p-3 text-red-400 text-center">
+                        ${error.message || 'Error searching products'}
+                    </div>
+                `;
+            }
+        }
+
+        function toggleProduct(productId, productData, event) {
+            // Prevent event bubbling
+            if (event) {
+                event.stopPropagation();
+            }
+            
+            if (selectedProducts.has(productId)) {
+                selectedProducts.delete(productId);
+            } else {
+                selectedProducts.add(productId);
+            }
+            
+            // Update both displays
+            updateSelectedProductsDisplay();
+            updateSearchResultsDisplay();
+        }
+
+        function updateSelectedProductsDisplay() {
+            const displayDiv = document.getElementById('selectedProducts');
+            
+            if (selectedProducts.size === 0) {
+                displayDiv.innerHTML = '<p class="text-gray-400">No products selected</p>';
+                return;
+            }
+
+            // Find selected products from both the products array and search results
+            const selectedProductsArray = Array.from(selectedProducts)
+                .map(productId => {
+                    // First try to find in the existing products array
+                    let product = products.find(p => p._id === productId);
+                    return product;
+                })
+                .filter(Boolean);
+
+            displayDiv.innerHTML = selectedProductsArray.map(product => `
+                <div class="flex items-center justify-between bg-zinc-700 p-2 rounded mb-2">
+                    <div class="flex-1">
+                        <div class="font-medium">${product.name || 'Unnamed Product'}</div>
+                        <div class="text-sm text-gray-400">
+                            ${[product.brand, product.color].filter(Boolean).join(' - ') || 'No details available'}
+                        </div>
+                    </div>
+                    <button type="button" 
+                            onclick="toggleProduct('${product._id}')"
+                            class="ml-2 text-red-400 hover:text-red-300">
+                        <i class="material-icons text-sm">close</i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function updateSearchResultsDisplay() {
+            const resultsDiv = document.getElementById('productSearchResults');
+            const currentResults = resultsDiv.querySelectorAll('.product-item');
+            
+            currentResults.forEach(item => {
+                const productId = item.getAttribute('data-product-id');
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    checkbox.checked = selectedProducts.has(productId);
+                }
+            });
+        }
+
+        // Add click outside listener to close search results
+        document.addEventListener('click', (e) => {
+            const searchContainer = document.getElementById('productSelection');
+            const resultsDiv = document.getElementById('productSearchResults');
+            
+            if (!searchContainer.contains(e.target)) {
+                resultsDiv.classList.add('hidden');
+            }
+        });
+
         async function handleSubmit(event) {
             event.preventDefault();
             try {
@@ -241,9 +414,16 @@
                 };
 
                 if (data.type === 'product') {
-                    data.productIds = Array.from(event.target.productIds.selectedOptions).map(option => option.value);
+                    if (selectedProducts.size === 0) {
+                        throw new Error('Please select at least one product');
+                    }
+                    data.productIds = Array.from(selectedProducts);
                 } else {
-                    data.categoryId = formData.get('categoryId');
+                    const categoryId = formData.get('categoryId');
+                    if (!categoryId) {
+                        throw new Error('Please select a category');
+                    }
+                    data.categoryId = categoryId;
                 }
 
                 const url = isEditMode ? `/admin/offers/${currentOfferId}` : '/admin/offers';
@@ -255,9 +435,8 @@
                     body: JSON.stringify(data)
                 });
 
-                const result = await response.json();
-
                 if (!response.ok) {
+                    const result = await response.json();
                     throw new Error(result.error || 'Failed to save offer');
                 }
 
