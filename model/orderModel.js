@@ -3,24 +3,13 @@ import mongoose from "mongoose";
 const orderItemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   brand: { type: String, required: true },
-  variant: { type: String, required: true },
   images: [{ path: String, filename: String }],
   quantity: { type: Number, required: true },
   price: { type: Number, required: true },
   discount: { type: Number, default: 0 },
   status: {
     type: String,
-    enum: [
-      'pending',           // Initial status when order is placed
-      'processing',        // Admin started processing the order
-      'shipped',          // Order has been shipped
-      'delivered',        // Order has been delivered
-      'cancelled',        // User cancelled the order
-      'order rejected',   // Admin rejected the order
-      'return requested', // User requested a return
-      'returned',         // Return accepted and completed
-      'return rejected'   // Return request was rejected
-    ],
+    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'return requested', 'returned'],
     default: 'pending'
   },
   shippedDate: { type: Date },
@@ -76,7 +65,10 @@ const orderSchema = new mongoose.Schema({
   deliveryDate: {
     type: Date
   },
- 
+  coupon: {
+    code: { type: String },
+    discount: { type: Number, default: 0 }
+  },
   paymentDetails: {
     razorpayOrderId: { type: String },
     razorpayPaymentId: { type: String },

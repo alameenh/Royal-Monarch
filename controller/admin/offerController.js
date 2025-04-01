@@ -157,6 +157,29 @@ const offerController = {
         } catch (error) {
             res.status(500).json({ error: 'Failed to delete offer' });
         }
+    },
+
+    toggleOfferStatus: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const offer = await Offer.findById(id);
+            
+            if (!offer) {
+                return res.status(404).json({ error: 'Offer not found' });
+            }
+
+            // Toggle the isActive status
+            offer.isActive = !offer.isActive;
+            await offer.save();
+
+            res.json({ 
+                message: offer.isActive ? 'Offer activated successfully' : 'Offer deactivated successfully',
+                isActive: offer.isActive 
+            });
+        } catch (error) {
+            console.error('Status Toggle Error:', error);
+            res.status(500).json({ error: 'Failed to update offer status' });
+        }
     }
 };
 

@@ -4,6 +4,7 @@ import User from '../../model/userModel.js';
 import Wishlist from '../../model/wishlistModel.js';
 import CartItem from '../../model/cartModel.js';
 import mongoose from 'mongoose';
+import Offer from '../../model/offerModel.js';
 
 const getProductDetails = async (req, res) => {
     try {
@@ -54,10 +55,31 @@ const getProductDetails = async (req, res) => {
             return acc;
         }, {});
 
-        // Add inCart status to variants
+        // Fetch active offers for this product and its category
+        const currentDate = new Date();
+        const activeOffers = await Offer.find({
+            $or: [
+                { productIds: new mongoose.Types.ObjectId(productId) },
+                { categoryId: productData.category }
+            ],
+            isActive: true,
+            startDate: { $lte: currentDate },
+            endDate: { $gte: currentDate }
+        }).sort({ type: -1 }); // Sort by type to prioritize product offers (-1 makes 'product' come before 'category')
+
+        // Get the applicable offer (product offer takes priority)
+        const productOffer = activeOffers.find(offer => offer.type === 'product' && 
+            offer.productIds.some(id => id.toString() === productId));
+        const categoryOffer = activeOffers.find(offer => offer.type === 'category');
+        const applicableOffer = productOffer || categoryOffer;
+
+        // Apply offer discount to variants
         productData.variants = productData.variants.map(variant => ({
             ...variant,
-            inCart: !!cartVariants[variant.type]
+            inCart: !!cartVariants[variant.type],
+            discount: applicableOffer ? applicableOffer.discount : 0,
+            offerType: applicableOffer ? applicableOffer.type : null,
+            offerName: applicableOffer ? applicableOffer.name : null
         }));
 
         // Check if the product is in user's wishlist
@@ -100,7 +122,8 @@ const getProductDetails = async (req, res) => {
         return res.render('user/viewProduct', {
             product: productData,
             similarProducts,
-            isInWishlist: isInWishlist
+            isInWishlist: isInWishlist,
+            offer: applicableOffer
         });
 
     } catch (error) {

@@ -6,6 +6,7 @@ import categoryController from '../controller/admin/categoryController.js';
 import productController from '../controller/admin/productController.js';
 import orderController from '../controller/admin/adminOrderController.js';
 import offerController from '../controller/admin/offerController.js';
+import couponController from '../controller/admin/couponController.js';
 
 const router = express.Router();
 
@@ -46,6 +47,14 @@ router.post('/offers', adminMiddleware.checkSession, offerController.createOffer
 router.put('/offers/:id', adminMiddleware.checkSession, offerController.updateOffer);
 router.delete('/offers/:id', adminMiddleware.checkSession, offerController.deleteOffer);
 router.get('/offers/search-products', offerController.searchProducts);
+router.patch('/offers/:id/toggle-status', offerController.toggleOfferStatus);
 
+// Coupon Management Routes
+router.get('/coupons', adminMiddleware.checkSession, couponController.getCoupons);
+router.post('/coupons', adminMiddleware.checkSession, couponController.createCoupon);
+router.get('/coupons/:id', adminMiddleware.checkSession, couponController.getCoupon);
+router.put('/coupons/:id', adminMiddleware.checkSession, couponController.updateCoupon);
+router.delete('/coupons/:id', adminMiddleware.checkSession, couponController.deleteCoupon);
+router.patch('/coupons/:id/toggle-status', adminMiddleware.checkSession, couponController.toggleCouponStatus);
 
 export default router; 

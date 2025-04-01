@@ -1,6 +1,7 @@
 import CartItem from '../../model/cartModel.js';
 import Product from '../../model/productModel.js';
 import User from '../../model/userModel.js';
+import Offer from '../../model/offerModel.js';
 
 const cartController = {
     addToCart: async (req, res) => {
@@ -144,60 +145,75 @@ const cartController = {
     getCart: async (req, res) => {
         try {
             const userId = req.session.userId;
-            const user = await User.findById(userId);
-
-            // Fetch all cart items with product details
             const cartItems = await CartItem.find({ userId })
-                .populate({
-                    path: 'productId',
-                    select: 'name images variants status'
-                })
-                .sort({ createdAt: -1 });
+                .populate('productId');
 
-            // Calculate cart totals (only for active products)
-            let subtotal = 0;
-            const shippingCost = 40; // Fixed shipping cost
-            
-            const processedItems = cartItems.map(item => {
-                // Skip calculation for inactive products
-                if (!item.productId || item.productId.status !== 'Active') {
-                    return {
-                        ...item.toObject(),
-                        price: 0,
-                        discount: 0,
-                        discountedPrice: 0,
-                        totalPrice: 0,
-                        stock: 0
-                    };
-                }
+            // Get current date for offer validation
+            const currentDate = new Date();
 
-                const variant = item.productId.variants.find(v => v.type === item.variantType);
-                const price = variant ? variant.price : 0;
-                const discount = variant ? variant.discount : 0;
-                const discountedPrice = Math.round(price * (1 - discount/100));
-                const totalPrice = discountedPrice * item.quantity;
-                
-                // Only add to subtotal if product is active
-                if (item.productId.status === 'Active') {
-                    subtotal += totalPrice;
-                }
-                
-                return {
-                    ...item.toObject(),
-                    price: price,
-                    discount: discount,
-                    discountedPrice: discountedPrice,
-                    totalPrice: totalPrice,
-                    stock: variant ? variant.stock : 0
-                };
+            // Fetch all active offers that might apply to cart items
+            const activeOffers = await Offer.find({
+                isActive: true,
+                startDate: { $lte: currentDate },
+                endDate: { $gte: currentDate }
             });
 
+            // Process each cart item to include offer details
+            const processedCartItems = await Promise.all(cartItems.map(async item => {
+                if (!item.productId || item.productId.status !== 'Active') {
+                    return item;
+                }
+
+                // Find product-specific offer
+                const productOffer = activeOffers.find(offer => 
+                    offer.type === 'product' && 
+                    offer.productIds.some(id => id.toString() === item.productId._id.toString())
+                );
+
+                // Find category offer
+                const categoryOffer = activeOffers.find(offer => 
+                    offer.type === 'category' && 
+                    offer.categoryId.toString() === item.productId.category.toString()
+                );
+
+                // Use product offer if available, otherwise use category offer
+                const applicableOffer = productOffer || categoryOffer;
+
+                // Find the variant price
+                const variant = item.productId.variants.find(v => v.type === item.variantType);
+                const originalPrice = variant ? variant.price : 0;
+
+                // Calculate discounted price
+                let discountedPrice = originalPrice;
+                if (applicableOffer) {
+                    discountedPrice = Math.round(originalPrice * (1 - applicableOffer.discount/100));
+                }
+
+                return {
+                    ...item.toObject(),
+                    originalPrice,
+                    discountedPrice,
+                    offer: applicableOffer,
+                    totalPrice: discountedPrice * item.quantity,
+                    stock: variant ? variant.stock : 0
+                };
+            }));
+
+            // Calculate totals
+            let subtotal = 0;
+            processedCartItems.forEach(item => {
+                if (item.productId && item.productId.status === 'Active') {
+                    subtotal += item.totalPrice;
+                }
+            });
+
+            const shippingCost = subtotal > 0 ? 40 : 0; // Example shipping cost
             const total = subtotal + shippingCost;
 
             res.render('user/cart', {
                 title: 'Cart',
-                user,
-                cartItems: processedItems,
+                user: await User.findById(userId),
+                cartItems: processedCartItems,
                 subtotal,
                 shippingCost,
                 total,

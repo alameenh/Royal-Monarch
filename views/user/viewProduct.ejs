@@ -56,6 +56,7 @@
                                 data-price="<%= variant.price %>"
                                 data-stock="<%= variant.stock %>"
                                 data-discount="<%= variant.discount %>"
+                                data-offer-name="<%= variant.offerName %>"
                                 data-specs='<%= JSON.stringify(variant.specifications) %>'
                                 data-in-cart="<%= variant.inCart %>">
                             <%= variant.type %> 
@@ -189,6 +190,7 @@ function updateVariantDetails() {
     const specs = JSON.parse(option.getAttribute('data-specs'));
     const type = option.getAttribute('data-type');
     const discount = parseInt(option.getAttribute('data-discount') || '0');
+    const offerName = option.getAttribute('data-offer-name');
     const inCart = option.getAttribute('data-in-cart') === 'true';
     
     // Calculate discounted price
@@ -206,8 +208,12 @@ function updateVariantDetails() {
         originalPriceDisplay.textContent = `₹${price}`;
         originalPriceDisplay.style.display = 'inline';
         
-        // Show discount badge
-        discountBadge.textContent = `${discount}% OFF`;
+        // Show discount badge with offer name if available
+        let discountText = `${discount}% OFF`;
+        if (offerName) {
+            discountText += ` (${offerName})`;
+        }
+        discountBadge.textContent = discountText;
         discountBadge.style.display = 'inline-block';
     } else {
         // Hide original price and discount badge if no discount

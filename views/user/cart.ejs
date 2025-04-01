@@ -48,9 +48,13 @@
                                             
                                             <div class="flex items-center gap-2">
                                                 <span class="text-lg font-bold">₹<%= item.discountedPrice %></span>
-                                                <% if (item.discount > 0) { %>
-                                                    <span class="text-sm text-gray-500 line-through">₹<%= item.price %></span>
-                                                    <span class="text-sm text-red-600">(<%= item.discount %>% OFF)</span>
+                                                <% if (item.originalPrice !== item.discountedPrice) { %>
+                                                    <span class="text-sm text-gray-500 line-through">₹<%= item.originalPrice %></span>
+                                                    <% if (item.offer) { %>
+                                                        <span class="text-sm text-red-600">
+                                                            (<%= item.offer.discount %>% OFF - <%= item.offer.name %>)
+                                                        </span>
+                                                    <% } %>
                                                 <% } %>
                                             </div>
 

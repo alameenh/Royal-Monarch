@@ -1,5 +1,6 @@
 import Product from '../../model/productModel.js';
 import Category from '../../model/categoryModel.js';
+import Offer from '../../model/offerModel.js';
 import mongoose from 'mongoose';
 
 const getShopPage = async (req, res) => {
@@ -23,6 +24,16 @@ const getProducts = async (req, res) => {
         const order = req.query.order || 'desc';
         const minPrice = req.query.minPrice ? parseInt(req.query.minPrice) : 0;
         const maxPrice = req.query.maxPrice ? parseInt(req.query.maxPrice) : Number.MAX_SAFE_INTEGER;
+
+        // Get current date for offer validation
+        const currentDate = new Date();
+
+        // Fetch active offers
+        const activeOffers = await Offer.find({
+            isActive: true,
+            startDate: { $lte: currentDate },
+            endDate: { $gte: currentDate }
+        });
 
         // Build base query
         let query = { status: 'Active' };
@@ -86,6 +97,38 @@ const getProducts = async (req, res) => {
             }
         ]);
 
+        // Process products to include offer information
+        const processedProducts = products.map(product => {
+            // Find product-specific offer
+            const productOffer = activeOffers.find(offer => 
+                offer.type === 'product' && 
+                offer.productIds.some(id => id.toString() === product._id.toString())
+            );
+
+            // Find category offer
+            const categoryOffer = activeOffers.find(offer => 
+                offer.type === 'category' && 
+                offer.categoryId.toString() === product.category.toString()
+            );
+
+            // Use product offer if available, otherwise use category offer
+            const applicableOffer = productOffer || categoryOffer;
+
+            // Calculate discounted price for the base variant
+            const baseVariant = product.variants[0];
+            const originalPrice = baseVariant.price;
+            const discountedPrice = applicableOffer 
+                ? Math.round(originalPrice * (1 - applicableOffer.discount/100))
+                : originalPrice;
+
+            return {
+                ...product,
+                offer: applicableOffer,
+                discountedPrice,
+                originalPrice
+            };
+        });
+
         // Get total count
         const totalProducts = await Product.aggregate([
             {
@@ -115,7 +158,7 @@ const getProducts = async (req, res) => {
 
         res.json({
             success: true,
-            products,
+            products: processedProducts,
             pagination: {
                 currentPage: page,
                 totalPages,
