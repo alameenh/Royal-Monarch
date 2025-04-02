@@ -1,0 +1,179 @@
+<%- include('../partials/navbar') %>
+
+<div class="container mx-auto px-4 py-8">
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Sidebar -->
+        <div class="lg:w-1/4">
+            <%- include('../partials/profileSidebar') %>
+        </div>
+
+        <!-- Main Content -->
+        <div class="lg:w-3/4">
+            <h1 class="text-2xl font-bold mb-6">My Wallet</h1>
+
+            <!-- Wallet Balance Card -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-gray-600">Available Balance</p>
+                        <h2 class="text-3xl font-bold">₹<%= wallet.balance.toFixed(2) %></h2>
+                    </div>
+                    <button onclick="addFunds()" 
+                            class="bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+                        Add Funds
+                    </button>
+                </div>
+            </div>
+
+            <!-- Transaction History -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="p-6 border-b">
+                    <h3 class="text-xl font-semibold">Transaction History</h3>
+                </div>
+
+                <div class="divide-y">
+                    <% if (wallet.transactions && wallet.transactions.length > 0) { %>
+                        <% wallet.transactions.reverse().forEach(transaction => { %>
+                            <div class="p-4 hover:bg-gray-50">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <p class="font-medium"><%= transaction.description %></p>
+                                        <p class="text-sm text-gray-600">
+                                            <%= new Date(transaction.date).toLocaleDateString('en-IN', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) %>
+                                        </p>
+                                        <p class="text-sm text-gray-600">
+                                            Transaction ID: <%= transaction.transactionId %>
+                                        </p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-semibold <%= transaction.type === 'CREDIT' ? 'text-green-600' : 'text-red-600' %>">
+                                            <%= transaction.type === 'CREDIT' ? '+' : '-' %>₹<%= transaction.amount.toFixed(2) %>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }); %>
+                    <% } else { %>
+                        <div class="p-8 text-center text-gray-600">
+                            <p>No transactions found</p>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Razorpay Script -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- Add Funds Function -->
+<script>
+async function addFunds() {
+    try {
+        const { value: amount } = await Swal.fire({
+            title: 'Add Funds to Wallet',
+            input: 'number',
+            inputLabel: 'Enter Amount (₹)',
+            inputPlaceholder: 'Enter amount',
+            showCancelButton: true,
+            inputValidator: (value) => {
+                if (!value || value < 1) {
+                    return 'Please enter a valid amount (minimum ₹1)';
+                }
+            }
+        });
+
+        if (amount) {
+            console.log('Amount entered:', amount); // Debug log
+
+            const orderResponse = await fetch('/wallet/create-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: amount * 100 })
+            });
+
+            console.log('Order response status:', orderResponse.status); // Debug log
+
+            const orderData = await orderResponse.json();
+            console.log('Order data:', orderData); // Debug log
+
+            if (!orderData.success) {
+                throw new Error(orderData.error || 'Failed to create order');
+            }
+
+            const options = {
+                key: '<%= razorpayKeyId %>', // Pass from controller
+                amount: amount * 100,
+                currency: 'INR',
+                name: 'Royal Monarch',
+                description: 'Wallet Recharge',
+                order_id: orderData.order.id,
+                handler: async function (response) {
+                    try {
+                        const verifyResponse = await fetch('/wallet/verify-payment', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                amount: amount * 100
+                            })
+                        });
+
+                        const verifyData = await verifyResponse.json();
+
+                        if (verifyData.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success!',
+                                text: 'Funds added successfully',
+                                showConfirmButton: false,
+                                timer: 1500
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            throw new Error(verifyData.error || 'Payment verification failed');
+                        }
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: error.message || 'Failed to verify payment'
+                        });
+                    }
+                },
+                prefill: {
+                    name: '<%= user.name %>',
+                    email: '<%= user.email %>'
+                },
+                theme: {
+                    color: '#000000'
+                }
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.open();
+
+        }
+    } catch (error) {
+        console.error('Error details:', error); // Debug log
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to process payment'
+        });
+    }
+}
+</script>
+
+<%- include('../partials/footer') %>

@@ -469,19 +469,17 @@
                 });
 
                 if (result.isConfirmed) {
-                    const response = await fetch(`/admin/offers/${offerId}/toggle-status`, {
-                        method: 'PATCH'
+                    const response = await fetch(`/admin/offers/${offerId}`, {
+                        method: 'DELETE'
                     });
 
                     if (!response.ok) {
                         throw new Error('Failed to update offer status');
                     }
 
-                    const data = await response.json();
-
                     await Swal.fire({
                         title: 'Success!',
-                        text: data.message,
+                        text: currentStatus ? 'Offer deactivated successfully' : 'Offer activated successfully',
                         icon: 'success',
                         background: '#18181B',
                         color: '#FFFFFF'

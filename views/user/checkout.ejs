@@ -69,9 +69,25 @@
                                          class="w-20 h-20 object-cover rounded">
                                     <div class="flex-grow">
                                         <h3 class="font-semibold"><%= item.productId.name %></h3>
+                                        <p class="text-gray-600">Brand: <%= item.productId.brand %></p>
                                         <p class="text-gray-600">Variant: <%= item.variantType %></p>
-                                        <p class="text-gray-600">Quantity: <%= item.quantity %></p>
-                                        <p class="font-semibold">₹<%= item.totalPrice %></p>
+                                        <div class="mt-2">
+                                            <% if (item.offer) { %>
+                                                <p class="text-sm text-gray-500 line-through">
+                                                    ₹<%= item.originalPrice.toFixed(2) %>
+                                                </p>
+                                                <p class="text-sm text-green-600">
+                                                    <%= item.offer.discount %>% off - <%= item.offer.name %>
+                                                    (<%= item.offer.type === 'product' ? 'Product Offer' : 'Category Offer' %>)
+                                                </p>
+                                            <% } %>
+                                            <p class="font-semibold">
+                                                ₹<%= item.discountedPrice.toFixed(2) %> x <%= item.quantity %>
+                                            </p>
+                                            <p class="text-sm font-semibold text-gray-800">
+                                                Total: ₹<%= item.totalPrice.toFixed(2) %>
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             <% }); %>
@@ -82,20 +98,71 @@
                 <!-- Order Summary -->
                 <div class="md:w-1/3">
                     <div class="bg-white p-6 rounded-lg shadow-md sticky top-4">
+                        <!-- Coupon Section -->
+                        <div class="mb-6 border-b pb-4">
+                            <h3 class="font-semibold mb-2">Apply Coupon</h3>
+                            <% if (coupons && coupons.length > 0) { %>
+                                <select id="couponSelect" class="w-full p-2 border rounded mb-2">
+                                    <option value="">Select a coupon</option>
+                                    <% coupons.forEach(coupon => { %>
+                                        <option value="<%= coupon._id %>" 
+                                                data-type="<%= coupon.discountType %>"
+                                                data-value="<%= coupon.discountValue %>"
+                                                data-max="<%= coupon.maxDiscount %>">
+                                            <%= coupon.code %> - 
+                                            <%= coupon.discountType === 'PERCENTAGE' ? 
+                                                `${coupon.discountValue}% off` : 
+                                                `₹${coupon.discountValue} off` %>
+                                            <% if (coupon.maxDiscount) { %>
+                                                (Max: ₹<%= coupon.maxDiscount %>)
+                                            <% } %>
+                                        </option>
+                                    <% }); %>
+                                </select>
+                                <button onclick="applyCoupon()" 
+                                        class="w-full bg-gray-800 text-white py-2 rounded hover:bg-gray-700">
+                                    Apply Coupon
+                                </button>
+                            <% } else { %>
+                                <p class="text-sm text-gray-600">No coupons available for this order</p>
+                            <% } %>
+                        </div>
+
+                        <!-- Order Summary Section -->
                         <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
                         <div class="space-y-3">
                             <div class="flex justify-between">
                                 <span>Subtotal</span>
-                                <span>₹<%= subtotal %></span>
+                                <span>₹<%= subtotal.toFixed(2) %></span>
                             </div>
+
+                            <% if (totalOfferDiscount > 0) { %>
+                                <div class="flex justify-between text-green-600">
+                                    <span>Offer Discount</span>
+                                    <span>-₹<%= totalOfferDiscount.toFixed(2) %></span>
+                                </div>
+                            <% } %>
+
+                            <!-- Coupon Discount Row (Hidden by default) -->
+                            <div id="couponDiscountRow" class="flex justify-between text-green-600 hidden">
+                                <span>Coupon Discount</span>
+                                <span>-₹<span id="couponDiscountAmount">0.00</span></span>
+                            </div>
+
+                            <div class="flex justify-between text-gray-600">
+                                <span>GST (10%)</span>
+                                <span>₹<%= gstAmount.toFixed(2) %></span>
+                            </div>
+
                             <div class="flex justify-between">
                                 <span>Shipping</span>
-                                <span>₹<%= shippingCost %></span>
+                                <span>₹<%= shippingCost.toFixed(2) %></span>
                             </div>
+
                             <div class="border-t pt-3">
                                 <div class="flex justify-between font-bold">
                                     <span>Total</span>
-                                    <span>₹<%= total %></span>
+                                    <span>₹<span id="finalTotal"><%= total.toFixed(2) %></span></span>
                                 </div>
                             </div>
                         </div>
@@ -120,7 +187,7 @@
                         </div>
 
                         <!-- Place Order Button -->
-                        <button onclick="placeOrder()"
+                        <button id="placeOrderButton"
                                 class="w-full mt-6 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors">
                             Place Order
                         </button>
@@ -131,41 +198,61 @@
     </div>
 </div>
 
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
-async function placeOrder() {
+let appliedCoupon = null;
+
+async function applyCoupon() {
     try {
-        const selectedAddress = document.querySelector('input[name="selectedAddress"]:checked');
-        const selectedPaymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
+        const select = document.getElementById('couponSelect');
+        const option = select.options[select.selectedIndex];
 
-        if (!selectedAddress) {
-            throw new Error('Please select a delivery address');
+        if (!option.value) {
+            throw new Error('Please select a coupon');
         }
 
-        if (!selectedPaymentMethod) {
-            throw new Error('Please select a payment method');
-        }
-
-        const response = await fetch('/order/create', {
+        const response = await fetch('/apply-coupon', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                addressId: selectedAddress.value,
-                paymentMethod: selectedPaymentMethod.value
+                couponId: option.value,
+                subtotal: <%= subtotal - totalOfferDiscount %>,
+                items: <%- JSON.stringify(cartItems.map(item => ({
+                    id: item.productId._id,
+                    price: item.discountedPrice,
+                    quantity: item.quantity
+                }))) %>
             })
         });
 
         const data = await response.json();
 
         if (data.success) {
-            if (data.paymentMethod === 'online') {
-                // Handle online payment
-                // Implement Razorpay integration here
-            } else {
-                // For COD and wallet payments
-                window.location.href = data.redirect;
-            }
+            // Show coupon discount
+            document.getElementById('couponDiscountRow').classList.remove('hidden');
+            document.getElementById('couponDiscountAmount').textContent = 
+                data.discount.toFixed(2);
+
+            // Update final total
+            const subtotalAfterOffers = <%= subtotal - totalOfferDiscount %>;
+            const gstAmount = (subtotalAfterOffers - data.discount) * 0.10;
+            const newTotal = subtotalAfterOffers - data.discount + gstAmount + <%= shippingCost %>;
+            document.getElementById('finalTotal').textContent = newTotal.toFixed(2);
+
+            // Store applied coupon
+            appliedCoupon = {
+                id: option.value,
+                code: option.textContent.split(' - ')[0],
+                discount: data.discount
+            };
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Coupon Applied',
+                text: `Discount of ₹${data.discount.toFixed(2)} applied successfully!`
+            });
         } else {
             throw new Error(data.message);
         }
@@ -173,10 +260,151 @@ async function placeOrder() {
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: error.message || 'Failed to place order'
+            text: error.message || 'Failed to apply coupon'
         });
     }
 }
+
+async function placeOrder(event) {
+    event.preventDefault();
+    
+    // Check if address is selected
+    const selectedAddress = document.querySelector('input[name="selectedAddress"]:checked');
+    if (!selectedAddress) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Please select a delivery address'
+        });
+        return;
+    }
+
+    // Check if payment method is selected
+    const selectedPayment = document.querySelector('input[name="paymentMethod"]:checked');
+    if (!selectedPayment) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Please select a payment method'
+        });
+        return;
+    }
+    
+    const formData = {
+        addressId: selectedAddress.value,
+        paymentMethod: selectedPayment.value,
+        coupon: appliedCoupon
+    };
+
+    try {
+        const response = await fetch('/order/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            if (data.paymentMethod === 'cod') {
+                window.location.href = data.redirect;
+            } 
+            else if (data.paymentMethod === 'online') {
+                // Initialize Razorpay payment
+                const options = {
+                    key: '<%= razorpayKey %>',
+                    amount: data.razorpayOrder.amount,
+                    currency: data.razorpayOrder.currency,
+                    order_id: data.razorpayOrder.id,
+                    name: 'Royal Monarch',
+                    description: 'Order Payment',
+                    handler: async function (response) {
+                        try {
+                            // Verify payment
+                            const verifyResponse = await fetch('/order/verify-payment', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_signature: response.razorpay_signature
+                                })
+                            });
+
+                            const verifyData = await verifyResponse.json();
+                            
+                            if (verifyData.success) {
+                                window.location.href = verifyData.redirect;
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Payment Failed',
+                                    text: 'Payment verification failed. Please contact support.'
+                                });
+                            }
+                        } catch (error) {
+                            console.error('Payment verification error:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Payment Failed',
+                                text: 'Payment verification failed. Please try again.'
+                            });
+                        }
+                    },
+                    modal: {
+                        ondismiss: function() {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Payment Cancelled',
+                                text: 'Payment was cancelled. Please try again.'
+                            });
+                        }
+                    },
+                    prefill: {
+                        name: '<%= user.firstName %> <%= user.lastName %>',
+                        email: '<%= user.email %>',
+                        contact: '<%= user.phone %>'
+                    },
+                    theme: {
+                        color: '#000000'
+                    }
+                };
+
+                const rzp = new Razorpay(options);
+                rzp.open();
+                
+                // Handle payment failures
+                rzp.on('payment.failed', function (response) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Payment Failed',
+                        text: 'The payment failed. Please try again.'
+                    });
+                });
+            }
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.message || 'Failed to create order'
+            });
+        }
+    } catch (error) {
+        console.error('Order creation error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to create order. Please try again.'
+        });
+    }
+}
+
+// Add event listener to the form
+document.getElementById('placeOrderButton').addEventListener('click', placeOrder);
 </script>
 
 <%- include('../partials/footer') %>

@@ -8,6 +8,7 @@ import addressController from '../controller/user/addressController.js';
 import wishlistController from '../controller/user/wishlistController.js';
 import cartController from '../controller/user/cartController.js';
 import orderController from '../controller/user/orderController.js';
+import walletController from '../controller/user/walletController.js';
 
 
 const router = express.Router();
@@ -95,5 +96,14 @@ router.post('/order/:orderId/return/:itemId', userMiddleware.checkSession, order
 // Add this route
 router.get('/order/success/:orderId', userMiddleware.checkSession, orderController.getOrderSuccess);
 router.get('/order/:orderId/invoice/:itemId', userMiddleware.checkSession, orderController.generateInvoice);
+
+router.post('/apply-coupon', userMiddleware.checkSession, orderController.applyCoupon);
+
+// Wallet routes
+router.get('/wallet', userMiddleware.checkSession, walletController.getWallet);
+router.post('/wallet/create-order', userMiddleware.checkSession, walletController.createOrder);
+router.post('/wallet/verify-payment', userMiddleware.checkSession, walletController.verifyPayment);
+
+router.post('/order/verify-payment', orderController.verifyPayment);
 
 export default router;
