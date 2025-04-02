@@ -151,7 +151,7 @@
 
                             <div class="flex justify-between text-gray-600">
                                 <span>GST (10%)</span>
-                                <span>₹<%= gstAmount.toFixed(2) %></span>
+                                <span>₹<span id="gstAmount"><%= gstAmount.toFixed(2) %></span></span>
                             </div>
 
                             <div class="flex justify-between">
@@ -211,6 +211,11 @@ async function applyCoupon() {
             throw new Error('Please select a coupon');
         }
 
+        // Get original subtotal and offer discount
+        const originalSubtotal = <%= subtotal %>;
+        const offerDiscount = <%= totalOfferDiscount %>;
+        const subtotalAfterOffers = originalSubtotal - offerDiscount;
+
         const response = await fetch('/apply-coupon', {
             method: 'POST',
             headers: {
@@ -218,7 +223,7 @@ async function applyCoupon() {
             },
             body: JSON.stringify({
                 couponId: option.value,
-                subtotal: <%= subtotal - totalOfferDiscount %>,
+                subtotal: subtotalAfterOffers,
                 items: <%- JSON.stringify(cartItems.map(item => ({
                     id: item.productId._id,
                     price: item.discountedPrice,
@@ -235,18 +240,30 @@ async function applyCoupon() {
             document.getElementById('couponDiscountAmount').textContent = 
                 data.discount.toFixed(2);
 
-            // Update final total
-            const subtotalAfterOffers = <%= subtotal - totalOfferDiscount %>;
-            const gstAmount = (subtotalAfterOffers - data.discount) * 0.10;
-            const newTotal = subtotalAfterOffers - data.discount + gstAmount + <%= shippingCost %>;
-            document.getElementById('finalTotal').textContent = newTotal.toFixed(2);
+            // Calculate final total with correct order:
+            // 1. Original subtotal
+            // 2. Subtract offer discount
+            // 3. Subtract coupon discount
+            // 4. Calculate GST on remaining amount
+            // 5. Add shipping charge
+            const subtotalAfterOffers = originalSubtotal - offerDiscount;
+            const subtotalAfterCoupon = subtotalAfterOffers - data.discount;
+            const gstAmount = subtotalAfterCoupon * 0.10; // 10% GST
+            const shippingCost = <%= shippingCost %>;
+            const finalTotal = subtotalAfterCoupon + gstAmount + shippingCost;
 
-            // Store applied coupon
+            // Update displayed total
+            document.getElementById('finalTotal').textContent = finalTotal.toFixed(2);
+
+            // Store applied coupon with all details
             appliedCoupon = {
                 id: option.value,
                 code: option.textContent.split(' - ')[0],
                 discount: data.discount
             };
+
+            // Update GST amount display
+            document.getElementById('gstAmount').textContent = gstAmount.toFixed(2);
 
             Swal.fire({
                 icon: 'success',
@@ -290,10 +307,14 @@ async function placeOrder(event) {
         return;
     }
     
+    // Get the current total amount from the UI
+    const currentTotal = parseFloat(document.getElementById('finalTotal').textContent);
+    
     const formData = {
         addressId: selectedAddress.value,
         paymentMethod: selectedPayment.value,
-        coupon: appliedCoupon
+        coupon: appliedCoupon,
+        totalAmount: currentTotal // Pass the current total to backend
     };
 
     try {
@@ -315,7 +336,7 @@ async function placeOrder(event) {
                 // Initialize Razorpay payment
                 const options = {
                     key: '<%= razorpayKey %>',
-                    amount: data.razorpayOrder.amount,
+                    amount: Math.round(currentTotal * 100), // Use the current total from UI
                     currency: data.razorpayOrder.currency,
                     order_id: data.razorpayOrder.id,
                     name: 'Royal Monarch',

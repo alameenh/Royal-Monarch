@@ -103,9 +103,9 @@ const orderController = {
                 };
             }));
 
-            // Calculate GST and final total
+            // Calculate totals with correct order
             const subtotalAfterOffers = subtotal - totalOfferDiscount;
-            const gstAmount = subtotalAfterOffers * 0.10; // 10% GST
+            const gstAmount = subtotalAfterOffers * 0.10; // 10% GST on amount after offers
             const shippingCost = 40;
             const total = subtotalAfterOffers + gstAmount + shippingCost;
 
@@ -129,7 +129,7 @@ const orderController = {
                 user,
                 addresses,
                 cartItems: processedItems.filter(item => item !== null),
-                subtotal,
+                subtotal, // Original subtotal
                 totalOfferDiscount,
                 subtotalAfterOffers,
                 gstAmount,
@@ -149,7 +149,7 @@ const orderController = {
     createOrder: async (req, res) => {
         try {
             const userId = req.session.userId;
-            const { addressId, paymentMethod, coupon } = req.body;
+            const { addressId, paymentMethod, coupon, totalAmount } = req.body;
 
             // Validate address
             const address = await Address.findOne({ _id: addressId, userId });
@@ -204,24 +204,40 @@ const orderController = {
                 });
             }
 
-            // Apply coupon if provided
+            // Calculate all amounts
+            const subtotalAfterOffers = subtotal - totalOfferDiscount;
+            
+            // Apply coupon discount
             let couponDiscount = 0;
             if (coupon) {
+                // Verify coupon is still valid
+                const validCoupon = await Coupon.findOne({
+                    _id: coupon.id,
+                    isActive: true,
+                    startDate: { $lte: new Date() },
+                    expiryDate: { $gte: new Date() },
+                    minPurchase: { $lte: subtotalAfterOffers }
+                });
+
+                if (!validCoupon) {
+                    throw new Error('Coupon is no longer valid');
+                }
+
                 couponDiscount = coupon.discount;
             }
 
             // Calculate final amounts
-            const subtotalAfterOffers = subtotal - totalOfferDiscount;
-            const gstAmount = (subtotalAfterOffers - couponDiscount) * 0.10; // 10% GST
+            const subtotalAfterCoupon = subtotalAfterOffers - couponDiscount;
+            const gstAmount = subtotalAfterCoupon * 0.10; // 10% GST
             const shippingCost = 40;
-            const totalAmount = subtotalAfterOffers - couponDiscount + gstAmount + shippingCost;
+            const finalAmount = subtotalAfterCoupon + gstAmount + shippingCost;
 
-            // Create new order with initial payment status
+            // Create new order
             const order = new Order({
                 orderId: uuidv4(),
                 userId,
                 items: orderItems,
-                totalAmount,
+                totalAmount: finalAmount,
                 paymentMethod,
                 paymentStatus: 'pending',
                 shippingAddress: {
@@ -258,34 +274,29 @@ const orderController = {
             } 
             else if (paymentMethod === 'online') {
                 try {
-                    // Verify Razorpay configuration
                     verifyRazorpayConfig();
 
                     const options = {
-                        amount: Math.round(totalAmount * 100),
+                        amount: Math.round(totalAmount * 100), // Use the total passed from frontend
                         currency: "INR",
                         receipt: order.orderId,
                         notes: {
                             orderId: order.orderId,
-                            userId: userId.toString()
+                            userId: userId.toString(),
+                            subtotal: subtotal,
+                            offerDiscount: totalOfferDiscount,
+                            couponDiscount: couponDiscount || 0,
+                            gst: gstAmount,
+                            shipping: shippingCost,
+                            finalAmount: totalAmount
                         }
                     };
-
-                    console.log('Creating Razorpay order with options:', {
-                        ...options,
-                        amount: options.amount / 100 // Log actual amount in rupees
-                    });
 
                     const razorpayOrder = await razorpay.orders.create(options);
 
                     if (!razorpayOrder || !razorpayOrder.id) {
                         throw new Error('Failed to create Razorpay order');
                     }
-
-                    console.log('Razorpay order created:', {
-                        id: razorpayOrder.id,
-                        amount: razorpayOrder.amount / 100
-                    });
 
                     // Update order with Razorpay details
                     order.paymentDetails = {
@@ -300,8 +311,8 @@ const orderController = {
                         paymentMethod,
                         razorpayOrder: {
                             id: razorpayOrder.id,
-                            amount: razorpayOrder.amount,
-                            currency: razorpayOrder.currency
+                            amount: Math.round(totalAmount * 100), // Use the same amount here
+                            currency: 'INR'
                         }
                     });
                 } catch (razorpayError) {

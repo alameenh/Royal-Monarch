@@ -1,4 +1,7 @@
 import Order from '../../model/orderModel.js';
+import Product from '../../model/productModel.js';
+import Wallet from '../../model/walletModel.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -83,84 +86,83 @@ const searchOrders = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
     try {
         const { orderId } = req.params;
-        const { status, itemId } = req.body;
+        const { itemId, status } = req.body;
 
-        const order = await Order.findOne({ orderId: orderId });
+        const order = await Order.findOne({ orderId });
         if (!order) {
-            return res.status(404).json({ success: false, message: 'Order not found' });
-        }
-
-        const itemIndex = order.items.findIndex(item => item._id.toString() === itemId);
-        if (itemIndex === -1) {
-            return res.status(404).json({ success: false, message: 'Item not found in order' });
-        }
-
-        const item = order.items[itemIndex];
-
-        // Define allowed status transitions based on current status
-        const statusTransitions = {
-            'pending': ['processing','order rejected'],
-            'processing': ['shipped', 'order rejected'],
-            'shipped': ['delivered', 'order rejected'],
-            'delivered': ['return requested'],
-            'return requested': ['returned', 'return rejected'],
-            'cancelled': [],
-            'order rejected': [],
-            'returned': [],
-            'return rejected': []
-        };
-
-        // Check if the status transition is allowed
-        if (!statusTransitions[item.status]?.includes(status)) {
-            return res.status(400).json({
+            return res.status(404).json({
                 success: false,
-                message: 'Invalid status transition'
+                message: 'Order not found'
             });
         }
 
-        // Update status and corresponding dates
-        const now = new Date();
-        order.items[itemIndex].status = status;
+        const item = order.items.id(itemId);
+        if (!item) {
+            return res.status(404).json({
+                success: false,
+                message: 'Item not found'
+            });
+        }
 
-        // Update dates based on status
-        switch (status) {
-            case 'shipped':
-                order.items[itemIndex].shippedDate = now;
-                // Calculate expected delivery date (e.g., 5 days from shipping)
-                order.expectedDeliveryDate = new Date(now.getTime() + (5 * 24 * 60 * 60 * 1000));
-                break;
+        // Handle return approval
+        if (status === 'returned' && item.status === 'return requested') {
+            // Calculate refund amount (including any discounts applied)
+            const refundAmount = (item.price - (item.price * (item.discount || 0) / 100)) * item.quantity;
 
-            case 'delivered':
-                order.items[itemIndex].deliveredDate = now;
-                order.deliveryDate = now;
-                if (order.paymentMethod === 'cod') {
-                    order.paymentStatus = 'paid';
+            // Find or create user's wallet
+            let wallet = await Wallet.findOne({ userId: order.userId });
+            if (!wallet) {
+                wallet = new Wallet({
+                    userId: order.userId,
+                    balance: 0,
+                    transactions: []
+                });
+            }
+
+            // Add refund to wallet
+            wallet.balance += refundAmount;
+            wallet.transactions.push({
+                transactionId: uuidv4(),
+                type: 'CREDIT',
+                amount: refundAmount,
+                description: `Refund for order ${order.orderId}`,
+                date: new Date()
+            });
+
+            await wallet.save();
+
+            // Update product stock
+            const product = await Product.findOne({
+                name: item.name,
+                'variants.type': item.variantType
+            });
+
+            if (product) {
+                const variant = product.variants.find(v => v.type === item.variantType);
+                if (variant) {
+                    variant.stock += item.quantity;
+                    await product.save();
                 }
-                break;
+            }
+        }
 
-            case 'order rejected':
-                if (order.paymentStatus === 'paid') {
-                    order.paymentStatus = 'refunded';
-                }
-                break;
-
-            case 'returned':
-                order.items[itemIndex].returnedDate = now;
-                if (order.paymentStatus === 'paid') {
-                    order.paymentStatus = 'refunded';
-                }
-                break;
+        // Update item status
+        item.status = status;
+        if (status === 'delivered') {
+            item.deliveredDate = new Date();
+        } else if (status === 'returned') {
+            item.returnedDate = new Date();
         }
 
         await order.save();
 
         res.json({
             success: true,
-            message: `Order ${status.replace('_', ' ')} successfully`,
-            newStatus: status
+            message: 'Order status updated successfully'
         });
+
     } catch (error) {
-        console.error('Error updating order status:', error);
+        console.error('Update Order Status Error:', error);
         res.status(500).json({
             success: false,
             message: 'Error updating order status'

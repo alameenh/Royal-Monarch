@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+</head>
+<body class="bg-zinc-900 text-white min-h-screen">
+    <%- include("../partials/sidebar") %>
+
+    <div class="lg:ml-64 transition-all" id="main-content">
+        <!-- Header -->
+        <header class="flex items-center justify-between mb-8 p-4 lg:p-8 border-b border-gray-700">
+            <h1 class="text-2xl font-semibold text-gray-200">Sales Report</h1>
+            
+            <!-- Download Buttons -->
+            <div class="flex gap-4">
+                <button onclick="downloadReport('pdf')" 
+                        class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2">
+                    <i class="material-icons text-sm">picture_as_pdf</i>
+                    PDF
+                </button>
+                <button onclick="downloadReport('excel')" 
+                        class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2">
+                    <i class="material-icons text-sm">table_view</i>
+                    Excel
+                </button>
+            </div>
+        </header>
+
+        <!-- Filters -->
+        <div class="p-4 lg:p-8">
+            <div class="bg-zinc-800 rounded-lg p-6 mb-8">
+                <div class="flex flex-wrap gap-4 items-end">
+                    <!-- Time Period Filter -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Time Period</label>
+                        <select id="timeFilter" onchange="handleFilterChange()" 
+                                class="bg-zinc-700 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="all" <%= currentFilter === 'all' ? 'selected' : '' %>>All Time</option>
+                            <option value="daily" <%= currentFilter === 'daily' ? 'selected' : '' %>>Daily</option>
+                            <option value="weekly" <%= currentFilter === 'weekly' ? 'selected' : '' %>>Weekly</option>
+                            <option value="monthly" <%= currentFilter === 'monthly' ? 'selected' : '' %>>Monthly</option>
+                            <option value="custom" <%= currentFilter === 'custom' ? 'selected' : '' %>>Custom Date Range</option>
+                        </select>
+                    </div>
+
+                    <!-- Custom Date Range -->
+                    <div id="customDateRange" class="<%= currentFilter === 'custom' ? 'flex' : 'hidden' %> gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Start Date</label>
+                            <input type="date" id="startDate" value="<%= startDate %>"
+                                   class="bg-zinc-700 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">End Date</label>
+                            <input type="date" id="endDate" value="<%= endDate %>"
+                                   class="bg-zinc-700 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <button onclick="applyCustomDateFilter()"
+                                class="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors">
+                            Apply
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sales Summary -->
+            <div class="bg-zinc-800 rounded-lg p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4">Summary</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-zinc-700 rounded-lg p-6">
+                        <div class="text-sm text-gray-400">Total Revenue</div>
+                        <div class="text-2xl font-bold">₹<%= totalRevenue.toFixed(2) %></div>
+                    </div>
+                    <div class="bg-zinc-700 rounded-lg p-6">
+                        <div class="text-sm text-gray-400">Total Orders</div>
+                        <div class="text-2xl font-bold"><%= orders.length %></div>
+                    </div>
+                    <div class="bg-zinc-700 rounded-lg p-6">
+                        <div class="text-sm text-gray-400">Average Order Value</div>
+                        <div class="text-2xl font-bold">₹<%= (totalRevenue / (orders.length || 1)).toFixed(2) %></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Table -->
+            <div class="bg-zinc-800 rounded-lg p-6 overflow-x-auto">
+                <table class="min-w-full text-left text-gray-400">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="py-3 px-4">Order ID</th>
+                            <th class="py-3 px-4">Customer</th>
+                            <th class="py-3 px-4">Date</th>
+                            <th class="py-3 px-4">Items</th>
+                            <th class="py-3 px-4">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (orders && orders.length > 0) { %>
+                            <% orders.forEach(order => { %>
+                                <tr class="border-b border-gray-700 hover:bg-zinc-700 transition-colors">
+                                    <td class="py-3 px-4"><%= order.orderId %></td>
+                                    <td class="py-3 px-4">
+                                        <div class="text-gray-200"><%= order.userId.name %></div>
+                                        <div class="text-sm"><%= order.userId.email %></div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <%= new Date(order.deliveryDate).toLocaleDateString() %>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <%= order.items.length %> items
+                                    </td>
+                                    <td class="py-3 px-4">₹<%= order.totalAmount.toFixed(2) %></td>
+                                </tr>
+                            <% }); %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="5" class="py-8 text-center text-gray-400">
+                                    No orders found for the selected period
+                                </td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function handleFilterChange() {
+            const filter = document.getElementById('timeFilter').value;
+            const customDateRange = document.getElementById('customDateRange');
+            
+            if (filter === 'custom') {
+                customDateRange.classList.remove('hidden');
+                customDateRange.classList.add('flex');
+            } else {
+                customDateRange.classList.add('hidden');
+                customDateRange.classList.remove('flex');
+                window.location.href = `/admin/sales-report?filter=${filter}`;
+            }
+        }
+
+        function applyCustomDateFilter() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!startDate || !endDate) {
+                alert('Please select both start and end dates');
+                return;
+            }
+            
+            window.location.href = `/admin/sales-report?filter=custom&startDate=${startDate}&endDate=${endDate}`;
+        }
+
+        function downloadReport(type) {
+            const filter = document.getElementById('timeFilter').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            let url = `/admin/sales-report/download-${type}?filter=${filter}`;
+            
+            if (filter === 'custom' && startDate && endDate) {
+                url += `&startDate=${startDate}&endDate=${endDate}`;
+            }
+            
+            window.location.href = url;
+        }
+    </script>
+</body>
+</html> 

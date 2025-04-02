@@ -7,6 +7,7 @@ import productController from '../controller/admin/productController.js';
 import orderController from '../controller/admin/adminOrderController.js';
 import offerController from '../controller/admin/offerController.js';
 import couponController from '../controller/admin/couponController.js';
+import salesController from '../controller/admin/salesController.js';
 
 const router = express.Router();
 
@@ -56,5 +57,10 @@ router.get('/coupons/:id', adminMiddleware.checkSession, couponController.getCou
 router.put('/coupons/:id', adminMiddleware.checkSession, couponController.updateCoupon);
 router.delete('/coupons/:id', adminMiddleware.checkSession, couponController.deleteCoupon);
 router.patch('/coupons/:id/toggle-status', adminMiddleware.checkSession, couponController.toggleCouponStatus);
+
+// Sales Report Routes
+router.get('/sales-report', adminMiddleware.checkSession, salesController.getSalesReport);
+router.get('/sales-report/download-pdf', adminMiddleware.checkSession, salesController.downloadPDF);
+router.get('/sales-report/download-excel', adminMiddleware.checkSession, salesController.downloadExcel);
 
 export default router; 
