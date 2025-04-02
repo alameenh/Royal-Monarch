@@ -3,16 +3,27 @@
     <div class="justify-center items-center h-screen flex">
         <div class="rounded-lg shadow-lg w-80 border-2 p-8">
             <p class="text-center text-gray-700 mb-4">Login</p>
-            <form class="space-y-4" >
-                <input type="email" placeholder="Email" class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200"
-                     />
-                <input type="password" placeholder="Password"
-                    class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200" />
+            <form class="space-y-4" id="loginForm" novalidate>
+                <div>
+                    <input type="email" id="email" placeholder="Email" 
+                        class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200" />
+                    <p class="text-red-500 text-xs mt-1 hidden" id="emailError"></p>
+                </div>
+
+                <div>
+                    <input type="password" id="password" placeholder="Password"
+                        class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200" />
+                    <p class="text-red-500 text-xs mt-1 hidden" id="passwordError"></p>
+                </div>
+
                 <div class="justify-between text-sm text-gray-700 flex">
                     <a href="/signup">Signup</a>
                     <a href="/forgot-password" class="ml-auto">Forget Password?</a>
                 </div>
-                <button type="submit" class="rounded w-full py-2 mt-2 bg-black text-white">Login</button>
+                <button type="submit" id="loginButton" 
+                    class="rounded w-full py-2 mt-2 bg-black text-white hover:bg-gray-800 disabled:bg-gray-400">
+                    Login
+                </button>
             </form>
 
             <!-- Google Sign in -->
@@ -20,66 +31,109 @@
                 Or continue with Google
             </div>
             <a class="flex justify-center mt-6" href="/auth/google?trigger=login">
-                <img src="https://w7.pngwing.com/pngs/989/129/png-transparent-google-logo-google-search-meng-meng-company-text-logo-thumbnail.png" 
-                alt="Google Logo" 
-                class="w-7 h-7"
-           />
-                
+                <i class="fa-brands fa-google fa-lg" style="color: #b12020"></i>
             </a>
-
         </div>
     </div>
+
     <%- include("../partials/footer") %>
 
-        <script>
-            document.querySelector('form').addEventListener('submit', async (event) => {
-                event.preventDefault();
-                const form = event.target;
-                const email = form.querySelector('input[type="email"]').value;
-                const password = form.querySelector('input[type="password"]').value;
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const loginButton = document.getElementById('loginButton');
 
-                try {
-                    const loadingAlert = Swal.fire({
-                        title: 'Logging in...',
-                        allowOutsideClick: false,
-                        showConfirmButton: false,
-                        willOpen: () => {
-                            Swal.showLoading();
-                        }
+        // Validation functions
+        function validateEmail(email) {
+            if (!email) return 'Email is required';
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) return 'Please enter a valid email address';
+            return '';
+        }
+
+        function validatePassword(password) {
+            if (!password) return 'Password is required';
+            if (password.length < 6) return 'Password must be at least 6 characters';
+            return '';
+        }
+
+        // Real-time validation
+        document.getElementById('email').addEventListener('input', function(e) {
+            const error = validateEmail(e.target.value);
+            document.getElementById('emailError').textContent = error;
+            document.getElementById('emailError').classList.toggle('hidden', !error);
+        });
+
+        document.getElementById('password').addEventListener('input', function(e) {
+            const error = validatePassword(e.target.value);
+            document.getElementById('passwordError').textContent = error;
+            document.getElementById('passwordError').classList.toggle('hidden', !error);
+        });
+
+        loginForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // Validate all fields
+            const emailError = validateEmail(email);
+            const passwordError = validatePassword(password);
+
+            // Show errors if any
+            document.getElementById('emailError').textContent = emailError;
+            document.getElementById('emailError').classList.toggle('hidden', !emailError);
+            document.getElementById('passwordError').textContent = passwordError;
+            document.getElementById('passwordError').classList.toggle('hidden', !passwordError);
+
+            // If there are validation errors, stop form submission
+            if (emailError || passwordError) {
+                return;
+            }
+
+            try {
+                loginButton.disabled = true;
+                const loadingAlert = Swal.fire({
+                    title: 'Logging in...',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    willOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                const response = await axios.post('/login', { email, password });
+                loadingAlert.close();
+
+                if (response.data.success) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: response.data.message,
+                        timer: 1500,
+                        showConfirmButton: false
                     });
-
-                    const response = await axios.post('/login', { email, password });
-                    loadingAlert.close();
-
-                    if (response.data.success) {
-                        await Swal.fire({
-                            icon: 'success',
-                            title: 'Success!',
-                            text: response.data.message,
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
-                        window.location.href = response.data.redirect;
-                    }
-                } catch (error) {
-                    const message = error.response?.data?.message || 'An error occurred';
-                    const redirect = error.response?.data?.redirect;
-
-                    if (redirect) {
-                        await Swal.fire({
-                            icon: 'info',
-                            title: 'Verification Required',
-                            text: message,
-                            confirmButtonText: 'Verify Now'
-                        });
-                        window.location.href = redirect;
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: message
-                        });
-                    }
+                    window.location.href = response.data.redirect;
                 }
-            });
-        </script>
+            } catch (error) {
+                const message = error.response?.data?.message || 'An error occurred';
+                const redirect = error.response?.data?.redirect;
+
+                if (redirect) {
+                    await Swal.fire({
+                        icon: 'info',
+                        title: 'Verification Required',
+                        text: message,
+                        confirmButtonText: 'Verify Now'
+                    });
+                    window.location.href = redirect;
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: message
+                    });
+                }
+            } finally {
+                loginButton.disabled = false;
+            }
+        });
+    </script>

@@ -9,6 +9,7 @@ import Offer from '../../model/offerModel.js';
 import Coupon from '../../model/couponModel.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import Wallet from '../../model/walletModel.js';
 
 // Initialize Razorpay with proper configuration
 const razorpay = new Razorpay({
@@ -174,10 +175,38 @@ const orderController = {
                 });
             }
 
+            // Fetch active offers
+            const activeOffers = await Offer.find({
+                isActive: true,
+                startDate: { $lte: new Date() },
+                endDate: { $gte: new Date() }
+            });
+
             // Calculate totals and prepare order items
             let subtotal = 0;
             let totalOfferDiscount = 0;
             const orderItems = [];
+
+            // Add stock check and update before creating order
+            for (const item of cartItems) {
+                const product = await Product.findById(item.productId._id);
+                if (!product) {
+                    throw new Error(`Product ${item.productId._id} not found`);
+                }
+
+                const variant = product.variants.find(v => v.type === item.variantType);
+                if (!variant) {
+                    throw new Error(`Variant ${item.variantType} not found for ${product.name}`);
+                }
+
+                if (variant.stock < item.quantity) {
+                    throw new Error(`Insufficient stock for ${product.name} (${item.variantType})`);
+                }
+
+                // Decrease stock
+                variant.stock -= item.quantity;
+                await product.save();
+            }
 
             for (const item of cartItems) {
                 if (!item.productId || item.productId.status !== 'Active') continue;
@@ -185,22 +214,45 @@ const orderController = {
                 const variant = item.productId.variants.find(v => v.type === item.variantType);
                 const originalPrice = variant.price;
                 const itemSubtotal = originalPrice * item.quantity;
-                
-                // Apply offer discount if any
-                let discountedPrice = item.discountedPrice || originalPrice;
-                let offerDiscount = originalPrice - discountedPrice;
+
+                // Find applicable offers
+                const productOffer = activeOffers.find(offer => 
+                    offer.type === 'product' && 
+                    offer.productIds.some(id => id.toString() === item.productId._id.toString())
+                );
+
+                const categoryOffer = activeOffers.find(offer => 
+                    offer.type === 'category' && 
+                    offer.categoryId.toString() === item.productId.category.toString()
+                );
+
+                // Apply best offer
+                const applicableOffer = productOffer || categoryOffer;
+                let offerDiscount = 0;
+                let discountedPrice = originalPrice;
+
+                if (applicableOffer) {
+                    offerDiscount = (originalPrice * applicableOffer.discount) / 100;
+                    discountedPrice = originalPrice - offerDiscount;
+                    totalOfferDiscount += offerDiscount * item.quantity;
+                }
 
                 subtotal += itemSubtotal;
-                totalOfferDiscount += offerDiscount * item.quantity;
 
                 orderItems.push({
+                    productId: item.productId._id,
                     name: item.productId.name,
                     brand: item.productId.brand,
                     images: item.productId.images,
                     quantity: item.quantity,
                     price: originalPrice,
-                    discount: offerDiscount,
-                    variantType: item.variantType
+                    variantType: item.variantType,
+                    discount: applicableOffer ? applicableOffer.discount : 0,
+                    offer: applicableOffer ? {
+                        name: applicableOffer.name,
+                        type: applicableOffer.type,
+                        discount: applicableOffer.discount
+                    } : null
                 });
             }
 
@@ -209,6 +261,7 @@ const orderController = {
             
             // Apply coupon discount
             let couponDiscount = 0;
+            let couponDetails = null;
             if (coupon) {
                 // Verify coupon is still valid
                 const validCoupon = await Coupon.findOne({
@@ -224,6 +277,11 @@ const orderController = {
                 }
 
                 couponDiscount = coupon.discount;
+                couponDetails = {
+                    code: validCoupon.code,
+                    discount: couponDiscount,
+                    type: validCoupon.discountType
+                };
             }
 
             // Calculate final amounts
@@ -232,12 +290,18 @@ const orderController = {
             const shippingCost = 40;
             const finalAmount = subtotalAfterCoupon + gstAmount + shippingCost;
 
-            // Create new order
+            // Create order first
+            const newOrderId = uuidv4();
             const order = new Order({
-                orderId: uuidv4(),
+                orderId: newOrderId,
                 userId,
                 items: orderItems,
                 totalAmount: finalAmount,
+                subtotal,
+                offerDiscount: totalOfferDiscount,
+                coupon: couponDetails,
+                gstAmount,
+                shippingCost,
                 paymentMethod,
                 paymentStatus: 'pending',
                 shippingAddress: {
@@ -250,14 +314,26 @@ const orderController = {
                     phone: address.phone,
                     alternatePhone: address.alternatePhone
                 },
-                expectedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-                coupon: coupon ? {
-                    code: coupon.code,
-                    discount: couponDiscount
-                } : undefined
+                expectedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
             });
 
             await order.save();
+
+            // Update coupon usage after order is created
+            if (coupon && couponDetails) {
+                await Coupon.findByIdAndUpdate(
+                    coupon.id,
+                    {
+                        $push: {
+                            usageHistory: {
+                                userId: userId,
+                                orderId: newOrderId,
+                                usedAt: new Date()
+                            }
+                        }
+                    }
+                );
+            }
 
             if (paymentMethod === 'cod') {
                 order.paymentStatus = 'unpaid';
@@ -378,11 +454,7 @@ const orderController = {
             const { orderId, itemId } = req.params;
             const userId = req.session.userId;
 
-            const order = await Order.findOne({ 
-                orderId: orderId,
-                userId: userId
-            });
-
+            const order = await Order.findOne({ orderId, userId });
             if (!order) {
                 return res.status(404).json({
                     success: false,
@@ -405,30 +477,83 @@ const orderController = {
                 });
             }
 
-            // Find the product to update stock
-            const product = await Product.findOne({
-                name: item.name,
-                'variants.type': item.variant
-            });
-
-            if (product) {
-                // Find the variant and update its stock
-                const variantIndex = product.variants.findIndex(v => v.type === item.variant);
-                if (variantIndex !== -1) {
-                    // Add the cancelled quantity back to stock
-                    product.variants[variantIndex].stock += item.quantity;
-                    await product.save();
-                }
+            // Update product stock
+            const product = await Product.findById(item.productId);
+            if (!product) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Product not found'
+                });
             }
 
-            // Update order item status
+            const variant = product.variants.find(v => v.type === item.variantType);
+            if (!variant) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Product variant not found'
+                });
+            }
+
+            // Increase stock
+            variant.stock += item.quantity;
+            await product.save();
+            console.log(`Stock updated for ${product.name} (${item.variantType}): +${item.quantity}, New stock: ${variant.stock}`);
+
+            // Process refund if needed
+            if (order.paymentMethod === 'online' && order.paymentStatus === 'paid') {
+                // Calculate base refund amount for this item
+                const itemBasePrice = (item.price - (item.price * (item.discount || 0) / 100)) * item.quantity;
+                let refundAmount = itemBasePrice;
+
+                // If order has coupon, calculate proportional coupon discount
+                if (order.coupon && order.coupon.discount > 0) {
+                    // Calculate total order value (before coupon)
+                    const orderTotalBeforeCoupon = order.items.reduce((sum, orderItem) => {
+                        const itemPrice = (orderItem.price - (orderItem.price * (orderItem.discount || 0) / 100)) * orderItem.quantity;
+                        return sum + itemPrice;
+                    }, 0);
+
+                    // Calculate this item's proportion of the total order
+                    const itemProportion = itemBasePrice / orderTotalBeforeCoupon;
+                    
+                    // Calculate this item's share of the coupon discount
+                    const itemCouponDiscount = order.coupon.discount * itemProportion;
+                    
+                    // Add proportional coupon discount to refund
+                    refundAmount += itemCouponDiscount;
+                }
+
+                // Find or create user's wallet
+                let wallet = await Wallet.findOne({ userId });
+                if (!wallet) {
+                    wallet = new Wallet({
+                        userId,
+                        balance: 0,
+                        transactions: []
+                    });
+                }
+
+                // Add refund to wallet
+                wallet.balance += refundAmount;
+                wallet.transactions.push({
+                    transactionId: uuidv4(),
+                    type: 'CREDIT',
+                    amount: refundAmount,
+                    description: `Refund for cancelled order ${order.orderId} (${item.name})`,
+                    date: new Date()
+                });
+
+                await wallet.save();
+            }
+
+            // Update order status
             item.status = 'cancelled';
             item.cancelledDate = new Date();
             await order.save();
 
             res.json({
                 success: true,
-                message: 'Item cancelled successfully and stock updated'
+                message: 'Item cancelled successfully'
             });
 
         } catch (error) {
@@ -911,3 +1036,4 @@ const orderController = {
 };
 
 export default orderController;
+

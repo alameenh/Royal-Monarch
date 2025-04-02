@@ -166,14 +166,15 @@ function updateVariantPrice(select, variants) {
     priceContainer.className = 'flex items-center justify-between mt-3';
 }
 
-// Update addToCart function to use selected variant
+// Update the addToCart function
 async function addToCart(productId, variantIndex) {
     try {
         const select = document.querySelector(`select[data-product-id="${productId}"]`);
         const selectedOption = select.options[select.selectedIndex];
         const variantType = selectedOption.text.split(' - ')[0]; // Get variant type from option text
 
-        const response = await fetch('/cart/add', {
+        // Add to cart
+        const cartResponse = await fetch('/cart/add', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -184,23 +185,41 @@ async function addToCart(productId, variantIndex) {
             })
         });
 
-        const data = await response.json();
+        const cartData = await cartResponse.json();
 
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Added to Cart!',
-                showConfirmButton: false,
-                timer: 1500
+        if (cartData.success) {
+            // If successfully added to cart, remove from wishlist
+            const wishlistResponse = await fetch(`/wishlist/remove/${productId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             });
+
+            const wishlistData = await wishlistResponse.json();
+
+            if (wishlistData.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Added to Cart!',
+                    text: 'Item removed from wishlist',
+                    showConfirmButton: false,
+                    timer: 1500
+                }).then(() => {
+                    // Refresh the page to update the wishlist
+                    location.reload();
+                });
+            } else {
+                throw new Error(wishlistData.message);
+            }
         } else {
-            throw new Error(data.message);
+            throw new Error(cartData.message);
         }
     } catch (error) {
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: error.message || 'Failed to add to cart'
+            text: error.message || 'Failed to process request'
         });
     }
 }

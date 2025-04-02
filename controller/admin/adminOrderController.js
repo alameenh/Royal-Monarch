@@ -104,10 +104,32 @@ const updateOrderStatus = async (req, res) => {
             });
         }
 
-        // Handle return approval
-        if (status === 'returned' && item.status === 'return requested') {
-            // Calculate refund amount (including any discounts applied)
-            const refundAmount = (item.price - (item.price * (item.discount || 0) / 100)) * item.quantity;
+        // Handle refunds for online payments
+        if ((status === 'order rejected' || status === 'cancelled') && 
+            order.paymentMethod === 'online' && 
+            order.paymentStatus === 'paid') {
+            
+            // Calculate base refund amount for this item
+            const itemBasePrice = (item.price - (item.price * (item.discount || 0) / 100)) * item.quantity;
+            let refundAmount = itemBasePrice;
+
+            // If order has coupon, calculate proportional coupon discount
+            if (order.coupon && order.coupon.discount > 0) {
+                // Calculate total order value (before coupon)
+                const orderTotalBeforeCoupon = order.items.reduce((sum, orderItem) => {
+                    const itemPrice = (orderItem.price - (orderItem.price * (orderItem.discount || 0) / 100)) * orderItem.quantity;
+                    return sum + itemPrice;
+                }, 0);
+
+                // Calculate this item's proportion of the total order
+                const itemProportion = itemBasePrice / orderTotalBeforeCoupon;
+                
+                // Calculate this item's share of the coupon discount
+                const itemCouponDiscount = order.coupon.discount * itemProportion;
+                
+                // Add proportional coupon discount to refund
+                refundAmount += itemCouponDiscount;
+            }
 
             // Find or create user's wallet
             let wallet = await Wallet.findOne({ userId: order.userId });
@@ -125,7 +147,62 @@ const updateOrderStatus = async (req, res) => {
                 transactionId: uuidv4(),
                 type: 'CREDIT',
                 amount: refundAmount,
-                description: `Refund for order ${order.orderId}`,
+                description: `Refund for cancelled order ${order.orderId} (${item.name})`,
+                date: new Date()
+            });
+
+            await wallet.save();
+
+            // Update product stock
+            const product = await Product.findOne({
+                name: item.name,
+                'variants.type': item.variantType
+            });
+
+            if (product) {
+                const variant = product.variants.find(v => v.type === item.variantType);
+                if (variant) {
+                    variant.stock += item.quantity;
+                    await product.save();
+                }
+            }
+        }
+
+        // Handle return approval refunds
+        if (status === 'returned' && item.status === 'return requested') {
+            // Calculate base refund amount
+            const itemBasePrice = (item.price - (item.price * (item.discount || 0) / 100)) * item.quantity;
+            let refundAmount = itemBasePrice;
+
+            // If order has coupon, calculate proportional coupon discount
+            if (order.coupon && order.coupon.discount > 0) {
+                const orderTotalBeforeCoupon = order.items.reduce((sum, orderItem) => {
+                    const itemPrice = (orderItem.price - (orderItem.price * (orderItem.discount || 0) / 100)) * orderItem.quantity;
+                    return sum + itemPrice;
+                }, 0);
+
+                const itemProportion = itemBasePrice / orderTotalBeforeCoupon;
+                const itemCouponDiscount = order.coupon.discount * itemProportion;
+                refundAmount += itemCouponDiscount;
+            }
+
+            // Find or create user's wallet
+            let wallet = await Wallet.findOne({ userId: order.userId });
+            if (!wallet) {
+                wallet = new Wallet({
+                    userId: order.userId,
+                    balance: 0,
+                    transactions: []
+                });
+            }
+
+            // Add refund to wallet
+            wallet.balance += refundAmount;
+            wallet.transactions.push({
+                transactionId: uuidv4(),
+                type: 'CREDIT',
+                amount: refundAmount,
+                description: `Refund for returned item ${order.orderId} (${item.name})`,
                 date: new Date()
             });
 
@@ -152,6 +229,8 @@ const updateOrderStatus = async (req, res) => {
             item.deliveredDate = new Date();
         } else if (status === 'returned') {
             item.returnedDate = new Date();
+        } else if (status === 'cancelled' || status === 'order rejected') {
+            item.cancelledDate = new Date();
         }
 
         await order.save();

@@ -1,11 +1,17 @@
 import mongoose from "mongoose";
 
 const orderItemSchema = new mongoose.Schema({
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+    required: true
+  },
   name: { type: String, required: true },
   brand: { type: String, required: true },
   images: [{ path: String, filename: String }],
   quantity: { type: Number, required: true },
   price: { type: Number, required: true },
+  variantType: { type: String, required: true },
   discount: { type: Number, default: 0 },
   status: {
     type: String,
@@ -65,9 +71,29 @@ const orderSchema = new mongoose.Schema({
   deliveryDate: {
     type: Date
   },
+  subtotal: { 
+    type: Number, 
+    required: true 
+  },
+  offerDiscount: { 
+    type: Number, 
+    default: 0 
+  },
+  gstAmount: { 
+    type: Number, 
+    required: true 
+  },
+  shippingCost: { 
+    type: Number, 
+    required: true 
+  },
   coupon: {
     code: { type: String },
-    discount: { type: Number, default: 0 }
+    discount: { type: Number },
+    type: { 
+      type: String,
+      enum: ['PERCENTAGE', 'FIXED']
+    }
   },
   paymentDetails: {
     razorpayOrderId: { type: String },
