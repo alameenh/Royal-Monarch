@@ -5,14 +5,21 @@ import bcrypt from 'bcrypt';
 import Category from '../../model/categoryModel.js';
 import Product from '../../model/productModel.js';
 import passport from 'passport';
+import CartItem from '../../model/cartModel.js';
 
 config();
 
 const getLogin = (req, res) => {
+    if (req.session.isAuth) {
+        return res.redirect('/home');
+    }
     res.render('user/login.ejs');
 }
 
 const getSignup = (req, res) => {
+    if (req.session.isAuth) {
+        return res.redirect('/home');
+    }
     res.render('user/signup.ejs');
 }
 
@@ -164,11 +171,15 @@ const getHomePage = async (req, res) => {
         .sort({ createdAt: -1 })
         .limit(8);
 
+        // Get cart count for navbar
+        const cartCount = await CartItem.countDocuments({ userId: req.session.userId });
+
         res.render('user/home', {
             user,
             categories,
             featuredProducts,
-            newArrivals
+            newArrivals,
+            cartCount
         });
         
     } catch (error) {

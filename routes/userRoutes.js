@@ -3,7 +3,7 @@ import userController from '../controller/user/userController.js';
 import shopController from '../controller/user/shopController.js';
 import userMiddleware from '../middleware/userMiddleware.js';
 import viewProductController from '../controller/user/viewProductController.js';
-import { profileController, upload } from '../controller/user/profileController.js';
+import { getProfile, getEditProfile, updateProfile, upload } from '../controller/user/profileController.js';
 import addressController from '../controller/user/addressController.js';
 import wishlistController from '../controller/user/wishlistController.js';
 import cartController from '../controller/user/cartController.js';
@@ -58,9 +58,10 @@ router.get('/reset-password', userController.getResetPassword);
 
 router.post('/reset-password', userController.postResetPassword);
 
-router.get('/profile', userMiddleware.checkSession, profileController.getProfile);
-router.get('/profile/edit', userMiddleware.checkSession, profileController.getEditProfile);
-router.post('/profile/update', userMiddleware.checkSession, upload.single('profileImage'), profileController.updateProfile);
+// Update these profile routes
+router.get('/profile', userMiddleware.checkSession, getProfile);
+router.get('/profile/edit', userMiddleware.checkSession, getEditProfile);
+router.post('/profile/update', userMiddleware.checkSession, upload.single('profileImage'), updateProfile);
 
 // Address routes
 router.get('/address', userMiddleware.checkSession, addressController.getAddressPage);
@@ -79,6 +80,7 @@ router.get('/cart', userMiddleware.checkSession, cartController.getCart);
 router.post('/cart/add', userMiddleware.checkSession, cartController.addToCart);
 router.post('/cart/remove', userMiddleware.checkSession, cartController.removeFromCart);
 router.post('/cart/update-quantity', userMiddleware.checkSession, cartController.updateQuantity);
+router.get('/cart/count', userMiddleware.checkSession, cartController.getCartCount);
 
 // Add these routes
 router.get('/change-password', userMiddleware.checkSession, userController.getChangePassword);

@@ -9,17 +9,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
     <script src="https://raw.githubusercontent.com/rosshatokay/toasterjs/main/src/toaster.js"></script>
     <link rel="stylesheet" href="https://raw.githubusercontent.com/rosshatokay/toasterjs/main/src/toaster.css" />
-
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
 
 <nav class="items-center justify-between flex p-4 border-b-2">
     <div class="items-center flex space-x-4">
-        <a href="#" class="text-black">Home</a>
+        <a href="/home" class="text-black">Home</a>
         <a href="/shop" class="text-black">Shop</a>
-        <a href="#" class="text-black">Contact Us</a>
-        <a href="#" class="text-black">About Us</a>
+        <!-- <a href="#" class="text-black">Contact Us</a>
+        <a href="#" class="text-black">About Us</a> -->
     </div>
     <div class="items-center flex mr-40px space-x-2">
         <img alt="Royal Monarch logo" src="/images/logo3.png" class="h-13"/>
@@ -28,6 +28,43 @@
     <div class="items-center flex space-x-8">
         <a href="/wishlist" class="text-black"><i class="fas fa-heart"></i></a>
         <a href="/profile" class="text-black"><i class="fas fa-user"></i></a>
-        <a href="/cart" class="text-black"><i class="fas fa-shopping-cart"></i></a>
+        <a href="/cart" class="text-black relative">
+            <i class="fas fa-shopping-cart"></i>
+            <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+                <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    <%= cartCount %>
+                </span>
+            <% } %>
+        </a>
     </div>
 </nav>
+
+<script>
+// Function to update cart count via AJAX
+function updateCartCount() {
+    fetch('/cart/count')
+        .then(response => response.json())
+        .then(data => {
+            const cartBadge = document.querySelector('.fa-shopping-cart').nextElementSibling;
+            if (data.count > 0) {
+                if (cartBadge) {
+                    cartBadge.textContent = data.count;
+                } else {
+                    const badge = document.createElement('span');
+                    badge.className = 'absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center';
+                    badge.textContent = data.count;
+                    document.querySelector('.fa-shopping-cart').parentElement.appendChild(badge);
+                }
+            } else if (cartBadge) {
+                cartBadge.remove();
+            }
+        })
+        .catch(error => console.error('Error updating cart count:', error));
+}
+
+// Set up cart count update when adding to cart
+document.addEventListener('DOMContentLoaded', function() {
+    // Listen for custom event that will be triggered when cart is updated
+    document.addEventListener('cartUpdated', updateCartCount);
+});
+</script>

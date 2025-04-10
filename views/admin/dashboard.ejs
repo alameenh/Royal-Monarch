@@ -1,125 +1,375 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Admin Dashboard</title>
-    <!-- Add Tailwind CSS CDN -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Admin Dashboard for Royal Monarch" />
+    <title>Dashboard - Royal Monarch</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-
-    <!-- Add SweetAlert2 for better alerts -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Add Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="flex h-screen bg-gray-100">
-    <!-- Sidebar -->
-    <div class="w-64 bg-black text-white h-full">
-        <%- include("../partials/sidebar") %>
 
-        <!-- Logout button at bottom of sidebar -->
-        <div class="absolute bottom-0 w-64 p-4">
-            <button 
-                onclick="handleLogout()" 
-                class="w-full bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
-            >
-                <i class="fas fa-sign-out-alt"></i>
-                Logout
-            </button>
+<body class="bg-zinc-900 text-white min-h-screen">
+    <%- include("../partials/sidebar") %>
+
+    <div class="lg:ml-64 transition-all" id="main-content">
+        <header class="flex items-center justify-between mb-8 p-4 lg:p-8 border-b border-gray-700">
+            <h1 class="text-2xl font-semibold text-gray-200">Dashboard Overview</h1>
+            <div class="text-gray-400"><%= new Date().toLocaleString() %></div>
+        </header>
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 px-4 lg:px-8">
+            <!-- Total Users Card -->
+            <div class="bg-zinc-800 p-6 rounded-lg shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-gray-400">Total Users</h3>
+                    <i class="material-icons text-emerald-500 text-lg md:text-xl lg:text-2xl group-hover:rotate-12 transition-transform">person</i>
+                </div>
+                <div class="flex items-baseline">
+                    <p class="text-3xl font-bold text-gray-200"><%= userCount || 0 %></p>
+                </div>
+            </div>
+
+            <!-- Total Products Card -->
+            <div class="bg-zinc-800 p-6 rounded-lg shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-gray-400">Total Products</h3>
+                    <i class="material-icons text-emerald-500 text-lg md:text-xl lg:text-2xl group-hover:rotate-12 transition-transform">directions_car</i>
+                </div>
+                <div class="flex items-baseline">
+                    <p class="text-3xl font-bold text-gray-200"><%= productCount || 0 %></p>
+                </div>
+            </div>
+
+            <!-- Total Orders Card -->
+            <div class="bg-zinc-800 p-6 rounded-lg shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-gray-400">Total Orders</h3>
+                    <i class="material-icons text-emerald-500 text-lg md:text-xl lg:text-2xl group-hover:rotate-12 transition-transform">shopping_cart</i>
+                </div>
+                <div class="flex items-baseline">
+                    <p class="text-3xl font-bold text-gray-200"><%= orderCount || 0 %></p>
+                </div>
+            </div>
+
+            <!-- Total Revenue Card -->
+            <div class="bg-zinc-800 p-6 rounded-lg shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-gray-400">Total Revenue</h3>
+                    <i class="material-icons text-emerald-500 text-lg md:text-xl lg:text-2xl group-hover:rotate-12 transition-transform">payments</i>
+                </div>
+                <div class="flex items-baseline">
+                    <p class="text-3xl font-bold text-gray-200">₹<%= totalRevenue.toLocaleString() || 0 %></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales Chart -->
+        <div class="bg-zinc-800 rounded-lg shadow-lg p-6 mb-8 mx-4 lg:mx-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-200 mb-2">Sales Overview</h2>
+                    <div class="flex space-x-4">
+                        <div class="flex items-center">
+                            <span class="inline-block w-3 h-3 rounded-full bg-emerald-500 mr-2"></span>
+                            <span class="text-sm text-gray-400">Revenue</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
+                            <span class="text-sm text-gray-400">Orders</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex flex-wrap gap-2">
+                    <!-- Time Range Selector -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-gray-400">Time Range:</span>
+                        <div class="flex bg-zinc-700 rounded-lg p-1">
+                            <button class="time-range-btn px-3 py-1 rounded-md transition-all" data-range="day">Today</button>
+                            <button class="time-range-btn px-3 py-1 rounded-md transition-all" data-range="week">Week</button>
+                            <button class="time-range-btn px-3 py-1 rounded-md transition-all" data-range="month">Month</button>
+                            <button class="time-range-btn px-3 py-1 rounded-md transition-all" data-range="custom">Custom</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date Range Picker -->
+            <div id="dateRangePicker" class="hidden mb-4">
+                <div class="flex gap-2 bg-zinc-700 p-3 rounded-lg shadow-lg">
+                    <input type="text" id="startDate" class="bg-zinc-800 text-white px-4 py-2 rounded-md border border-zinc-700" placeholder="Start Date">
+                    <input type="text" id="endDate" class="bg-zinc-800 text-white px-4 py-2 rounded-md border border-zinc-700" placeholder="End Date">
+                </div>
+            </div>
+
+            <div class="h-[400px]">
+                <canvas id="salesChart"></canvas>
+            </div>
         </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="flex-1 flex flex-col overflow-hidden">
-        <!-- Top Navigation -->
-        <nav class="bg-white shadow-md p-4">
-            <div class="flex justify-between items-center">
-                <h1 class="text-xl font-bold text-gray-800">Royal Monarch Dashboard</h1>
-                <div class="flex items-center space-x-4">
-                    <span class="text-gray-600">Welcome, Admin</span>
-                </div>
-            </div>
-        </nav>
-
-        <!-- Main Content Area -->
-        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
-            <div class="container mx-auto">
-                <h2 class="text-2xl font-bold mb-4 text-gray-800">Dashboard Overview</h2>
-                
-                <!-- Dashboard Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-blue-100 text-blue-500">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="ml-4">
-                                <p class="text-gray-500">Total Users</p>
-                                <p class="text-2xl font-semibold">0</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-green-100 text-green-500">
-                                <i class="fas fa-shopping-cart"></i>
-                            </div>
-                            <div class="ml-4">
-                                <p class="text-gray-500">Total Orders</p>
-                                <p class="text-2xl font-semibold">0</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-yellow-100 text-yellow-500">
-                                <i class="fas fa-box"></i>
-                            </div>
-                            <div class="ml-4">
-                                <p class="text-gray-500">Total Products</p>
-                                <p class="text-2xl font-semibold">0</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-purple-100 text-purple-500">
-                                <i class="fas fa-rupee-sign"></i>
-                            </div>
-                            <div class="ml-4">
-                                <p class="text-gray-500">Total Revenue</p>
-                                <p class="text-2xl font-semibold">₹0</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
     <script>
-        function handleLogout() {
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You will be logged out of the admin panel",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, logout',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    Swal.fire({
-                        title: 'Logging out...',
-                        allowOutsideClick: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-                    window.location.href = '/admin/logout';
+        // Initialize date picker
+        flatpickr("#dateRangePicker", {
+            mode: "range",
+            dateFormat: "Y-m-d",
+            onChange: function(selectedDates, dateStr, instance) {
+                if (selectedDates.length === 2) {
+                    document.getElementById('startDate').value = selectedDates[0].toISOString().split('T')[0];
+                    document.getElementById('endDate').value = selectedDates[1].toISOString().split('T')[0];
+                    fetchChartData();
                 }
+            }
+        });
+
+        // Chart initialization
+        let salesChart;
+        const ctx = document.getElementById('salesChart').getContext('2d');
+
+        function createChartConfig(data) {
+            const revenueGradient = ctx.createLinearGradient(0, 0, 0, 400);
+            revenueGradient.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
+            revenueGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
+            const ordersGradient = ctx.createLinearGradient(0, 0, 0, 400);
+            ordersGradient.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+            ordersGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+            return {
+                type: 'line',
+                data: {
+                    labels: data.map(item => item._id),
+                    datasets: [
+                        {
+                            label: 'Revenue (₹)',
+                            data: data.map(item => item.revenue),
+                            backgroundColor: revenueGradient,
+                            borderColor: '#10b981',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#fff',
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            tension: 0.4,
+                            fill: true,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Orders',
+                            data: data.map(item => item.count),
+                            backgroundColor: ordersGradient,
+                            borderColor: '#3b82f6',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#fff',
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            tension: 0.4,
+                            fill: true,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#e5e7eb',
+                                font: {
+                                    size: 12
+                                },
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(24, 24, 27, 0.9)',
+                            titleColor: '#e5e7eb',
+                            bodyColor: '#e5e7eb',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            padding: 12,
+                            cornerRadius: 8,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.datasetIndex === 0) {
+                                        label += '₹' + context.parsed.y.toLocaleString();
+                                    } else {
+                                        label += context.parsed.y;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#e5e7eb',
+                                maxRotation: 45,
+                                minRotation: 0,
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            border: {
+                                dash: [4, 4]
+                            },
+                            ticks: {
+                                color: '#e5e7eb',
+                                font: {
+                                    size: 11
+                                },
+                                callback: function(value) {
+                                    return '₹' + value.toLocaleString();
+                                }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            beginAtZero: true,
+                            grid: {
+                                drawOnChartArea: false
+                            },
+                            border: {
+                                dash: [4, 4]
+                            },
+                            ticks: {
+                                color: '#e5e7eb',
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        }
+                    },
+                    animations: {
+                        tension: {
+                            duration: 1000,
+                            easing: 'linear',
+                            from: 0.8,
+                            to: 0.4,
+                            loop: false
+                        }
+                    }
+                }
+            };
+        }
+
+        function initChart(data) {
+            if (salesChart) {
+                salesChart.destroy();
+            }
+            const config = createChartConfig(data);
+            salesChart = new Chart(ctx, config);
+        }
+
+        // Initialize with default data
+        initChart(<%- orderData %>);
+
+        // Event Handlers
+        function setupEventHandlers() {
+            // Time Range Buttons
+            document.querySelectorAll('.time-range-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    try {
+                        document.querySelectorAll('.time-range-btn').forEach(b => b.classList.remove('bg-emerald-600', 'text-white'));
+                        btn.classList.add('bg-emerald-600', 'text-white');
+                        
+                        const dateRangePicker = document.getElementById('dateRangePicker');
+                        if (btn.dataset.range === 'custom') {
+                            dateRangePicker.classList.remove('hidden');
+                        } else {
+                            dateRangePicker.classList.add('hidden');
+                            
+                            let url = `/admin/dashboard/chart-data?filter=${btn.dataset.range}`;
+                            const response = await fetch(url);
+                            if (!response.ok) throw new Error('Failed to fetch chart data');
+                            const data = await response.json();
+                            initChart(data);
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'Failed to fetch chart data. Please try again.',
+                            icon: 'error',
+                            background: '#18181B',
+                            color: '#FFFFFF'
+                        });
+                    }
+                });
             });
         }
+
+        // Set initial active button
+        document.querySelector('.time-range-btn[data-range="week"]').classList.add('bg-emerald-600', 'text-white');
+
+        // Initialize event handlers
+        setupEventHandlers();
+
+        // Auto-refresh data every 5 minutes
+        setInterval(async () => {
+            try {
+                const activeRangeBtn = document.querySelector('.time-range-btn.bg-emerald-600');
+                const filter = activeRangeBtn.dataset.range;
+                const startDate = document.getElementById('startDate')?.value;
+                const endDate = document.getElementById('endDate')?.value;
+
+                let url = `/admin/dashboard/chart-data?filter=${filter}`;
+                if (filter === 'custom' && startDate && endDate) {
+                    url += `&startDate=${startDate}&endDate=${endDate}`;
+                }
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to fetch chart data');
+                const data = await response.json();
+                initChart(data);
+                
+                // Update last updated time
+                document.querySelector('header .text-gray-400').textContent = new Date().toLocaleString();
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+            }
+        }, 300000); // 5 minutes
     </script>
 </body>
 </html>

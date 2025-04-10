@@ -41,6 +41,9 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true
+  },  soldcount: {
+    type: Number,
+    default: 0
   },
   color: {
     type: String,

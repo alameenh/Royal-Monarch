@@ -16,6 +16,7 @@ router.get('/login', adminMiddleware.isLogin, adminController.getAdmin);
 router.post('/login', adminController.postAdmin);
 
 router.get('/dashboard', adminMiddleware.checkSession, adminController.getDashboard);
+router.get('/dashboard/chart-data', adminMiddleware.checkSession, adminController.getChartData);
 
 router.get('/logout', adminMiddleware.checkSession, adminController.getLogout);
 
@@ -63,4 +64,4 @@ router.get('/sales-report', adminMiddleware.checkSession, salesController.getSal
 router.get('/sales-report/download-pdf', adminMiddleware.checkSession, salesController.downloadPDF);
 router.get('/sales-report/download-excel', adminMiddleware.checkSession, salesController.downloadExcel);
 
-export default router; 
+export default router;

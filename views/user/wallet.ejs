@@ -33,7 +33,7 @@
 
                 <div class="divide-y">
                     <% if (wallet.transactions && wallet.transactions.length > 0) { %>
-                        <% wallet.transactions.reverse().forEach(transaction => { %>
+                        <% wallet.transactions.forEach(transaction => { %>
                             <div class="p-4 hover:bg-gray-50">
                                 <div class="flex justify-between items-center">
                                     <div>
@@ -59,6 +59,68 @@
                                 </div>
                             </div>
                         <% }); %>
+                        
+                        <!-- Pagination Controls -->
+                        <% if (pagination && pagination.totalPages > 1) { %>
+                            <div class="flex justify-center items-center p-4 border-t">
+                                <nav class="flex items-center space-x-2">
+                                    <!-- Previous Button -->
+                                    <% if (pagination.hasPrevPage) { %>
+                                        <a href="/wallet?page=<%= pagination.prevPage %>" 
+                                           class="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                        </a>
+                                    <% } else { %>
+                                        <span class="px-3 py-2 bg-gray-50 text-gray-400 rounded-md cursor-not-allowed">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                        </span>
+                                    <% } %>
+                                    
+                                    <!-- Page Numbers (show up to 5 pages) -->
+                                    <% 
+                                        let startPage = Math.max(1, pagination.currentPage - 2);
+                                        let endPage = Math.min(pagination.totalPages, startPage + 4);
+                                        if (endPage - startPage < 4) {
+                                            startPage = Math.max(1, endPage - 4);
+                                        }
+                                    %>
+                                    
+                                    <% for (let i = startPage; i <= endPage; i++) { %>
+                                        <a href="/wallet?page=<%= i %>" 
+                                           class="px-3 py-2 <%= pagination.currentPage === i ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' %> rounded-md transition-colors">
+                                            <%= i %>
+                                        </a>
+                                    <% } %>
+                                    
+                                    <!-- Next Button -->
+                                    <% if (pagination.hasNextPage) { %>
+                                        <a href="/wallet?page=<%= pagination.nextPage %>" 
+                                           class="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                        </a>
+                                    <% } else { %>
+                                        <span class="px-3 py-2 bg-gray-50 text-gray-400 rounded-md cursor-not-allowed">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                        </span>
+                                    <% } %>
+                                </nav>
+                            </div>
+                            
+                            <!-- Transaction Count Summary -->
+                            <div class="text-center text-sm text-gray-500 p-2 bg-gray-50">
+                                Showing <%= Math.min((pagination.currentPage - 1) * 10 + 1, pagination.totalTransactions) %> to 
+                                <%= Math.min(pagination.currentPage * 10, pagination.totalTransactions) %> 
+                                of <%= pagination.totalTransactions %> transactions
+                            </div>
+                        <% } %>
                     <% } else { %>
                         <div class="p-8 text-center text-gray-600">
                             <p>No transactions found</p>

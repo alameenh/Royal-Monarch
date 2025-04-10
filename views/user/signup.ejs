@@ -40,17 +40,14 @@
                     Sign Up
                 </button>
             </form>
-            <p class="text-center text-gray-700 mt-4">Already have an account?
-                <a href="/" class="text-black hover:underline">Login</a>
+            <p class="text-center text-gray-500 mt-4">Already have an account?
+                <a href="/" class="text-blue-500 hover:underline">Login</a>
             </p>
 
             <!-- Google Sign in -->
-            <div id="google-auth-div">
-                <div class="flex justify-center text-center mt-6 text-gray-500 text-sm">
-                    Or continue with Google
-                </div>
-                <a class="flex justify-center mt-6" href="/auth/google?trigger=signup">
-                    <i class="fa-brands fa-google fa-lg" style="color: #b12020"></i>
+            <div id="google-auth-div" class="flex justify-center">
+                <a class="inline-flex mt-4 px-2 py-1 border rounded-lg hover:bg-gray-50 transition-colors duration-200" href="/auth/google?trigger=signup">
+                    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" class="w-5 h-5">
                 </a>
             </div>
         </div>

@@ -28,9 +28,38 @@ const walletController = {
                 });
             }
 
+            // Pagination logic
+            const page = parseInt(req.query.page) || 1;
+            const limit = 10;
+            
+            // Get total transactions count
+            const totalTransactions = wallet.transactions.length;
+            const totalPages = Math.ceil(totalTransactions / limit);
+            
+            // Get transactions for current page (slice in reverse order)
+            const reversedTransactions = [...wallet.transactions].reverse();
+            const startIndex = (page - 1) * limit;
+            const endIndex = startIndex + limit;
+            const paginatedTransactions = reversedTransactions.slice(startIndex, endIndex);
+            
+            // Pagination data
+            const pagination = {
+                currentPage: page,
+                totalPages,
+                totalTransactions,
+                hasPrevPage: page > 1,
+                hasNextPage: page < totalPages,
+                prevPage: page - 1,
+                nextPage: page + 1
+            };
+
             res.render('user/wallet', {
                 user,
-                wallet,
+                wallet: {
+                    ...wallet.toObject(),
+                    transactions: paginatedTransactions
+                },
+                pagination,
                 currentPage: 'wallet',
                 razorpayKeyId: process.env.RAZORPAY_KEY_ID
             });

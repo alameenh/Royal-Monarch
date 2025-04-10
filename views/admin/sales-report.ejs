@@ -40,9 +40,9 @@
                         <select id="timeFilter" onchange="handleFilterChange()" 
                                 class="bg-zinc-700 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                             <option value="all" <%= currentFilter === 'all' ? 'selected' : '' %>>All Time</option>
-                            <option value="daily" <%= currentFilter === 'daily' ? 'selected' : '' %>>Daily</option>
-                            <option value="weekly" <%= currentFilter === 'weekly' ? 'selected' : '' %>>Weekly</option>
-                            <option value="monthly" <%= currentFilter === 'monthly' ? 'selected' : '' %>>Monthly</option>
+                            <option value="daily" <%= currentFilter === 'daily' ? 'selected' : '' %>>Today</option>
+                            <option value="weekly" <%= currentFilter === 'weekly' ? 'selected' : '' %>>This Week</option>
+                            <option value="monthly" <%= currentFilter === 'monthly' ? 'selected' : '' %>>This Month</option>
                             <option value="custom" <%= currentFilter === 'custom' ? 'selected' : '' %>>Custom Date Range</option>
                         </select>
                     </div>
@@ -51,12 +51,12 @@
                     <div id="customDateRange" class="<%= currentFilter === 'custom' ? 'flex' : 'hidden' %> gap-4">
                         <div>
                             <label class="block text-sm font-medium mb-2">Start Date</label>
-                            <input type="date" id="startDate" value="<%= startDate %>"
+                            <input type="date" id="startDate" value="<%= startDate || '' %>"
                                    class="bg-zinc-700 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-2">End Date</label>
-                            <input type="date" id="endDate" value="<%= endDate %>"
+                            <input type="date" id="endDate" value="<%= endDate || '' %>"
                                    class="bg-zinc-700 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                         </div>
                         <button onclick="applyCustomDateFilter()"
@@ -72,16 +72,16 @@
                 <h2 class="text-xl font-semibold mb-4">Summary</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div class="bg-zinc-700 rounded-lg p-6">
-                        <div class="text-sm text-gray-400">Total Revenue</div>
+                        <div class="text-sm text-gray-400">Total Revenue (Delivered Items)</div>
                         <div class="text-2xl font-bold">₹<%= totalRevenue.toFixed(2) %></div>
                     </div>
                     <div class="bg-zinc-700 rounded-lg p-6">
-                        <div class="text-sm text-gray-400">Total Orders</div>
-                        <div class="text-2xl font-bold"><%= orders.length %></div>
+                        <div class="text-sm text-gray-400">Total Items Sold</div>
+                        <div class="text-2xl font-bold"><%= pagination ? pagination.totalItems : orders.length %></div>
                     </div>
                     <div class="bg-zinc-700 rounded-lg p-6">
-                        <div class="text-sm text-gray-400">Average Order Value</div>
-                        <div class="text-2xl font-bold">₹<%= (totalRevenue / (orders.length || 1)).toFixed(2) %></div>
+                        <div class="text-sm text-gray-400">Average Item Value</div>
+                        <div class="text-2xl font-bold">₹<%= (orders.length > 0 ? (totalRevenue / (pagination ? pagination.totalItems : orders.length)).toFixed(2) : '0.00') %></div>
                     </div>
                 </div>
             </div>
@@ -92,39 +92,119 @@
                     <thead>
                         <tr class="border-b border-gray-700">
                             <th class="py-3 px-4">Order ID</th>
+                            <th class="py-3 px-4">Product</th>
+                            <th class="py-3 px-4">Variant</th>
+                            <th class="py-3 px-4">Qty</th>
                             <th class="py-3 px-4">Customer</th>
-                            <th class="py-3 px-4">Date</th>
-                            <th class="py-3 px-4">Items</th>
+                            <th class="py-3 px-4">Delivery Date</th>
                             <th class="py-3 px-4">Amount</th>
                         </tr>
                     </thead>
                     <tbody>
                         <% if (orders && orders.length > 0) { %>
-                            <% orders.forEach(order => { %>
+                            <% orders.forEach(item => { %>
                                 <tr class="border-b border-gray-700 hover:bg-zinc-700 transition-colors">
-                                    <td class="py-3 px-4"><%= order.orderId %></td>
+                                    <td class="py-3 px-4"><%= item.orderId %></td>
+                                    <td class="py-3 px-4"><%= item.itemName %></td>
+                                    <td class="py-3 px-4"><%= item.variantType %></td>
+                                    <td class="py-3 px-4"><%= item.quantity %></td>
                                     <td class="py-3 px-4">
-                                        <div class="text-gray-200"><%= order.userId.name %></div>
-                                        <div class="text-sm"><%= order.userId.email %></div>
+                                        <div class="text-gray-200"><%= item.userId.name %></div>
+                                        <div class="text-sm"><%= item.userId.email %></div>
                                     </td>
                                     <td class="py-3 px-4">
-                                        <%= new Date(order.deliveryDate).toLocaleDateString() %>
+                                        <%= item.deliveredDate ? new Date(item.deliveredDate).toLocaleDateString() : 'N/A' %>
                                     </td>
-                                    <td class="py-3 px-4">
-                                        <%= order.items.length %> items
-                                    </td>
-                                    <td class="py-3 px-4">₹<%= order.totalAmount.toFixed(2) %></td>
+                                    <td class="py-3 px-4">₹<%= item.amount.toFixed(2) %></td>
                                 </tr>
                             <% }); %>
                         <% } else { %>
                             <tr>
-                                <td colspan="5" class="py-8 text-center text-gray-400">
+                                <td colspan="7" class="py-8 text-center text-gray-400">
                                     No orders found for the selected period
                                 </td>
                             </tr>
                         <% } %>
                     </tbody>
+                    <tfoot>
+                        <tr class="border-t border-gray-700">
+                            <td colspan="6" class="py-3 px-4 text-right font-semibold">Total Revenue:</td>
+                            <td class="py-3 px-4 font-semibold">₹<%= totalRevenue.toFixed(2) %></td>
+                        </tr>
+                    </tfoot>
                 </table>
+                
+                <!-- Debug information -->
+                <div class="mt-4 text-sm text-gray-400">
+                    <% if (typeof pagination !== 'undefined') { %>
+                        Pagination data: Pages <%= pagination.totalPages %>, Items <%= pagination.totalItems %>, 
+                        Current <%= pagination.currentPage %>, 
+                    <% } else { %>
+                        Pagination data is undefined
+                    <% } %>
+                </div>
+                
+                <!-- Pagination Controls -->
+                <% if (pagination && pagination.totalPages > 1) { %>
+                    <div class="flex justify-center items-center p-4 mt-6">
+                        <nav class="flex items-center space-x-2">
+                            <!-- Previous Button -->
+                            <% if (pagination.hasPrevPage) { %>
+                                <a href="/admin/sales-report?page=<%= pagination.prevPage %><%= currentFilter !== 'all' ? `&filter=${currentFilter}` : '' %><%= startDate ? `&startDate=${startDate}` : '' %><%= endDate ? `&endDate=${endDate}` : '' %>" 
+                                   class="px-3 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </a>
+                            <% } else { %>
+                                <span class="px-3 py-2 bg-zinc-800 text-gray-500 rounded-md cursor-not-allowed">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+                            <% } %>
+                            
+                            <!-- Page Numbers (show up to 5 pages) -->
+                            <% 
+                                let startPage = Math.max(1, pagination.currentPage - 2);
+                                let endPage = Math.min(pagination.totalPages, startPage + 4);
+                                if (endPage - startPage < 4) {
+                                    startPage = Math.max(1, endPage - 4);
+                                }
+                            %>
+                            
+                            <% for (let i = startPage; i <= endPage; i++) { %>
+                                <a href="/admin/sales-report?page=<%= i %><%= currentFilter !== 'all' ? `&filter=${currentFilter}` : '' %><%= startDate ? `&startDate=${startDate}` : '' %><%= endDate ? `&endDate=${endDate}` : '' %>" 
+                                   class="px-3 py-2 <%= pagination.currentPage === i ? 'bg-emerald-600 text-white' : 'bg-zinc-700 text-white hover:bg-zinc-600' %> rounded-md transition-colors">
+                                    <%= i %>
+                                </a>
+                            <% } %>
+                            
+                            <!-- Next Button -->
+                            <% if (pagination.hasNextPage) { %>
+                                <a href="/admin/sales-report?page=<%= pagination.nextPage %><%= currentFilter !== 'all' ? `&filter=${currentFilter}` : '' %><%= startDate ? `&startDate=${startDate}` : '' %><%= endDate ? `&endDate=${endDate}` : '' %>" 
+                                   class="px-3 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </a>
+                            <% } else { %>
+                                <span class="px-3 py-2 bg-zinc-800 text-gray-500 rounded-md cursor-not-allowed">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+                            <% } %>
+                        </nav>
+                    </div>
+                    
+                    <!-- Item Count Summary -->
+                    <div class="text-center text-sm text-gray-400 p-2 bg-zinc-800 rounded-md mx-auto max-w-sm">
+                        Showing <%= Math.min((pagination.currentPage - 1) * 10 + 1, pagination.totalItems) %> to 
+                        <%= Math.min(pagination.currentPage * 10, pagination.totalItems) %> 
+                        of <%= pagination.totalItems %> items
+                    </div>
+                <% } %>
             </div>
         </div>
     </div>

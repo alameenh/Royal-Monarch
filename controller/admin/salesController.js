@@ -1,4 +1,5 @@
 import Order from '../../model/orderModel.js';
+import User from '../../model/userModel.js';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit-table';
 
@@ -6,38 +7,39 @@ const getSalesReport = async (req, res) => {
     try {
         const { filter, startDate, endDate } = req.query;
         
-        // Base query for delivered orders
+        // Base query for orders with delivered items
         let query = {
             'items.status': 'delivered'
         };
 
-        // Add date filtering
+        // Date filter for item deliveredDate
+        let dateFilter = {};
         if (filter) {
             const now = new Date();
             const startOfDay = new Date(now.setHours(0, 0, 0, 0));
             
             switch (filter) {
                 case 'daily':
-                    query.deliveryDate = {
+                    dateFilter = {
                         $gte: startOfDay,
                         $lt: new Date(now.setDate(now.getDate() + 1))
                     };
                     break;
                 case 'weekly':
-                    query.deliveryDate = {
+                    dateFilter = {
                         $gte: new Date(now.setDate(now.getDate() - 7)),
                         $lt: new Date()
                     };
                     break;
                 case 'monthly':
-                    query.deliveryDate = {
+                    dateFilter = {
                         $gte: new Date(now.setMonth(now.getMonth() - 1)),
                         $lt: new Date()
                     };
                     break;
                 case 'custom':
                     if (startDate && endDate) {
-                        query.deliveryDate = {
+                        dateFilter = {
                             $gte: new Date(startDate),
                             $lt: new Date(new Date(endDate).setDate(new Date(endDate).getDate() + 1))
                         };
@@ -46,19 +48,103 @@ const getSalesReport = async (req, res) => {
             }
         }
 
-        const orders = await Order.find(query)
-            .sort({ deliveryDate: -1 })
-            .populate('userId', 'name email');
+        // Apply date filter if any
+        if (Object.keys(dateFilter).length > 0) {
+            query['items.deliveredDate'] = dateFilter;
+        }
 
-        // Calculate total revenue
-        const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+        // Find orders and populate user data
+        const orders = await Order.find(query).populate('userId');
+
+        // Process orders to extract only delivered items
+        const processedOrders = [];
+        let totalRevenue = 0;
+
+        for (const order of orders) {
+            const userData = order.userId ? {
+                name: order.userId.firstname && order.userId.lastname ? 
+                    `${order.userId.firstname} ${order.userId.lastname}` : 
+                    (order.userId.name || order.userId.email || 'Unknown User'),
+                email: order.userId.email || 'N/A'
+            } : { name: 'Unknown User', email: 'N/A' };
+
+            // Filter for only delivered items
+            const deliveredItems = order.items.filter(item => item.status === 'delivered');
+            
+            // Skip if no delivered items matching date criteria
+            if (deliveredItems.length === 0) continue;
+
+            // Process each delivered item
+            for (const item of deliveredItems) {
+                // Skip if date filter exists and item doesn't match
+                if (Object.keys(dateFilter).length > 0 && 
+                    (!item.deliveredDate || 
+                     item.deliveredDate < dateFilter.$gte || 
+                     item.deliveredDate >= dateFilter.$lt)) {
+                    continue;
+                }
+
+                // Calculate item revenue (finalAmount includes all discounts)
+                const itemRevenue = parseFloat(item.finalAmount || 0) + 
+                                   parseFloat(item.gstAmount || 0) + 
+                                   parseFloat(item.shippingCost || 0);
+                
+                totalRevenue += itemRevenue;
+
+                processedOrders.push({
+                    orderId: order.orderId,
+                    itemId: item._id,
+                    itemName: item.name,
+                    userId: userData,
+                    variantType: item.variantType,
+                    quantity: item.quantity,
+                    deliveredDate: item.deliveredDate,
+                    amount: itemRevenue
+                });
+            }
+        }
+
+        // Sort by delivered date, most recent first
+        processedOrders.sort((a, b) => {
+            if (!a.deliveredDate) return 1;
+            if (!b.deliveredDate) return -1;
+            return new Date(b.deliveredDate) - new Date(a.deliveredDate);
+        });
+
+        // Pagination logic
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10;
+        const totalItems = processedOrders.length;
+        const totalPages = Math.ceil(totalItems / limit);
+        const startIndex = (page - 1) * limit;
+        const endIndex = Math.min(startIndex + limit, totalItems);
+        const paginatedOrders = processedOrders.slice(startIndex, endIndex);
+
+        console.log('Pagination data:', {
+            page,
+            totalItems,
+            totalPages,
+            processedOrdersLength: processedOrders.length,
+            paginatedOrdersLength: paginatedOrders.length,
+            hasItems: paginatedOrders.length > 0,
+            filter
+        });
 
         res.render('admin/sales-report', {
-            orders,
+            orders: paginatedOrders,
             totalRevenue,
             currentFilter: filter || 'all',
             startDate,
-            endDate
+            endDate,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1,
+                nextPage: page + 1,
+                prevPage: page - 1
+            }
         });
 
     } catch (error) {

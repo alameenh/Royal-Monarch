@@ -20,7 +20,7 @@
                                  onclick="toggleOrderDetails('<%= order._id %>')">
                                 <div class="flex-grow">
                                     <div class="flex items-center justify-between">
-                                        <h3 class="font-semibold">#<%= order.orderId %></h3>
+                                        <h3 class="font-semibold">ORD NO : #<%= order.orderId.slice(-6) %></h3>
                                         <p class="text-sm text-gray-600">
                                             <%= new Date(order.orderDate).toLocaleDateString() %>
                                         </p>
@@ -28,12 +28,12 @@
                                     <div class="flex items-center justify-between mt-2">
                                         <p class="font-semibold">₹<%= order.totalAmount %></p>
                                         <span class="text-sm px-3 py-1 rounded-full
-                                            <%= order.items.every(item => item.status === 'delivered') ? 'bg-green-100 text-green-800' :
+                                            <%= order.items.every(item => ['delivered', 'return requested', 'returned'].includes(item.status)) ? 'bg-green-100 text-green-800' :
                                                 order.items.every(item => item.status === 'cancelled') ? 'bg-red-100 text-red-800' :
                                                 order.items.some(item => item.status === 'cancelled') ? 'bg-red-100 text-red-800' :
                                                 order.items.some(item => item.status === 'shipped') ? 'bg-blue-100 text-blue-800' :
                                                 'bg-orange-100 text-orange-800' %>">
-                                            <%= order.items.every(item => item.status === 'delivered') ? 'Delivered' :
+                                            <%= order.items.every(item => ['delivered', 'return requested', 'returned'].includes(item.status)) ? 'Delivered' :
                                                 order.items.every(item => item.status === 'cancelled') ? 'Cancelled' :
                                                 order.items.some(item => item.status === 'cancelled') ? 'Partially Cancelled' :
                                                 order.items.some(item => item.status === 'shipped') ? 'Shipped' : 'Processing' %>

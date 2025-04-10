@@ -83,7 +83,7 @@
                             <% orders.forEach(order => { %>
                                 <tr id="order-<%= order._id %>" class="border-b border-gray-700 hover:bg-zinc-700 transition-colors">
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-200"><%= order.orderId %></div>
+                                        <div class="text-sm font-medium text-gray-200">ORD NO : #<%= order.orderId.slice(-6) %></div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-200"><%= order.shippingAddress.name %></div>
@@ -95,7 +95,7 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-200">₹<%= order.totalAmount %></div>
+                                        <div class="text-sm text-gray-200">₹<%= order.totalAmount.toFixed(2) %></div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span id="payment-status-<%= order._id %>" 
@@ -109,14 +109,18 @@
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <% 
                                             let allCancelled = order.items.every(item => item.status === 'cancelled');
-                                            let allDelivered = order.items.every(item => item.status === 'delivered');
+                                            let allDelivered = order.items.every(item => ['delivered', 'returned'].includes(item.status));
                                             let allShipped = order.items.every(item => item.status === 'shipped');
                                             let allPending = order.items.every(item => item.status === 'pending');
                                             let allRejected = order.items.every(item => item.status === 'rejected');
+                                            let anyReturnRequested = order.items.some(item => item.status === 'return requested');
                                             let status;
                                             let statusClass;
                                             
-                                            if (allCancelled) {
+                                            if (anyReturnRequested) {
+                                                status = 'Return Requested';
+                                                statusClass = 'bg-purple-500/20 text-purple-500';
+                                            } else if (allCancelled) {
                                                 status = 'Cancelled';
                                                 statusClass = 'bg-red-500/20 text-red-500';
                                             } else if (allRejected) {
@@ -383,7 +387,6 @@
                         background: '#18181B',
                         color: '#FFFFFF'
                     });
-                    window.location.reload();
                 } else {
                     await Swal.fire({
                         title: 'Error!',

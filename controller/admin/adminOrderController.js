@@ -109,27 +109,77 @@ const updateOrderStatus = async (req, res) => {
             order.paymentMethod === 'online' && 
             order.paymentStatus === 'paid') {
             
-            // Calculate base refund amount for this item
-            const itemBasePrice = (item.price - (item.price * (item.discount || 0) / 100)) * item.quantity;
-            let refundAmount = itemBasePrice;
-
-            // If order has coupon, calculate proportional coupon discount
-            if (order.coupon && order.coupon.discount > 0) {
-                // Calculate total order value (before coupon)
-                const orderTotalBeforeCoupon = order.items.reduce((sum, orderItem) => {
-                    const itemPrice = (orderItem.price - (orderItem.price * (orderItem.discount || 0) / 100)) * orderItem.quantity;
-                    return sum + itemPrice;
-                }, 0);
-
-                // Calculate this item's proportion of the total order
-                const itemProportion = itemBasePrice / orderTotalBeforeCoupon;
+            // Calculate refund amount using the new field structure
+            // Use the final amount which already includes all discounts
+            let refundAmount = 0;
+            
+            // Calculate base refund - use finalAmount if available, otherwise calculate from price
+            if (item.finalAmount && !isNaN(item.finalAmount)) {
+                // Modern order item structure with finalAmount field
+                refundAmount = parseFloat(item.finalAmount);
                 
-                // Calculate this item's share of the coupon discount
-                const itemCouponDiscount = order.coupon.discount * itemProportion;
+                // Add GST if available
+                // if (item.gstAmount && !isNaN(item.gstAmount)) {
+                //     refundAmount += parseFloat(item.gstAmount);
+                // }
                 
-                // Add proportional coupon discount to refund
-                refundAmount += itemCouponDiscount;
+                // // Add shipping if available
+                // if (item.shippingCost && !isNaN(item.shippingCost)) {
+                //     refundAmount += parseFloat(item.shippingCost);
+                // }
+            } else {
+                // Fallback to old calculation method
+                // Calculate base refund amount from price and discount
+                const itemPrice = parseFloat(item.price) || 0;
+                const itemDiscount = parseFloat(item.discount) || 0;
+                const itemQuantity = parseInt(item.quantity) || 1;
+                
+                const discountAmount = (itemPrice * itemDiscount) / 100;
+                const priceAfterDiscount = itemPrice - discountAmount;
+                const itemBasePrice = priceAfterDiscount * itemQuantity;
+                
+                refundAmount = itemBasePrice;
+
+                // If order has coupon, calculate proportional coupon discount
+                if (order.coupon && order.coupon.discount > 0) {
+                    // Calculate total order value before coupon
+                    let orderTotalBeforeCoupon = 0;
+                    
+                    for (const orderItem of order.items) {
+                        const orderItemPrice = parseFloat(orderItem.price) || 0;
+                        const orderItemDiscount = parseFloat(orderItem.discount) || 0;
+                        const orderItemQuantity = parseInt(orderItem.quantity) || 1;
+                        
+                        const orderItemDiscountAmount = (orderItemPrice * orderItemDiscount) / 100;
+                        const orderItemPriceAfterDiscount = orderItemPrice - orderItemDiscountAmount;
+                        
+                        orderTotalBeforeCoupon += orderItemPriceAfterDiscount * orderItemQuantity;
+                    }
+                    
+                    if (orderTotalBeforeCoupon > 0) {
+                        const itemProportion = itemBasePrice / orderTotalBeforeCoupon;
+                        const couponDiscount = parseFloat(order.coupon.discount) || 0;
+                        const itemCouponDiscount = couponDiscount * itemProportion;
+                        
+                        refundAmount += itemCouponDiscount;
+                    }
+                }
+                
+                // Add proportional GST and shipping
+                const orderSubtotal = parseFloat(order.subtotal) || 0;
+                if (orderSubtotal > 0) {
+                    const itemProportion = itemBasePrice / orderSubtotal;
+                    const gstAmount = parseFloat(order.gstAmount) || 0;
+                    const shippingCost = parseFloat(order.shippingCost) || 0;
+                    
+                    refundAmount += itemProportion;
+                }
             }
+            
+            // Ensure refund amount is a valid number and greater than zero
+            refundAmount = Math.max(parseFloat(refundAmount) || 0, 0);
+            
+            console.log(`Processing refund for item ${item.name}, amount: ${refundAmount}`);
 
             // Find or create user's wallet
             let wallet = await Wallet.findOne({ userId: order.userId });
@@ -141,6 +191,9 @@ const updateOrderStatus = async (req, res) => {
                 });
             }
 
+            // Ensure wallet balance is a valid number
+            wallet.balance = parseFloat(wallet.balance) || 0;
+            
             // Add refund to wallet
             wallet.balance += refundAmount;
             wallet.transactions.push({
@@ -170,21 +223,77 @@ const updateOrderStatus = async (req, res) => {
 
         // Handle return approval refunds
         if (status === 'returned' && item.status === 'return requested') {
-            // Calculate base refund amount
-            const itemBasePrice = (item.price - (item.price * (item.discount || 0) / 100)) * item.quantity;
-            let refundAmount = itemBasePrice;
+            // Calculate refund amount using the new field structure
+            // Use the final amount which already includes all discounts
+            let refundAmount = 0;
+            
+            // Calculate base refund - use finalAmount if available, otherwise calculate from price
+            if (item.finalAmount && !isNaN(item.finalAmount)) {
+                // Modern order item structure with finalAmount field
+                refundAmount = parseFloat(item.finalAmount);
+                
+                // Add GST if available
+                // if (item.gstAmount && !isNaN(item.gstAmount)) {
+                //     refundAmount += parseFloat(item.gstAmount);
+                // }
+                
+                // // Add shipping if available
+                // if (item.shippingCost && !isNaN(item.shippingCost)) {
+                //     refundAmount += parseFloat(item.shippingCost);
+                // }
+            } else {
+                // Fallback to old calculation method
+                // Calculate base refund amount from price and discount
+                const itemPrice = parseFloat(item.price) || 0;
+                const itemDiscount = parseFloat(item.discount) || 0;
+                const itemQuantity = parseInt(item.quantity) || 1;
+                
+                const discountAmount = (itemPrice * itemDiscount) / 100;
+                const priceAfterDiscount = itemPrice - discountAmount;
+                const itemBasePrice = priceAfterDiscount * itemQuantity;
+                
+                refundAmount = itemBasePrice;
 
-            // If order has coupon, calculate proportional coupon discount
-            if (order.coupon && order.coupon.discount > 0) {
-                const orderTotalBeforeCoupon = order.items.reduce((sum, orderItem) => {
-                    const itemPrice = (orderItem.price - (orderItem.price * (orderItem.discount || 0) / 100)) * orderItem.quantity;
-                    return sum + itemPrice;
-                }, 0);
-
-                const itemProportion = itemBasePrice / orderTotalBeforeCoupon;
-                const itemCouponDiscount = order.coupon.discount * itemProportion;
-                refundAmount += itemCouponDiscount;
+                // If order has coupon, calculate proportional coupon discount
+                if (order.coupon && order.coupon.discount > 0) {
+                    // Calculate total order value before coupon
+                    let orderTotalBeforeCoupon = 0;
+                    
+                    for (const orderItem of order.items) {
+                        const orderItemPrice = parseFloat(orderItem.price) || 0;
+                        const orderItemDiscount = parseFloat(orderItem.discount) || 0;
+                        const orderItemQuantity = parseInt(orderItem.quantity) || 1;
+                        
+                        const orderItemDiscountAmount = (orderItemPrice * orderItemDiscount) / 100;
+                        const orderItemPriceAfterDiscount = orderItemPrice - orderItemDiscountAmount;
+                        
+                        orderTotalBeforeCoupon += orderItemPriceAfterDiscount * orderItemQuantity;
+                    }
+                    
+                    if (orderTotalBeforeCoupon > 0) {
+                        const itemProportion = itemBasePrice / orderTotalBeforeCoupon;
+                        const couponDiscount = parseFloat(order.coupon.discount) || 0;
+                        const itemCouponDiscount = couponDiscount * itemProportion;
+                        
+                        refundAmount -= itemCouponDiscount; // Subtract coupon discount from refund
+                    }
+                }
+                
+                // Add proportional GST and shipping
+                const orderSubtotal = parseFloat(order.subtotal) || 0;
+                if (orderSubtotal > 0) {
+                    const itemProportion = itemBasePrice / orderSubtotal;
+                    const gstAmount = parseFloat(order.gstAmount) || 0;
+                    const shippingCost = parseFloat(order.shippingCost) || 0;
+                    
+                    refundAmount +=itemProportion;
+                }
             }
+            
+            // Ensure refund amount is a valid number and greater than zero
+            refundAmount = Math.max(parseFloat(refundAmount) || 0, 0);
+            
+            console.log(`Processing refund for returned item ${item.name}, amount: ${refundAmount}`);
 
             // Find or create user's wallet
             let wallet = await Wallet.findOne({ userId: order.userId });
@@ -196,6 +305,9 @@ const updateOrderStatus = async (req, res) => {
                 });
             }
 
+            // Ensure wallet balance is a valid number
+            wallet.balance = parseFloat(wallet.balance) || 0;
+            
             // Add refund to wallet
             wallet.balance += refundAmount;
             wallet.transactions.push({
@@ -227,11 +339,43 @@ const updateOrderStatus = async (req, res) => {
         item.status = status;
         if (status === 'delivered') {
             item.deliveredDate = new Date();
+            
+            // Update product soldcount when status is changed to delivered
+            try {
+                const product = await Product.findById(item.productId);
+                if (product) {
+                    // Increment soldcount by the quantity purchased
+                    product.soldcount = (product.soldcount || 0) + item.quantity;
+                    await product.save();
+                    console.log(`Updated soldcount for product ${product.name}, new count: ${product.soldcount}`);
+                }
+            } catch (err) {
+                console.error(`Error updating soldcount for product ${item.productId}:`, err);
+                // Continue with status update even if soldcount update fails
+            }
         } else if (status === 'returned') {
             item.returnedDate = new Date();
+            
+            // Decrement soldcount if an item is returned that was previously delivered
+            if (item.previousStatus === 'delivered') {
+                try {
+                    const product = await Product.findById(item.productId);
+                    if (product) {
+                        // Ensure soldcount doesn't go below 0
+                        product.soldcount = Math.max(0, (product.soldcount || 0) - item.quantity);
+                        await product.save();
+                        console.log(`Decreased soldcount for returned product ${product.name}, new count: ${product.soldcount}`);
+                    }
+                } catch (err) {
+                    console.error(`Error updating soldcount for returned product ${item.productId}:`, err);
+                }
+            }
         } else if (status === 'cancelled' || status === 'order rejected') {
             item.cancelledDate = new Date();
         }
+        
+        // Save previous status for tracking status changes
+        item.previousStatus = item.status;
 
         await order.save();
 

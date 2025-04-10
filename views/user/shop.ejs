@@ -78,9 +78,8 @@ let currentFilters = {
 
 // Product card template
 const createProductCard = (product) => `
-    <div class="bg-white rounded-lg shadow-md overflow-hidden group cursor-pointer"
-         onclick="window.location.href='/product/view/${product._id}'">
-        <div class="aspect-w-1 aspect-h-1 overflow-hidden">
+    <div class="bg-white rounded-lg shadow-md overflow-hidden group">
+        <div class="aspect-w-1 aspect-h-1 overflow-hidden cursor-pointer" onclick="window.location.href='/product/view/${product._id}'">
             <img 
                 src="${product.images[0].path}" 
                 alt="${product.name}"
@@ -90,7 +89,7 @@ const createProductCard = (product) => `
         <div class="p-4">
             <h3 class="text-lg font-semibold mb-2">${product.name}</h3>
             <p class="text-gray-600 mb-2">${product.brand}</p>
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center mb-3">
                 <div class="flex flex-col">
                     <div class="flex items-center gap-2">
                         <span class="text-xl font-bold">₹${product.discountedPrice}</span>
@@ -104,9 +103,21 @@ const createProductCard = (product) => `
                         </span>
                     ` : ''}
                 </div>
-                <span class="text-black hover:text-gray-700">
+                <span class="text-black hover:text-gray-700 cursor-pointer" onclick="window.location.href='/product/view/${product._id}'">
                     <i class="fas fa-eye"></i>
                 </span>
+            </div>
+            <div class="flex flex-col gap-2">
+                <select class="variant-select w-full p-2 text-sm border rounded" data-product-id="${product._id}">
+                    ${product.variants.map(variant => `
+                        <option value="${variant.type}" data-stock="${variant.stock}">${variant.type} (${variant.stock} left)</option>
+                    `).join('')}
+                </select>
+                <button 
+                    class="add-to-cart-btn w-full bg-black text-white py-2 text-sm rounded hover:bg-gray-800 transition-colors" 
+                    data-product-id="${product._id}">
+                    Add to Cart
+                </button>
             </div>
         </div>
     </div>
@@ -218,4 +229,67 @@ const changePage = (page) => {
 
 // Initial load
 fetchProducts();
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Delegate event listener for "Add to Cart" buttons that will be created dynamically
+    document.getElementById('productsGrid').addEventListener('click', async function(event) {
+        if (event.target.classList.contains('add-to-cart-btn') || 
+            (event.target.parentElement && event.target.parentElement.classList.contains('add-to-cart-btn'))) {
+            
+            const button = event.target.classList.contains('add-to-cart-btn') ? 
+                event.target : event.target.parentElement;
+            
+            const productId = button.getAttribute('data-product-id');
+            const variantSelect = document.querySelector(`.variant-select[data-product-id="${productId}"]`);
+            const variantType = variantSelect.value;
+            const stock = variantSelect.options[variantSelect.selectedIndex].getAttribute('data-stock');
+            
+            // Check if product is in stock
+            if (parseInt(stock) <= 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Out of Stock',
+                    text: 'This variant is currently out of stock'
+                });
+                return;
+            }
+            
+            try {
+                const response = await fetch('/cart/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        productId,
+                        variantType
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Trigger cart updated event
+                    document.dispatchEvent(new CustomEvent('cartUpdated'));
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Added to Cart!',
+                        text: `${variantType} added to cart successfully`,
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: error.message || 'Failed to add to cart'
+                });
+            }
+        }
+    });
+});
 </script>

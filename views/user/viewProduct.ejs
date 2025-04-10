@@ -254,7 +254,7 @@ function updateVariantDetails() {
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     const variantSelect = document.getElementById('variantSelect');
-    const variants = <%- JSON.stringify(product.variants) %>;
+    const variants = JSON.parse('<%= JSON.stringify(product.variants) %>'.replace(/&quot;/g, '"'));
     
     variants.forEach((variant, index) => {
         const option = variantSelect.options[index];
@@ -290,6 +290,9 @@ async function handleCart(productId) {
             // Update only the current variant's cart status
             selectedVariant.setAttribute('data-in-cart', !inCart);
             updateCartButton(!inCart);
+            
+            // Trigger cart updated event
+            document.dispatchEvent(new CustomEvent('cartUpdated'));
 
             // Show success message with specific variant info
             Swal.fire({

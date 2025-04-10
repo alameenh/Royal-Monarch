@@ -8,16 +8,39 @@ const orderItemSchema = new mongoose.Schema({
   },
   name: { type: String, required: true },
   brand: { type: String, required: true },
+  category: { type: String, required: true },
   images: [{ path: String, filename: String }],
   quantity: { type: Number, required: true },
-  price: { type: Number, required: true },
+  originalPrice: { type: Number, required: true },
   variantType: { type: String, required: true },
-  discount: { type: Number, default: 0 },
   status: {
     type: String,
     enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'return requested', 'returned'],
     default: 'pending'
   },
+  previousStatus: {
+    type: String,
+    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'return requested', 'returned'],
+    default: 'pending'
+  },
+  offer: {
+    name: { type: String },
+    type: { type: String, enum: ['product', 'category'] },
+    discount: { type: Number }
+  },
+  offerDiscount: { type: Number, default: 0 },
+  priceAfterOffer: { type: Number, required: true },
+  couponForProduct: {
+    code: { type: String },
+    discount: { type: Number },
+    type: { type: String, enum: ['PERCENTAGE', 'FIXED'] }
+  },
+  couponDiscount: { type: Number, default: 0 },
+  subtotalforproduct: { type: Number, required: true },
+  finalPrice: { type: Number, required: true },
+  finalAmount: { type: Number, required: true },
+  gstAmount: { type: Number, required: true },
+  shippingCost: { type: Number, required: true },
   shippedDate: { type: Date },
   deliveredDate: { type: Date },
   cancelledDate: { type: Date },
@@ -71,22 +94,12 @@ const orderSchema = new mongoose.Schema({
   deliveryDate: {
     type: Date
   },
-  subtotal: { 
-    type: Number, 
-    required: true 
-  },
-  offerDiscount: { 
-    type: Number, 
-    default: 0 
-  },
-  gstAmount: { 
-    type: Number, 
-    required: true 
-  },
-  shippingCost: { 
-    type: Number, 
-    required: true 
-  },
+  originalSubtotal: { type: Number, required: true },
+  totalOfferDiscount: { type: Number, default: 0 },
+  totalCouponDiscount: { type: Number, default: 0 },
+  subtotal: { type: Number, required: true },
+  gstAmount: { type: Number, required: true },
+  shippingCost: { type: Number, required: true },
   coupon: {
     code: { type: String },
     discount: { type: Number },
@@ -104,4 +117,4 @@ const orderSchema = new mongoose.Schema({
   timestamps: true
 });
 
-export default mongoose.model('order', orderSchema);
+export default mongoose.model('order', orderSchema); 

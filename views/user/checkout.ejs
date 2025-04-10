@@ -62,7 +62,7 @@
                     <div class="bg-white p-6 rounded-lg shadow-md">
                         <h2 class="text-xl font-semibold mb-4">Order Items</h2>
                         <div class="space-y-4">
-                            <% cartItems.forEach(item => { %>
+                            <% cartItems.forEach((item, index) => { %>
                                 <div class="flex gap-4 border-b pb-4">
                                     <img src="<%= item.productId.images[0].path %>" 
                                          alt="<%= item.productId.name %>"
@@ -72,10 +72,10 @@
                                         <p class="text-gray-600">Brand: <%= item.productId.brand %></p>
                                         <p class="text-gray-600">Variant: <%= item.variantType %></p>
                                         <div class="mt-2">
+                                            <p class="text-sm text-gray-500 line-through">
+                                                ₹<%= item.originalPrice.toFixed(2) %>
+                                            </p>
                                             <% if (item.offer) { %>
-                                                <p class="text-sm text-gray-500 line-through">
-                                                    ₹<%= item.originalPrice.toFixed(2) %>
-                                                </p>
                                                 <p class="text-sm text-green-600">
                                                     <%= item.offer.discount %>% off - <%= item.offer.name %>
                                                     (<%= item.offer.type === 'product' ? 'Product Offer' : 'Category Offer' %>)
@@ -150,13 +150,13 @@
                             </div>
 
                             <div class="flex justify-between text-gray-600">
-                                <span>GST (10%)</span>
+                                <span>GST (18%)</span>
                                 <span>₹<span id="gstAmount"><%= gstAmount.toFixed(2) %></span></span>
                             </div>
 
                             <div class="flex justify-between">
-                                <span>Shipping</span>
-                                <span>₹<%= shippingCost.toFixed(2) %></span>
+                                <span>Shipping (2%)</span>
+                                <span>₹<span id="shippingCost"><%= shippingCost.toFixed(2) %></span></span>
                             </div>
 
                             <div class="border-t pt-3">
@@ -179,9 +179,19 @@
                                     <input type="radio" name="paymentMethod" value="online">
                                     <span>Online Payment</span>
                                 </label>
-                                <label class="flex items-center gap-2">
-                                    <input type="radio" name="paymentMethod" value="wallet">
-                                    <span>Wallet</span>
+                                <label class="flex items-center gap-2" id="walletPaymentLabel">
+                                    <input type="radio" name="paymentMethod" value="wallet" 
+                                           id="walletPayment" 
+                                           <%= walletBalance < total ? 'disabled' : '' %>>
+                                    <div>
+                                        <span>Wallet</span>
+                                        <p class="text-sm <%= walletBalance >= total ? 'text-green-600' : 'text-red-600' %>">
+                                            Balance: ₹<%= walletBalance.toFixed(2) %>
+                                            <% if (walletBalance < total) { %>
+                                                (Insufficient balance)
+                                            <% } %>
+                                        </p>
+                                    </div>
                                 </label>
                             </div>
                         </div>
@@ -202,6 +212,69 @@
 <script>
 let appliedCoupon = null;
 
+// Get the pre-calculated data from the server as a plain JSON string
+const cartItemsData = <%- JSON.stringify(cartItems.map(item => {
+    // Simple properties that are guaranteed to be available
+    return {
+        productId: item.productId._id,
+        name: item.productId.name,
+        brand: item.productId.brand,
+        category: item.productId.category ? item.productId.category.name || "Category" : "Category",
+        images: item.productId.images,
+        quantity: item.quantity,
+        originalPrice: item.originalPrice,
+        variantType: item.variantType,
+        status: 'pending',
+        previousStatus: 'pending',
+        priceAfterOffer: item.discountedPrice,
+        offerDiscount: item.originalPrice - item.discountedPrice,
+        subtotalforproduct: item.totalPrice,
+        gstAmount: Math.round(item.totalPrice * 0.18),
+        shippingCost: Math.round(item.totalPrice * 0.02),
+        finalPrice: item.discountedPrice,
+        finalAmount: item.totalPrice,
+        couponDiscount: 0,
+        couponForProduct: null,
+        offer: item.offer ? {
+            name: item.offer.name || '',
+            type: item.offer.type || 'product',
+            discount: item.offer.discount || 0
+        } : null
+    };
+})) %>;
+
+// Function to calculate all amounts
+function calculateAmounts(subtotal, offerDiscount = 0, couponDiscount = 0) {
+    // Calculate subtotal after offers and coupons
+    const subtotalAfterOffers = subtotal - offerDiscount;
+    const subtotalAfterCoupon = subtotalAfterOffers - couponDiscount;
+
+    // Calculate GST (18% of subtotal after all discounts)
+    const gstAmount = Math.round(subtotalAfterCoupon * 0.18);
+
+    // Calculate shipping (2% of subtotal after all discounts)
+    const shippingCost = subtotalAfterCoupon > 0 ? Math.round(subtotalAfterCoupon * 0.02) : 0;
+
+    // Calculate final total
+    const finalTotal = subtotalAfterCoupon + gstAmount + shippingCost;
+
+    return {
+        originalSubtotal: subtotal,
+        subtotalAfterOffers,
+        subtotalAfterCoupon,
+        gstAmount,
+        shippingCost,
+        finalTotal
+    };
+}
+
+// Function to update displayed amounts
+function updateDisplayedAmounts(amounts) {
+    document.getElementById('gstAmount').textContent = amounts.gstAmount.toFixed(2);
+    document.getElementById('shippingCost').textContent = amounts.shippingCost.toFixed(2);
+    document.getElementById('finalTotal').textContent = amounts.finalTotal.toFixed(2);
+}
+
 async function applyCoupon() {
     try {
         const select = document.getElementById('couponSelect');
@@ -211,10 +284,9 @@ async function applyCoupon() {
             throw new Error('Please select a coupon');
         }
 
-        // Get original subtotal and offer discount
-        const originalSubtotal = <%= subtotal %>;
-        const offerDiscount = <%= totalOfferDiscount %>;
-        const subtotalAfterOffers = originalSubtotal - offerDiscount;
+        // Get original amounts
+        const subtotalValue = parseFloat('<%= subtotal %>');
+        const offerDiscountValue = parseFloat('<%= totalOfferDiscount %>');
 
         const response = await fetch('/apply-coupon', {
             method: 'POST',
@@ -223,12 +295,8 @@ async function applyCoupon() {
             },
             body: JSON.stringify({
                 couponId: option.value,
-                subtotal: subtotalAfterOffers,
-                items: <%- JSON.stringify(cartItems.map(item => ({
-                    id: item.productId._id,
-                    price: item.discountedPrice,
-                    quantity: item.quantity
-                }))) %>
+                subtotal: subtotalValue,
+                items: cartItemsData
             })
         });
 
@@ -240,20 +308,11 @@ async function applyCoupon() {
             document.getElementById('couponDiscountAmount').textContent = 
                 data.discount.toFixed(2);
 
-            // Calculate final total with correct order:
-            // 1. Original subtotal
-            // 2. Subtract offer discount
-            // 3. Subtract coupon discount
-            // 4. Calculate GST on remaining amount
-            // 5. Add shipping charge
-            const subtotalAfterOffers = originalSubtotal - offerDiscount;
-            const subtotalAfterCoupon = subtotalAfterOffers - data.discount;
-            const gstAmount = subtotalAfterCoupon * 0.10; // 10% GST
-            const shippingCost = <%= shippingCost %>;
-            const finalTotal = subtotalAfterCoupon + gstAmount + shippingCost;
-
-            // Update displayed total
-            document.getElementById('finalTotal').textContent = finalTotal.toFixed(2);
+            // Calculate all amounts with the new coupon discount
+            const amounts = calculateAmounts(subtotalValue, offerDiscountValue, data.discount);
+            
+            // Update displayed amounts
+            updateDisplayedAmounts(amounts);
 
             // Store applied coupon with all details
             appliedCoupon = {
@@ -262,8 +321,8 @@ async function applyCoupon() {
                 discount: data.discount
             };
 
-            // Update GST amount display
-            document.getElementById('gstAmount').textContent = gstAmount.toFixed(2);
+            // Update payment options based on new total
+            updatePaymentOptions();
 
             Swal.fire({
                 icon: 'success',
@@ -280,6 +339,34 @@ async function applyCoupon() {
             text: error.message || 'Failed to apply coupon'
         });
     }
+}
+
+// Function to remove coupon and recalculate amounts
+function removeCoupon() {
+    // Hide coupon discount row
+    document.getElementById('couponDiscountRow').classList.add('hidden');
+    
+    // Reset coupon discount
+    document.getElementById('couponDiscountAmount').textContent = '0.00';
+    
+    // Get original amounts
+    const originalSubtotal = parseFloat('<%= subtotal %>');
+    const offerDiscount = parseFloat('<%= totalOfferDiscount %>');
+    
+    // Calculate all amounts without coupon
+    const amounts = calculateAmounts(originalSubtotal, offerDiscount, 0);
+    
+    // Update displayed amounts
+    updateDisplayedAmounts(amounts);
+    
+    // Clear applied coupon
+    appliedCoupon = null;
+    
+    // Reset coupon select
+    document.getElementById('couponSelect').value = '';
+
+    // Update payment options based on new total
+    updatePaymentOptions();
 }
 
 async function placeOrder(event) {
@@ -310,14 +397,67 @@ async function placeOrder(event) {
     // Get the current total amount from the UI
     const currentTotal = parseFloat(document.getElementById('finalTotal').textContent);
     
+    // Check wallet balance if wallet payment is selected
+    if (selectedPayment.value === 'wallet') {
+        const walletBalance = parseFloat('<%= walletBalance %>');
+        if (walletBalance < currentTotal) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Insufficient Balance',
+                text: 'Your wallet balance is insufficient for this purchase.'
+            });
+            return;
+        }
+    }
+
+    // Deep clone the cart items to avoid reference issues
+    const processedItems = JSON.parse(JSON.stringify(cartItemsData));
+
+    // If coupon is applied, update each item with the coupon discount
+    if (appliedCoupon) {
+        const couponDiscountAmount = parseFloat(document.getElementById('couponDiscountAmount').textContent || '0');
+        const subtotalValue = parseFloat('<%= subtotal %>');
+        
+        processedItems.forEach(item => {
+            const proportion = item.subtotalforproduct / subtotalValue;
+            const itemCouponDiscount = couponDiscountAmount * proportion;
+            
+            item.couponForProduct = {
+                code: appliedCoupon.code,
+                discount: itemCouponDiscount,
+                type: 'PERCENTAGE'
+            };
+            item.couponDiscount = itemCouponDiscount;
+            
+            // Update final prices with coupon discount
+            const priceAfterCoupon = item.priceAfterOffer - (itemCouponDiscount / item.quantity);
+            item.finalPrice = priceAfterCoupon;
+            item.finalAmount = priceAfterCoupon * item.quantity;
+        });
+    }
+
+    const couponDiscountAmount = parseFloat(document.getElementById('couponDiscountAmount').textContent || '0');
+    const subtotalValue = parseFloat('<%= subtotal %>');
+    const originalSubtotalValue = parseFloat('<%= originalSubtotal %>') || subtotalValue;
+    const offerDiscountValue = parseFloat('<%= totalOfferDiscount %>') || 0;
+
     const formData = {
         addressId: selectedAddress.value,
         paymentMethod: selectedPayment.value,
+        paymentStatus: selectedPayment.value === 'cod' ? 'pending' : 'paid',
         coupon: appliedCoupon,
-        totalAmount: currentTotal // Pass the current total to backend
+        totalAmount: currentTotal,
+        originalSubtotal: originalSubtotalValue,
+        totalOfferDiscount: offerDiscountValue,
+        totalCouponDiscount: couponDiscountAmount,
+        subtotal: subtotalValue,
+        gstAmount: parseFloat(document.getElementById('gstAmount').textContent),
+        shippingCost: parseFloat(document.getElementById('shippingCost').textContent),
+        items: processedItems
     };
 
     try {
+        console.log('Sending order data:', formData);
         const response = await fetch('/order/create', {
             method: 'POST',
             headers: {
@@ -329,14 +469,14 @@ async function placeOrder(event) {
         const data = await response.json();
 
         if (data.success) {
-            if (data.paymentMethod === 'cod') {
+            if (data.paymentMethod === 'cod' || data.paymentMethod === 'wallet') {
+                // Redirect to success page for COD and Wallet payments
                 window.location.href = data.redirect;
-            } 
-            else if (data.paymentMethod === 'online') {
+            } else if (data.paymentMethod === 'online') {
                 // Initialize Razorpay payment
                 const options = {
                     key: '<%= razorpayKey %>',
-                    amount: Math.round(currentTotal * 100), // Use the current total from UI
+                    amount: Math.round(currentTotal * 100),
                     currency: data.razorpayOrder.currency,
                     order_id: data.razorpayOrder.id,
                     name: 'Royal Monarch',
@@ -424,8 +564,34 @@ async function placeOrder(event) {
     }
 }
 
-// Add event listener to the form
+// Add event listener to the place order button
 document.getElementById('placeOrderButton').addEventListener('click', placeOrder);
+
+// Update payment options when total changes
+function updatePaymentOptions() {
+    const currentTotal = parseFloat(document.getElementById('finalTotal').textContent);
+    const walletBalance = parseFloat('<%= walletBalance %>');
+    const walletPayment = document.getElementById('walletPayment');
+    const walletPaymentLabel = document.getElementById('walletPaymentLabel');
+
+    if (walletBalance < currentTotal) {
+        walletPayment.disabled = true;
+        walletPayment.checked = false;
+        walletPaymentLabel.classList.add('opacity-50');
+    } else {
+        walletPayment.disabled = false;
+        walletPaymentLabel.classList.remove('opacity-50');
+    }
+}
+
+// Initialize amounts when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    const originalSubtotal = parseFloat('<%= subtotal %>');
+    const offerDiscount = parseFloat('<%= totalOfferDiscount %>');
+    const amounts = calculateAmounts(originalSubtotal, offerDiscount, 0);
+    updateDisplayedAmounts(amounts);
+    updatePaymentOptions();
+});
 </script>
 
 <%- include('../partials/footer') %>

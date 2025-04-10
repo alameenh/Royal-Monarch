@@ -142,6 +142,25 @@ const cartController = {
         }
     },
 
+    getCartCount: async (req, res) => {
+        try {
+            const userId = req.session.userId;
+            if (!userId) {
+                return res.json({ count: 0 });
+            }
+            
+            const count = await CartItem.countDocuments({ userId });
+            res.json({ count });
+        } catch (error) {
+            console.error('Get Cart Count Error:', error);
+            res.status(500).json({ 
+                success: false, 
+                message: 'Failed to get cart count',
+                count: 0
+            });
+        }
+    },
+
     getCart: async (req, res) => {
         try {
             const userId = req.session.userId;
@@ -183,41 +202,64 @@ const cartController = {
                 const variant = item.productId.variants.find(v => v.type === item.variantType);
                 const originalPrice = variant ? variant.price : 0;
 
-                // Calculate discounted price
-                let discountedPrice = originalPrice;
+                // Calculate price after offer
+                let priceAfterOffer = originalPrice;
+                let offerDiscount = 0;
                 if (applicableOffer) {
-                    discountedPrice = Math.round(originalPrice * (1 - applicableOffer.discount/100));
+                    offerDiscount = (originalPrice * applicableOffer.discount) / 100;
+                    priceAfterOffer = originalPrice - offerDiscount;
                 }
+
+                // Calculate subtotal for this product after offer
+                const subtotalAfterOffer = priceAfterOffer * item.quantity;
 
                 return {
                     ...item.toObject(),
                     originalPrice,
-                    discountedPrice,
+                    priceAfterOffer,
                     offer: applicableOffer,
-                    totalPrice: discountedPrice * item.quantity,
+                    offerDiscountforproduct: offerDiscount * item.quantity,
+                    subtotalAfterOffer,
                     stock: variant ? variant.stock : 0
                 };
             }));
 
-            // Calculate totals
-            let subtotal = 0;
+            // Calculate total subtotal after offers
+            let totalSubtotalAfterOffers = 0;
+            let originalSubtotal = 0;
+            let totalOfferDiscount = 0;
             processedCartItems.forEach(item => {
                 if (item.productId && item.productId.status === 'Active') {
-                    subtotal += item.totalPrice;
+                    originalSubtotal += item.originalPrice * item.quantity;
+                    totalOfferDiscount += item.offerDiscountforproduct;
+                    totalSubtotalAfterOffers += item.subtotalAfterOffer;
                 }
             });
 
-            const shippingCost = subtotal > 0 ? 40 : 0; // Example shipping cost
-            const total = subtotal + shippingCost;
+            // Calculate GST (18% of subtotal after offers)
+            const gstAmount = Math.round(totalSubtotalAfterOffers * 0.18);
+
+            // Calculate shipping (5% of subtotal after offers)
+            const shippingCost = totalSubtotalAfterOffers > 0 ? Math.round(totalSubtotalAfterOffers * 0.02) : 0;
+
+            // Calculate final total
+            const total = totalSubtotalAfterOffers + gstAmount + shippingCost;
+
+            // Get cart count for the navbar
+            const cartCount = await CartItem.countDocuments({ userId });
 
             res.render('user/cart', {
                 title: 'Cart',
                 user: await User.findById(userId),
                 cartItems: processedCartItems,
-                subtotal,
+                originalSubtotal,
+                totalOfferDiscount,
+                subtotal: totalSubtotalAfterOffers,
+                gstAmount,
                 shippingCost,
                 total,
-                currentPage: 'cart'
+                currentPage: 'cart',
+                cartCount
             });
 
         } catch (error) {
