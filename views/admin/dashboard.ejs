@@ -106,34 +106,194 @@
                 <div class="flex gap-2 bg-zinc-700 p-3 rounded-lg shadow-lg">
                     <input type="text" id="startDate" class="bg-zinc-800 text-white px-4 py-2 rounded-md border border-zinc-700" placeholder="Start Date">
                     <input type="text" id="endDate" class="bg-zinc-800 text-white px-4 py-2 rounded-md border border-zinc-700" placeholder="End Date">
+                    <button id="applyDateRange" class="bg-emerald-600 text-white px-4 py-2 rounded-md hover:bg-emerald-700 transition-colors">Apply</button>
                 </div>
             </div>
 
-            <div class="h-[400px]">
+            <div id="chartContainer" class="h-[400px]">
                 <canvas id="salesChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Top Selling Products, Categories, and Brands -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mx-4 lg:mx-8">
+            <!-- Top Products -->
+            <div class="bg-zinc-800 rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-200 mb-4">Top Products</h2>
+                <div class="overflow-y-auto max-h-80 scrollbar-hide">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr>
+                                <th class="text-left text-gray-400 text-sm font-medium">Product</th>
+                                <th class="text-right text-gray-400 text-sm font-medium">Sold</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (topProducts && topProducts.length > 0) { %>
+                                <% topProducts.forEach(product => { %>
+                                    <tr class="border-b border-gray-700">
+                                        <td class="py-3 text-white">
+                                            <%= product.name %>
+                                            <div class="text-xs text-gray-400"><%= product.brand %></div>
+                                        </td>
+                                        <td class="py-3 text-right text-white"><%= product.soldcount %></td>
+                                    </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="2" class="py-3 text-center text-gray-400">No data available</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Top Categories -->
+            <div class="bg-zinc-800 rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-200 mb-4">Top Categories</h2>
+                <div class="overflow-y-auto max-h-80 scrollbar-hide">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr>
+                                <th class="text-left text-gray-400 text-sm font-medium">Category</th>
+                                <th class="text-right text-gray-400 text-sm font-medium">Sold</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (topCategories && topCategories.length > 0) { %>
+                                <% topCategories.forEach(category => { %>
+                                    <tr class="border-b border-gray-700">
+                                        <td class="py-3 text-white"><%= category.name || category._id %></td>
+                                        <td class="py-3 text-right text-white"><%= category.count %></td>
+                                    </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="2" class="py-3 text-center text-gray-400">No data available</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Top Brands -->
+            <div class="bg-zinc-800 rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-200 mb-4">Top Brands</h2>
+                <div class="overflow-y-auto max-h-80 scrollbar-hide">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr>
+                                <th class="text-left text-gray-400 text-sm font-medium">Brand</th>
+                                <th class="text-right text-gray-400 text-sm font-medium">Sold</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (topBrands && topBrands.length > 0) { %>
+                                <% topBrands.forEach(brand => { %>
+                                    <tr class="border-b border-gray-700">
+                                        <td class="py-3 text-white"><%= brand._id %></td>
+                                        <td class="py-3 text-right text-white"><%= brand.count %></td>
+                                    </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="2" class="py-3 text-center text-gray-400">No data available</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
+    <style>
+        /* Hide scrollbar but keep functionality */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+
     <script>
-        // Initialize date picker
-        flatpickr("#dateRangePicker", {
-            mode: "range",
+        // Initialize date picker with better defaults
+        let startDatePicker = flatpickr("#startDate", {
             dateFormat: "Y-m-d",
-            onChange: function(selectedDates, dateStr, instance) {
-                if (selectedDates.length === 2) {
-                    document.getElementById('startDate').value = selectedDates[0].toISOString().split('T')[0];
-                    document.getElementById('endDate').value = selectedDates[1].toISOString().split('T')[0];
-                    fetchChartData();
-                }
+            defaultDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+            maxDate: new Date(),
+            onChange: function(selectedDates, dateStr) {
+                // Validate date range when start date changes
+                validateDateRange();
             }
         });
+        
+        let endDatePicker = flatpickr("#endDate", {
+            dateFormat: "Y-m-d",
+            defaultDate: new Date(),
+            maxDate: new Date(),
+            onChange: function(selectedDates, dateStr) {
+                // Validate date range when end date changes
+                validateDateRange();
+            }
+        });
+        
+        // Function to validate date range
+        function validateDateRange() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (startDate && endDate) {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                
+                const applyButton = document.getElementById('applyDateRange');
+                
+                if (start > end) {
+                    applyButton.disabled = true;
+                    applyButton.classList.add('opacity-50', 'cursor-not-allowed');
+                    applyButton.title = 'Start date cannot be after end date';
+                } else {
+                    applyButton.disabled = false;
+                    applyButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                    applyButton.title = '';
+                }
+            }
+        }
 
         // Chart initialization
         let salesChart;
-        const ctx = document.getElementById('salesChart').getContext('2d');
+        let ctx;
+        
+        function initializeChart() {
+            // Get the chart context
+            const chartCanvas = document.getElementById('salesChart');
+            if (!chartCanvas) {
+                console.error('Chart canvas not found');
+                return false;
+            }
+            
+            ctx = chartCanvas.getContext('2d');
+            if (!ctx) {
+                console.error('Could not get 2D context from canvas');
+                return false;
+            }
+            
+            return true;
+        }
 
         function createChartConfig(data) {
+            if (!ctx) {
+                if (!initializeChart()) {
+                    return null;
+                }
+            }
+            
             const revenueGradient = ctx.createLinearGradient(0, 0, 0, 400);
             revenueGradient.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
             revenueGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
@@ -295,15 +455,192 @@
         }
 
         function initChart(data) {
-            if (salesChart) {
-                salesChart.destroy();
+            try {
+                if (salesChart) {
+                    salesChart.destroy();
+                    salesChart = null;
+                }
+                
+                // Reset and get new canvas
+                const chartContainer = document.getElementById('chartContainer');
+                chartContainer.innerHTML = '<canvas id="salesChart"></canvas>';
+                
+                if (!initializeChart()) {
+                    throw new Error('Failed to initialize chart');
+                }
+                
+                const config = createChartConfig(data);
+                if (!config) {
+                    throw new Error('Failed to create chart configuration');
+                }
+                
+                salesChart = new Chart(ctx, config);
+                return true;
+            } catch (error) {
+                console.error('Error initializing chart:', error);
+                const chartContainer = document.getElementById('chartContainer');
+                chartContainer.innerHTML = 
+                    '<div class="flex items-center justify-center h-full">' +
+                    '<div class="text-red-500">Error initializing chart: ' + error.message + '</div></div>';
+                return false;
             }
-            const config = createChartConfig(data);
-            salesChart = new Chart(ctx, config);
+        }
+
+        // Function to load chart data from API
+        async function loadChartData(filter, startDate = null, endDate = null) {
+            try {
+                // Disable all filter buttons
+                document.querySelectorAll('.time-range-btn').forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50');
+                });
+                
+                // Disable apply button if in custom mode
+                const applyButton = document.getElementById('applyDateRange');
+                if (applyButton) {
+                    applyButton.disabled = true;
+                    applyButton.classList.add('opacity-50');
+                }
+                
+                // Show loading indicator
+                const chartContainer = document.getElementById('chartContainer');
+                chartContainer.innerHTML = '<div class="flex items-center justify-center h-full"><div class="text-emerald-500">Loading chart data...</div></div>';
+                
+                // Build URL
+                let url = `/admin/dashboard/chart-data?filter=${filter}`;
+                if (filter === 'custom' && startDate && endDate) {
+                    url += `&startDate=${startDate}&endDate=${endDate}`;
+                }
+                console.log('Fetching data from:', url);
+                
+                // Fetch data
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.details || 'Failed to fetch chart data');
+                }
+                
+                const data = await response.json();
+                console.log('Received chart data:', data);
+                
+                // Display data
+                if (!data || data.length === 0) {
+                    chartContainer.innerHTML = '<div class="flex items-center justify-center h-full"><div class="text-gray-400">No data available for selected time range</div></div>';
+                } else {
+                    initChart(data);
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('Error loading chart data:', error);
+                document.getElementById('chartContainer').innerHTML = 
+                    '<div class="flex items-center justify-center h-full">' +
+                    '<div class="text-red-500">Error loading chart data: ' + error.message + '</div></div>';
+                
+                Swal.fire({
+                    title: 'Error',
+                    text: error.message || 'Failed to fetch chart data. Please try again.',
+                    icon: 'error',
+                    background: '#18181B',
+                    color: '#FFFFFF'
+                });
+                
+                return false;
+            } finally {
+                // Re-enable all filter buttons
+                document.querySelectorAll('.time-range-btn').forEach(btn => {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50');
+                });
+                
+                // Re-enable apply button if in custom mode
+                const applyButton = document.getElementById('applyDateRange');
+                if (applyButton) {
+                    const startDate = document.getElementById('startDate')?.value;
+                    const endDate = document.getElementById('endDate')?.value;
+                    
+                    if (startDate && endDate) {
+                        const start = new Date(startDate);
+                        const end = new Date(endDate);
+                        
+                        if (start <= end) {
+                            applyButton.disabled = false;
+                            applyButton.classList.remove('opacity-50');
+                        }
+                    }
+                }
+            }
+        }
+
+        // Function to fetch chart data based on date range
+        async function fetchChartData() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!startDate || !endDate) {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Please select both start and end dates',
+                    icon: 'error',
+                    background: '#18181B',
+                    color: '#FFFFFF'
+                });
+                return;
+            }
+            
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            
+            if (start > end) {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Start date cannot be after end date',
+                    icon: 'error',
+                    background: '#18181B',
+                    color: '#FFFFFF'
+                });
+                return;
+            }
+            
+            // Load chart data with custom filter
+            await loadChartData('custom', startDate, endDate);
         }
 
         // Initialize with default data
-        initChart(<%- orderData %>);
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Try to initialize chart with server data
+                try {
+                    initializeChart();
+                    
+                    // Parse the data safely using JSON.parse and handle EJS encoding
+                    const orderDataStr = '<%- orderData %>'.replace(/&quot;/g, '"').replace(/&#34;/g, '"');
+                    const chartData = JSON.parse(orderDataStr);
+                    console.log('Initial chart data:', chartData);
+                    
+                    if (chartData && chartData.length > 0) {
+                        initChart(chartData);
+                    } else {
+                        document.getElementById('chartContainer').innerHTML = 
+                            '<div class="flex items-center justify-center h-full">' +
+                            '<div class="text-gray-400">No data available</div></div>';
+                    }
+                } catch (error) {
+                    console.error('Error parsing initial chart data:', error);
+                    document.getElementById('chartContainer').innerHTML = 
+                        '<div class="flex items-center justify-center h-full">' +
+                        '<div class="text-red-500">Error loading chart data: ' + error.message + '</div></div>';
+                }
+                
+                // Setup event handlers
+                setupEventHandlers();
+                
+                // Set initial active button
+                document.querySelector('.time-range-btn[data-range="week"]').classList.add('bg-emerald-600', 'text-white');
+            } catch (error) {
+                console.error('Error during initialization:', error);
+            }
+        });
 
         // Event Handlers
         function setupEventHandlers() {
@@ -311,58 +648,53 @@
             document.querySelectorAll('.time-range-btn').forEach(btn => {
                 btn.addEventListener('click', async () => {
                     try {
-                        document.querySelectorAll('.time-range-btn').forEach(b => b.classList.remove('bg-emerald-600', 'text-white'));
+                        // Update active button style
+                        document.querySelectorAll('.time-range-btn').forEach(b => {
+                            b.classList.remove('bg-emerald-600', 'text-white');
+                            b.disabled = false;
+                        });
                         btn.classList.add('bg-emerald-600', 'text-white');
                         
                         const dateRangePicker = document.getElementById('dateRangePicker');
                         if (btn.dataset.range === 'custom') {
+                            // Show date picker for custom range
                             dateRangePicker.classList.remove('hidden');
+                            validateDateRange();
+                            return; // Don't fetch data yet, wait for Apply button
                         } else {
+                            // Hide date picker for predefined ranges
                             dateRangePicker.classList.add('hidden');
                             
-                            let url = `/admin/dashboard/chart-data?filter=${btn.dataset.range}`;
-                            const response = await fetch(url);
-                            if (!response.ok) throw new Error('Failed to fetch chart data');
-                            const data = await response.json();
-                            initChart(data);
+                            // Load data for selected range
+                            await loadChartData(btn.dataset.range);
                         }
                     } catch (error) {
-                        console.error('Error:', error);
-                        Swal.fire({
-                            title: 'Error',
-                            text: 'Failed to fetch chart data. Please try again.',
-                            icon: 'error',
-                            background: '#18181B',
-                            color: '#FFFFFF'
-                        });
+                        console.error('Error handling filter button click:', error);
                     }
                 });
             });
+            
+            // Apply custom date range
+            document.getElementById('applyDateRange').addEventListener('click', fetchChartData);
         }
-
-        // Set initial active button
-        document.querySelector('.time-range-btn[data-range="week"]').classList.add('bg-emerald-600', 'text-white');
-
-        // Initialize event handlers
-        setupEventHandlers();
 
         // Auto-refresh data every 5 minutes
         setInterval(async () => {
             try {
                 const activeRangeBtn = document.querySelector('.time-range-btn.bg-emerald-600');
+                if (!activeRangeBtn) return;
+                
                 const filter = activeRangeBtn.dataset.range;
-                const startDate = document.getElementById('startDate')?.value;
-                const endDate = document.getElementById('endDate')?.value;
-
-                let url = `/admin/dashboard/chart-data?filter=${filter}`;
-                if (filter === 'custom' && startDate && endDate) {
-                    url += `&startDate=${startDate}&endDate=${endDate}`;
+                if (filter === 'custom') {
+                    const startDate = document.getElementById('startDate')?.value;
+                    const endDate = document.getElementById('endDate')?.value;
+                    
+                    if (startDate && endDate) {
+                        await loadChartData('custom', startDate, endDate);
+                    }
+                } else {
+                    await loadChartData(filter);
                 }
-
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Failed to fetch chart data');
-                const data = await response.json();
-                initChart(data);
                 
                 // Update last updated time
                 document.querySelector('header .text-gray-400').textContent = new Date().toLocaleString();

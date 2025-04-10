@@ -63,44 +63,80 @@ const getLogout = (req, res) => {
 const getDashboard = async (req, res) => {
     try {
         // Get counts
-        const [userCount, productCount, orderCount] = await Promise.all([
-            User.countDocuments(),
-            Product.countDocuments(),
-            Order.countDocuments()
+        const [userCount, productCount] = await Promise.all([
+            User.countDocuments({ isBlocked: { $ne: true } }),
+            Product.countDocuments({ status: 'Active' })
         ]);
         
-        // Calculate total revenue from delivered orders
-        const deliveredOrders = await Order.find({
-            'items.status': 'delivered'
-        });
-        const totalRevenue = deliveredOrders.reduce((acc, order) => acc + order.totalAmount, 0);
+        // Get all orders
+        const orders = await Order.find({});
+        const orderCount = orders.length;
 
-        // Get today's statistics
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        const [todayOrders, todayRevenue] = await Promise.all([
-            Order.countDocuments({
-                orderDate: { $gte: today, $lt: tomorrow }
-            }),
-            Order.aggregate([
-                {
-                    $match: {
-                        orderDate: { $gte: today, $lt: tomorrow }
-                    }
-                },
-                {
-                    $group: {
-                        _id: null,
-                        total: { $sum: "$totalAmount" }
-                    }
+        // Calculate total revenue from delivered items properly
+        let totalRevenue = 0;
+        orders.forEach(order => {
+            order.items.forEach(item => {
+                if (item.status === 'delivered') {
+                    totalRevenue += item.finalPrice * item.quantity;
                 }
-            ])
+            });
+        });
+
+        // Get top 10 products based on sold count
+        const topProducts = await Product.find({})
+            .sort({ soldcount: -1 })
+            .limit(10)
+            .select('name brand soldcount');
+
+        // Get top categories with proper category name lookup
+        const topCategories = await Product.aggregate([
+            {
+                $match: { status: 'Active' }
+            },
+            {
+                $lookup: {
+                    from: 'categories',
+                    localField: 'category',
+                    foreignField: '_id',
+                    as: 'categoryInfo'
+                }
+            },
+            {
+                $unwind: '$categoryInfo'
+            },
+            {
+                $group: {
+                    _id: '$category',
+                    name: { $first: '$categoryInfo.name' },
+                    count: { $sum: '$soldcount' }
+                }
+            },
+            {
+                $sort: { count: -1 }
+            },
+            {
+                $limit: 10
+            }
         ]);
 
-        const todayRevenueAmount = todayRevenue[0]?.total || 0;
+        // Get top brands based on sold count
+        const topBrands = await Product.aggregate([
+            {
+                $match: { status: 'Active' }
+            },
+            {
+                $group: {
+                    _id: '$brand',
+                    count: { $sum: '$soldcount' }
+                }
+            },
+            {
+                $sort: { count: -1 }
+            },
+            {
+                $limit: 10
+            }
+        ]);
 
         // Get orders for chart data (default: last 7 days)
         const last7Days = new Date();
@@ -109,7 +145,6 @@ const getDashboard = async (req, res) => {
         const orderData = await Order.aggregate([
             {
                 $match: {
-                    'items.status': 'delivered',
                     orderDate: { $gte: last7Days }
                 }
             },
@@ -124,8 +159,8 @@ const getDashboard = async (req, res) => {
             {
                 $group: {
                     _id: { $dateToString: { format: "%Y-%m-%d", date: "$orderDate" } },
-                    count: { $sum: "$items.quantity" },
-                    revenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } }
+                    count: { $sum: '$items.quantity' },
+                    revenue: { $sum: { $multiply: ['$items.finalPrice', '$items.quantity'] } }
                 }
             },
             {
@@ -133,52 +168,96 @@ const getDashboard = async (req, res) => {
             }
         ]);
 
+        // Ensure we have data for all days in the range
+        const result = [];
+        const endDate = new Date();
+        let currentDate = new Date(last7Days);
+        
+        while (currentDate <= endDate) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const existingData = orderData.find(item => item._id === dateStr);
+            
+            if (existingData) {
+                result.push(existingData);
+            } else {
+                result.push({
+                    _id: dateStr,
+                    count: 0,
+                    revenue: 0
+                });
+            }
+            
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
         res.render('admin/dashboard', {
             userCount,
             productCount,
             orderCount,
             totalRevenue,
-            todayOrders,
-            todayRevenue: todayRevenueAmount,
-            orderData: JSON.stringify(orderData)
+            topProducts,
+            topCategories,
+            topBrands,
+            orderData: JSON.stringify(result)
         });
     } catch (error) {
         console.error('Dashboard Error:', error);
-        res.status(500).render('error', { message: 'Error loading dashboard' });
+        res.status(500).send(`Error loading dashboard: ${error.message}`);
     }
 };
 
 const getChartData = async (req, res) => {
     try {
         const { filter, startDate, endDate } = req.query;
+        
+        console.log('Received chart request with filter:', filter, 'startDate:', startDate, 'endDate:', endDate);
+        
         let queryStartDate = new Date();
         let queryEndDate = new Date();
+        queryEndDate.setHours(23, 59, 59, 999); // Set to end of day
 
-        if (startDate && endDate) {
+        if (filter === 'custom' && startDate && endDate) {
             // Custom date range
             queryStartDate = new Date(startDate);
+            queryStartDate.setHours(0, 0, 0, 0); // Start of day
+            
             queryEndDate = new Date(endDate);
+            queryEndDate.setHours(23, 59, 59, 999); // End of day
+            
+            // Validate date range
+            if (queryStartDate > queryEndDate) {
+                return res.status(400).json({
+                    error: 'Invalid date range',
+                    details: 'Start date cannot be after end date'
+                });
+            }
         } else {
             // Predefined ranges
             switch (filter) {
                 case 'day':
-                    queryStartDate.setHours(0, 0, 0, 0);
+                    queryStartDate.setHours(0, 0, 0, 0); // Start of today
                     break;
                 case 'week':
                     queryStartDate.setDate(queryStartDate.getDate() - 7);
+                    queryStartDate.setHours(0, 0, 0, 0);
                     break;
                 case 'month':
                     queryStartDate.setMonth(queryStartDate.getMonth() - 1);
+                    queryStartDate.setHours(0, 0, 0, 0);
                     break;
                 default:
-                    queryStartDate.setDate(queryStartDate.getDate() - 7); // default to week
+                    // Default to week if not a known filter
+                    queryStartDate.setDate(queryStartDate.getDate() - 7);
+                    queryStartDate.setHours(0, 0, 0, 0);
             }
         }
 
+        console.log(`Fetching chart data from ${queryStartDate.toISOString()} to ${queryEndDate.toISOString()}`);
+
+        // Find orders within the date range
         const orderData = await Order.aggregate([
             {
                 $match: {
-                    'items.status': 'delivered',
                     orderDate: { 
                         $gte: queryStartDate,
                         $lte: queryEndDate
@@ -196,8 +275,8 @@ const getChartData = async (req, res) => {
             {
                 $group: {
                     _id: { $dateToString: { format: "%Y-%m-%d", date: "$orderDate" } },
-                    count: { $sum: "$items.quantity" },
-                    revenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } }
+                    count: { $sum: '$items.quantity' },
+                    revenue: { $sum: { $multiply: ['$items.finalPrice', '$items.quantity'] } }
                 }
             },
             {
@@ -205,10 +284,35 @@ const getChartData = async (req, res) => {
             }
         ]);
 
-        res.json(orderData);
+        console.log(`Query returned ${orderData.length} data points`);
+        
+        // Fill in missing dates in the range with zero values
+        const result = [];
+        let currentDate = new Date(queryStartDate);
+        
+        while (currentDate <= queryEndDate) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const existingData = orderData.find(item => item._id === dateStr);
+            
+            if (existingData) {
+                result.push(existingData);
+            } else {
+                result.push({
+                    _id: dateStr,
+                    count: 0,
+                    revenue: 0
+                });
+            }
+            
+            // Move to next day
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        console.log(`Returning ${result.length} data points with filled dates`);
+        res.json(result);
     } catch (error) {
         console.error('Chart Data Error:', error);
-        res.status(500).json({ error: 'Error fetching chart data' });
+        res.status(500).json({ error: 'Error fetching chart data', details: error.message });
     }
 };
 
