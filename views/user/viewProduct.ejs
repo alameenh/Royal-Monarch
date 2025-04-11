@@ -57,7 +57,7 @@
                                 data-stock="<%= variant.stock %>"
                                 data-discount="<%= variant.discount %>"
                                 data-offer-name="<%= variant.offerName %>"
-                                data-specs='<%= JSON.stringify(variant.specifications) %>'
+                                data-specs='<%= JSON.stringify(variant.specifications || []) %>'
                                 data-in-cart="<%= variant.inCart %>">
                             <%= variant.type %> 
                         </option>
@@ -88,7 +88,15 @@
             <!-- Specifications -->
             <div class="space-y-2">
                 <h3 class="font-semibold">Specifications:</h3>
-                <ul id="specsList" class="list-disc list-inside text-gray-600"></ul>
+                <ul id="specsList" class="list-disc list-inside text-gray-600">
+                    <% if (product.variants[0].specifications && product.variants[0].specifications.length > 0) { %>
+                        <% product.variants[0].specifications.forEach(spec => { %>
+                            <li class="mb-1"><%= spec %></li>
+                        <% }); %>
+                    <% } else { %>
+                        <li>No specifications available</li>
+                    <% } %>
+                </ul>
             </div>
 
             <!-- Action Buttons -->
@@ -125,11 +133,19 @@
                         
                         <div class="flex items-center gap-2">
                             <% const similarVariant = similar.variants[0]; %>
-                            <% const similarDiscountedPrice = Math.round(similarVariant.price * (1 - similarVariant.discount/100)); %>
+                            <% 
+                            // Only show discounts from offers, not from product model
+                            const hasOffer = similarVariant.offerName && similarVariant.discount > 0;
+                            const similarDiscountedPrice = hasOffer ? 
+                                Math.round(similarVariant.price * (1 - similarVariant.discount/100)) : 
+                                similarVariant.price; 
+                            %>
                             <span class="text-lg font-bold">₹<%= similarDiscountedPrice %></span>
-                            <% if (similarVariant.discount > 0) { %>
+                            <% if (hasOffer) { %>
                                 <span class="text-sm text-gray-500 line-through">₹<%= similarVariant.price %></span>
-                                <span class="text-sm text-red-600 font-medium">(<%= similarVariant.discount %>% OFF)</span>
+                                <span class="text-sm text-red-600 font-medium">
+                                    (<%= similarVariant.discount %>% OFF<%= similarVariant.offerName ? ` - ${similarVariant.offerName}` : '' %>)
+                                </span>
                             <% } %>
                         </div>
                     </div>
@@ -187,7 +203,7 @@ function updateVariantDetails() {
     
     const price = parseInt(option.getAttribute('data-price'));
     const stock = parseInt(option.getAttribute('data-stock'));
-    const specs = JSON.parse(option.getAttribute('data-specs'));
+    const specs = JSON.parse(option.getAttribute('data-specs') || '[]');
     const type = option.getAttribute('data-type');
     const discount = parseInt(option.getAttribute('data-discount') || '0');
     const offerName = option.getAttribute('data-offer-name');
@@ -233,7 +249,18 @@ function updateVariantDetails() {
     
     // Update specifications
     const specsList = document.getElementById('specsList');
-    specsList.innerHTML = specs.map(spec => `<li>${spec}</li>`).join('');
+    specsList.innerHTML = '';
+    
+    if (specs && specs.length > 0) {
+        specs.forEach(spec => {
+            const li = document.createElement('li');
+            li.textContent = spec;
+            li.className = 'mb-1';
+            specsList.appendChild(li);
+        });
+    } else {
+        specsList.innerHTML = '<li>No specifications available</li>';
+    }
 
     // Update button states
     const addToCartBtn = document.getElementById('cartBtn');
@@ -252,17 +279,74 @@ function updateVariantDetails() {
 }
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-    const variantSelect = document.getElementById('variantSelect');
-    const variants = JSON.parse('<%= JSON.stringify(product.variants) %>'.replace(/&quot;/g, '"'));
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        console.log('DOM loaded, initializing product details');
+        
+        // Initialize zoom functionality
+        setupZoom();
+        
+        // Initialize variant selection
+        const variantSelect = document.getElementById('variantSelect');
+        const firstVariantOption = variantSelect.options[0];
+        
+        // Set up cart status for variants
+        const variants = JSON.parse('<%= JSON.stringify(product.variants) %>'.replace(/&quot;/g, '"'));
+        console.log('Product variants:', variants);
+        
+        if (variants && variants.length > 0) {
+            console.log('First variant specs:', variants[0].specifications);
+            
+            // Update data attributes for each variant option
+            variants.forEach((variant, index) => {
+                if (index < variantSelect.options.length) {
+                    const option = variantSelect.options[index];
+                    option.setAttribute('data-in-cart', variant.inCart);
+                    
+                    // Debug specs from data attribute
+                    const specsData = option.getAttribute('data-specs');
+                    console.log(`Variant ${index} specs data attribute:`, specsData);
+                }
+            });
+            
+            // Manually initialize the specifications display for the first variant
+            const firstVariantSpecs = variants[0].specifications || [];
+            console.log('Initializing with specs:', firstVariantSpecs);
+            
+            // Force update variant details
+            updateVariantDetails();
+        }
+    } catch (err) {
+        console.error('Error initializing product page:', err);
+    }
+});
+
+function setupZoom() {
+    const container = document.querySelector('.image-zoom-container');
+    const img = document.getElementById('mainImage');
     
-    variants.forEach((variant, index) => {
-        const option = variantSelect.options[index];
-        option.setAttribute('data-in-cart', variant.inCart);
+    container.addEventListener('mousemove', function(e) {
+        if (!img.classList.contains('zoomed')) {
+            img.classList.add('zoomed');
+        }
+        
+        const rect = container.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        // Calculate the position in percentages
+        const xPercent = (x / rect.width) * 100;
+        const yPercent = (y / rect.height) * 100;
+        
+        // Update transform origin based on mouse position
+        img.style.transformOrigin = `${xPercent}% ${yPercent}%`;
     });
     
-    updateVariantDetails();
-});
+    container.addEventListener('mouseleave', function() {
+        img.classList.remove('zoomed');
+        img.style.transformOrigin = 'center center';
+    });
+}
 
 async function handleCart(productId) {
     try {
@@ -399,31 +483,4 @@ function toggleWishlist(productId) {
         });
     });
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-    const container = document.querySelector('.image-zoom-container');
-    const img = document.getElementById('mainImage');
-    
-    container.addEventListener('mousemove', function(e) {
-        if (!img.classList.contains('zoomed')) {
-            img.classList.add('zoomed');
-        }
-        
-        const rect = container.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        // Calculate the position in percentages
-        const xPercent = (x / rect.width) * 100;
-        const yPercent = (y / rect.height) * 100;
-        
-        // Update transform origin based on mouse position
-        img.style.transformOrigin = `${xPercent}% ${yPercent}%`;
-    });
-    
-    container.addEventListener('mouseleave', function() {
-        img.classList.remove('zoomed');
-        img.style.transformOrigin = 'center center';
-    });
-});
 </script>

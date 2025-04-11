@@ -10,28 +10,158 @@
     <script src="https://raw.githubusercontent.com/rosshatokay/toasterjs/main/src/toaster.js"></script>
     <link rel="stylesheet" href="https://raw.githubusercontent.com/rosshatokay/toasterjs/main/src/toaster.css" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* Add padding to body to prevent content from being hidden behind fixed navbar */
+        body {
+            font-family: 'Georgia', serif;
+            background-color: #f8f5f0;
+            color: #2c2c2c;
+        }
+        
+        /* Classic font styling */
+        .font-classic {
+            font-family: 'Georgia', serif;
+            letter-spacing: 0.03em;
+        }
+        
+        /* Classic elegant divider */
+        .elegant-divider {
+            position: relative;
+        }
+        
+        .elegant-divider::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(to right, transparent, #8B4513, transparent);
+        }
+        
+        /* Classic elegant button */
+        .btn-classic {
+            background-color: transparent;
+            border: 1px solid #8B4513;
+            color: #8B4513;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-classic:hover {
+            background-color: #8B4513;
+            color: #fff;
+        }
+        
+        /* Navbar height */
+        .nav-height {
+            height: 6rem;
+        }
+
+        /* Enhanced Navbar Animations */
+        .nav-link {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background-color: #8B4513;
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .nav-icon {
+            transition: all 0.3s ease;
+            transform-origin: center;
+        }
+
+        .nav-icon:hover {
+            transform: scale(1.1);
+            color: #8B4513;
+        }
+
+        .logo-container {
+            transition: all 0.3s ease;
+        }
+
+        .logo-container:hover {
+            transform: scale(1.02);
+        }
+
+        .cart-badge {
+            transition: all 0.3s ease;
+        }
+
+        .cart-badge:hover {
+            transform: scale(1.1);
+        }
+
+        /* Navbar scroll effects */
+        .navbar {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .navbar-scrolled {
+            margin: 0 auto;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            height: 4.5rem;
+        }
+
+        .navbar-scrolled .logo-container {
+            transform: scale(0.9);
+        }
+
+        .navbar-scrolled .nav-link {
+            font-size: 0.9rem;
+        }
+
+        .navbar-scrolled .nav-icon {
+            transform: scale(0.9);
+        }
+    </style>
 </head>
 
 <body>
 
-<nav class="items-center justify-between flex p-4 border-b-2">
-    <div class="items-center flex space-x-4">
-        <a href="/home" class="text-black">Home</a>
-        <a href="/shop" class="text-black">Shop</a>
-        <!-- <a href="#" class="text-black">Contact Us</a>
-        <a href="#" class="text-black">About Us</a> -->
+<nav class="navbar fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-10 py-7 border-b border-gray-200 shadow-sm bg-white transition-all duration-300 w-full">
+    <!-- Left navigation links -->
+    <div class="flex items-center space-x-12 ml-4">
+        <a href="/home" class="nav-link text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic text-base uppercase tracking-wider">Home</a>
+        <a href="/shop" class="nav-link text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic text-base uppercase tracking-wider">Shop</a>
+        <!-- <a href="#" class="text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic text-base uppercase tracking-wider">Contact Us</a>
+        <a href="#" class="text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic text-base uppercase tracking-wider">About Us</a> -->
     </div>
-    <div class="items-center flex mr-40px space-x-2">
-        <img alt="Royal Monarch logo" src="/images/logo3.png" class="h-13"/>
-        <span class="text-black text-lg font-serif">ROYAL MONARCH</span>
+    
+    <!-- Logo and brand name - centered with greater spacing -->
+    <div class="logo-container flex items-center space-x-3 absolute left-1/2 transform -translate-x-1/2">
+        <img alt="Royal Monarch logo" src="/images/Royal Monarch logo.png" class="h-12 transition-transform duration-300 hover:scale-105"/>
+        <div class="flex flex-col items-start justify-center">
+            <span class="text-[#8B4513] text-2xl font-serif tracking-wider transition-colors duration-300 hover:text-[#6B3610]">ROYAL MONARCH</span>
+            <span class="text-gray-600 text-xs tracking-wider uppercase transition-colors duration-300 hover:text-gray-800">Luxury Automobiles</span>
+        </div>
     </div>
-    <div class="items-center flex space-x-8">
-        <a href="/wishlist" class="text-black"><i class="fas fa-heart"></i></a>
-        <a href="/profile" class="text-black"><i class="fas fa-user"></i></a>
-        <a href="/cart" class="text-black relative">
-            <i class="fas fa-shopping-cart"></i>
+    
+    <!-- Right icons with increased spacing -->
+    <div class="flex items-center space-x-10 mr-4">
+        <a href="/wishlist" class="nav-icon text-gray-800 hover:text-[#8B4513] transition-colors duration-300">
+            <i class="fas fa-heart text-xl"></i>
+        </a>
+        <a href="/profile" class="nav-icon text-gray-800 hover:text-[#8B4513] transition-colors duration-300">
+            <i class="fas fa-user text-xl"></i>
+        </a>
+        <a href="/cart" class="nav-icon text-gray-800 hover:text-[#8B4513] transition-colors duration-300 relative">
+            <i class="fas fa-shopping-cart text-xl"></i>
             <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
-                <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span class="cart-badge absolute -top-2 -right-2 bg-[#8B4513] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     <%= cartCount %>
                 </span>
             <% } %>
@@ -40,31 +170,41 @@
 </nav>
 
 <script>
-// Function to update cart count via AJAX
-function updateCartCount() {
+// Update cart count whenever cart is updated
+document.addEventListener('cartUpdated', function() {
+    // Fetch updated cart count
     fetch('/cart/count')
         .then(response => response.json())
         .then(data => {
-            const cartBadge = document.querySelector('.fa-shopping-cart').nextElementSibling;
+            // Update cart count display
+            const cartCountElement = document.querySelector('.fa-shopping-cart').nextElementSibling;
             if (data.count > 0) {
-                if (cartBadge) {
-                    cartBadge.textContent = data.count;
+                if (cartCountElement) {
+                    cartCountElement.textContent = data.count;
                 } else {
-                    const badge = document.createElement('span');
-                    badge.className = 'absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center';
-                    badge.textContent = data.count;
-                    document.querySelector('.fa-shopping-cart').parentElement.appendChild(badge);
+                    const countBadge = document.createElement('span');
+                    countBadge.className = 'cart-badge absolute -top-2 -right-2 bg-[#8B4513] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center';
+                    countBadge.textContent = data.count;
+                    document.querySelector('.fa-shopping-cart').parentElement.appendChild(countBadge);
                 }
-            } else if (cartBadge) {
-                cartBadge.remove();
+            } else if (cartCountElement) {
+                cartCountElement.remove();
             }
         })
         .catch(error => console.error('Error updating cart count:', error));
-}
+});
 
-// Set up cart count update when adding to cart
-document.addEventListener('DOMContentLoaded', function() {
-    // Listen for custom event that will be triggered when cart is updated
-    document.addEventListener('cartUpdated', updateCartCount);
+// Navbar scroll effects
+window.addEventListener('scroll', function() {
+    const navbar = document.querySelector('.navbar');
+    if (window.scrollY > 50) {
+        navbar.classList.add('navbar-scrolled');
+        navbar.classList.add('py-4');
+        navbar.classList.remove('py-6');
+    } else {
+        navbar.classList.remove('navbar-scrolled');
+        navbar.classList.add('py-6');
+        navbar.classList.remove('py-4');
+    }
 });
 </script>

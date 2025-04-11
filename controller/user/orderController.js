@@ -1006,7 +1006,7 @@ const orderController = {
             
             if (item.originalPrice !== undefined) {
                 // New model structure
-                originalPrice = parseFloat(item.originalPrice) || 0;
+                originalPrice = parseFloat(item.originalPrice) || 0;         
                 
                 if (item.finalPrice !== undefined) {
                     discountedPrice = parseFloat(item.finalPrice) || originalPrice;

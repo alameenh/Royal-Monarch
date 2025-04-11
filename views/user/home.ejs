@@ -1,129 +1,124 @@
 <%- include("../partials/navbar") %>
 
 <!-- Hero Section -->
-<div class="relative h-[500px] bg-cover bg-center" style="background-image: url('/images/hero-banner.jpg');">
-    <div class="absolute inset-0 bg-black bg-opacity-40"></div>
-    <div class="absolute inset-0 flex items-center justify-center text-white">
-        <div class="text-center">
-            <h1 class="text-5xl font-bold mb-4">Welcome to Royal Monarch</h1>
-            <p class="text-xl mb-8">Discover our exclusive collection of luxury watches</p>
-            <a href="/shop" class="bg-white text-black px-8 py-3 rounded-md hover:bg-gray-100 transition-colors">
-                Shop Now
+<div class="relative h-[550px] bg-cover bg-center" style="background-image: url('/images/2026-Bugatti-Tourbillon-007-1440w.jpg');">
+    <!-- Classic overlay with subtle gradient -->
+    <div class="absolute inset-0 bg-black opacity-50"></div>
+    
+    <div class="absolute inset-0 flex items-center px-16">
+        <div class="text-left text-white max-w-xl">
+            <span class="text-[#D2B48C] uppercase tracking-wider text-sm mb-3 block font-serif animate-fade-in">Refined Elegance</span>
+            <h1 class="text-5xl font-serif mb-6 animate-slide-up">Welcome to <span class="text-[#D2B48C]">Royal Monarch</span></h1>
+            <p class="text-xl mb-8 font-serif text-gray-200 animate-slide-up delay-100">Discover our exclusive collection of luxury automobiles, crafted with precision and timeless design.</p>
+            <a href="/shop" class="bg-transparent border border-[#D2B48C] text-white px-8 py-3 hover:bg-[#8B4513] hover:border-[#8B4513] transition-all duration-300 inline-block font-serif animate-slide-up delay-200 group">
+                Explore Collection
+                <span class="inline-block transform group-hover:translate-x-1 transition-transform duration-300 ml-2">→</span>
             </a>
         </div>
     </div>
+    
+    <!-- Subtle vignette effect -->
+    <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black to-transparent opacity-50"></div>
 </div>
 
-<!-- Categories Section -->
-<section class="py-16 px-8">
-    <h2 class="text-3xl font-bold text-center mb-12">Shop by Category</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <% categories.forEach(category => { %>
-            <a href="/shop?category=<%= category._id %>" class="group relative overflow-hidden rounded-lg shadow-lg">
-                <div class="aspect-w-16 aspect-h-9">
-                    <img 
-                        src="<%= category.image || '/images/default-category.jpg' %>" 
-                        alt="<%= category.name %>"
-                        class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    >
-                </div>
-                <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-                    <h3 class="text-white text-2xl font-bold"><%= category.name %></h3>
-                </div>
-            </a>
-        <% }); %>
-    </div>
-</section>
-
 <!-- Featured Products Section -->
-<section class="py-16 px-8 bg-gray-50">
-    <h2 class="text-3xl font-bold text-center mb-12">Featured Products</h2>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-        <% featuredProducts.forEach(product => { %>
-            <div class="bg-white rounded-lg shadow-md overflow-hidden group">
-                <div class="aspect-w-1 aspect-h-1 overflow-hidden">
-                    <img 
-                        src="<%= product.images[0].path %>" 
-                        alt="<%= product.name %>"
-                        class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    >
-                </div>
-                <div class="p-4">
-                    <h3 class="text-lg font-semibold mb-2"><%= product.name %></h3>
-                    <p class="text-gray-600 mb-2"><%= product.brand %></p>
-                    <div class="flex justify-between items-center mb-3">
-                        <div>
-                            <span class="text-xl font-bold">₹<%= product.variants[0].price %></span>
-                            <% if (product.discount > 0) { %>
-                                <span class="text-sm text-red-500 ml-2">-<%= product.discount %>%</span>
-                            <% } %>
+<section class="py-16 px-8 bg-[#f8f5f0]">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-12">
+            <h2 class="text-3xl font-serif relative inline-block pb-4 text-[#2c2c2c]">
+                Featured Collection
+                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-24 h-[1px] bg-gradient-to-r from-transparent via-[#8B4513] to-transparent"></div>
+            </h2>
+            <p class="text-gray-600 mt-4 max-w-2xl mx-auto font-serif">Explore our handpicked selection of the finest automobiles, each representing the pinnacle of luxury and performance.</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <% newArrivals.forEach(product => { %>
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
+                    <a href="/product/view/<%= product._id %>" class="block relative">
+                        <div class="aspect-w-1 aspect-h-1 overflow-hidden">
+                            <img 
+                                src="<%= product.images[0].path %>" 
+                                alt="<%= product.name %>"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            >
+                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300"></div>
                         </div>
-                        <a href="/product/view/<%= product._id %>" class="text-black hover:text-gray-700">
-                            <i class="fas fa-eye"></i>
+                        <% if (product.discount > 0) { %>
+                            <div class="absolute top-0 right-0 bg-[#8B4513] text-white px-3 py-1 text-sm font-serif rounded-tr-lg">
+                                <%= product.discount %>% OFF
+                            </div>
+                        <% } %>
+                    </a>
+                    <div class="p-4">
+                        <a href="/product/view/<%= product._id %>" class="block">
+                            <h3 class="text-base font-serif mb-2 text-[#2c2c2c] group-hover:text-[#8B4513] transition-colors duration-300"><%= product.name %></h3>
+                            <p class="text-gray-600 mb-3 font-serif text-sm"><%= product.brand %></p>
+                            <div class="flex justify-between items-center mb-3">
+                                <div>
+                                    <span class="text-lg font-serif text-[#8B4513]">₹<%= product.variants[0].price %></span>
+                                    <% if (product.discount > 0) { %>
+                                        <span class="text-sm text-gray-500 ml-2 line-through">₹<%= Math.round(product.variants[0].price * 100 / (100 - product.discount)) %></span>
+                                    <% } %>
+                                </div>
+                                <span class="text-gray-600 hover:text-[#8B4513] transition-colors">
+                                    <i class="fas fa-eye"></i>
+                                </span>
+                            </div>
                         </a>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <select class="variant-select w-full p-2 text-sm border rounded" data-product-id="<%= product._id %>">
-                            <% product.variants.forEach(variant => { %>
-                                <option value="<%= variant.type %>" data-stock="<%= variant.stock %>"><%= variant.type %> (<%= variant.stock %> left)</option>
-                            <% }) %>
-                        </select>
-                        <button 
-                            class="add-to-cart-btn w-full bg-black text-white py-2 text-sm rounded hover:bg-gray-800 transition-colors" 
-                            data-product-id="<%= product._id %>">
-                            Add to Cart
-                        </button>
+                        <div class="flex flex-col gap-2">
+                            <select class="variant-select w-full p-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300" data-product-id="<%= product._id %>">
+                                <% product.variants.forEach(variant => { %>
+                                    <option value="<%= variant.type %>" data-stock="<%= variant.stock %>"><%= variant.type %> (<%= variant.stock %> left)</option>
+                                <% }) %>
+                            </select>
+                            <button 
+                                class="add-to-cart-btn w-full bg-white text-[#8B4513] py-1.5 text-sm uppercase border border-[#8B4513] hover:bg-[#8B4513] hover:text-white transition-all duration-300 font-serif rounded-lg group" 
+                                data-product-id="<%= product._id %>">
+                                Add to Cart
+                                <span class="inline-block transform group-hover:translate-x-1 transition-transform duration-300 ml-2">→</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        <% }); %>
+            <% }); %>
+        </div>
     </div>
 </section>
 
-<!-- New Arrivals Section -->
-<section class="py-16 px-8">
-    <h2 class="text-3xl font-bold text-center mb-12">New Arrivals</h2>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-        <% newArrivals.forEach(product => { %>
-            <div class="bg-white rounded-lg shadow-md overflow-hidden group">
-                <div class="aspect-w-1 aspect-h-1 overflow-hidden">
-                    <img 
-                        src="<%= product.images[0].path %>" 
-                        alt="<%= product.name %>"
-                        class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    >
-                </div>
-                <div class="p-4">
-                    <h3 class="text-lg font-semibold mb-2"><%= product.name %></h3>
-                    <p class="text-gray-600 mb-2"><%= product.brand %></p>
-                    <div class="flex justify-between items-center mb-3">
-                        <div>
-                            <span class="text-xl font-bold">₹<%= product.variants[0].price %></span>
-                            <% if (product.discount > 0) { %>
-                                <span class="text-sm text-red-500 ml-2">-<%= product.discount %>%</span>
-                            <% } %>
-                        </div>
-                        <a href="/product/view/<%= product._id %>" class="text-black hover:text-gray-700">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <select class="variant-select w-full p-2 text-sm border rounded" data-product-id="<%= product._id %>">
-                            <% product.variants.forEach(variant => { %>
-                                <option value="<%= variant.type %>" data-stock="<%= variant.stock %>"><%= variant.type %> (<%= variant.stock %> left)</option>
-                            <% }) %>
-                        </select>
-                        <button 
-                            class="add-to-cart-btn w-full bg-black text-white py-2 text-sm rounded hover:bg-gray-800 transition-colors" 
-                            data-product-id="<%= product._id %>">
-                            Add to Cart
-                        </button>
-                    </div>
-                </div>
-            </div>
-        <% }); %>
-    </div>
-</section>
+<style>
+    @keyframes fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slide-up {
+        from { 
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to { 
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in {
+        animation: fade-in 1s ease-out forwards;
+    }
+
+    .animate-slide-up {
+        animation: slide-up 0.8s ease-out forwards;
+    }
+
+    .delay-100 {
+        animation-delay: 100ms;
+    }
+
+    .delay-200 {
+        animation-delay: 200ms;
+    }
+</style>
 
 <%- include("../partials/footer") %>
 

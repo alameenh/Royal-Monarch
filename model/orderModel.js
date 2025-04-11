@@ -15,12 +15,12 @@ const orderItemSchema = new mongoose.Schema({
   variantType: { type: String, required: true },
   status: {
     type: String,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'return requested', 'returned'],
+    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'return requested', 'returned','refunded','rejected'],
     default: 'pending'
   },
   previousStatus: {
     type: String,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'return requested', 'returned'],
+    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'return requested', 'returned','refunded','rejected'],
     default: 'pending'
   },
   offer: {
