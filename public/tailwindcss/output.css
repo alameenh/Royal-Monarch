@@ -1819,13 +1819,6 @@
       }
     }
   }
-  .hover\:bg-\[\#6B3413\] {
-    &:hover {
-      @media (hover: hover) {
-        background-color: #6B3413;
-      }
-    }
-  }
   .hover\:bg-\[\#6B3513\] {
     &:hover {
       @media (hover: hover) {
@@ -2138,11 +2131,6 @@
       box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
     }
   }
-  .focus\:ring-\[\#8B4513\] {
-    &:focus {
-      --tw-ring-color: #8B4513;
-    }
-  }
   .focus\:ring-black {
     &:focus {
       --tw-ring-color: var(--color-black);
@@ -2185,19 +2173,6 @@
       outline-style: none;
     }
   }
-  .active\:scale-95 {
-    &:active {
-      --tw-scale-x: 95%;
-      --tw-scale-y: 95%;
-      --tw-scale-z: 95%;
-      scale: var(--tw-scale-x) var(--tw-scale-y);
-    }
-  }
-  .disabled\:cursor-not-allowed {
-    &:disabled {
-      cursor: not-allowed;
-    }
-  }
   .disabled\:border-gray-400 {
     &:disabled {
       border-color: var(--color-gray-400);
@@ -2211,11 +2186,6 @@
   .disabled\:text-gray-400 {
     &:disabled {
       color: var(--color-gray-400);
-    }
-  }
-  .disabled\:opacity-50 {
-    &:disabled {
-      opacity: 50%;
     }
   }
   .sm\:w-48 {

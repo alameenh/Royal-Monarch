@@ -134,11 +134,11 @@
                     <!-- Action Buttons -->
                     <div class="flex gap-4">
                         <button id="cartBtn" onclick="handleCart('<%= product._id %>')" 
-                                class="flex-1 text-white py-3 rounded-lg transition-colors duration-300 font-serif text-base disabled:bg-gray-400 shadow-lg hover:shadow-xl <%= initialCartStatus ? 'bg-red-600 hover:bg-red-700' : 'bg-[#8B4513] hover:bg-[#6B3513]' %>">
+                                class="w-full text-white py-3 rounded-lg transition-colors duration-300 font-serif text-base disabled:bg-gray-400 shadow-lg hover:shadow-xl <%= initialCartStatus ? 'bg-red-600 hover:bg-red-700' : 'bg-[#8B4513] hover:bg-[#6B3513]' %>">
                             <%= initialCartStatus ? 'Remove from Cart' : 'Add to Cart' %>
                         </button>
                         <button id="buyNowBtn" onclick="buyNow('<%= product._id %>')" 
-                                class="flex-1 border-2 border-[#8B4513] py-3 rounded-lg hover:bg-[#8B4513]/5 transition-colors duration-300 font-serif text-base disabled:border-gray-400 disabled:text-gray-400 shadow-lg hover:shadow-xl">
+                                class="hidden border-2 border-[#8B4513] py-3 rounded-lg hover:bg-[#8B4513]/5 transition-colors duration-300 font-serif text-base disabled:border-gray-400 disabled:text-gray-400 shadow-lg hover:shadow-xl">
                             Buy Now
                         </button>
                     </div>

@@ -16,7 +16,13 @@
                     
                     <% if (cartItems && cartItems.length > 0) { %>
                         <div class="space-y-4">
-                            <% cartItems.forEach(item => { %>
+                            <% 
+                            // Sort cart items by createdAt in descending order
+                            const sortedCartItems = [...cartItems].sort((a, b) => {
+                                return new Date(b.createdAt) - new Date(a.createdAt);
+                            });
+                            %>
+                            <% sortedCartItems.forEach(item => { %>
                                 <% if (item.productId && item.productId.status === 'Active') { %>
                                     <div class="flex flex-col md:flex-row gap-4 p-4 border rounded-lg shadow-sm relative">
                                         <!-- Replace the current remove button -->
