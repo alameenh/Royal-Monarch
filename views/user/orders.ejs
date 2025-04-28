@@ -78,12 +78,15 @@
                                                     Variant: <%= item.variant %> | Quantity: <%= item.quantity %>
                                                 </p>
                                                 <p class="text-sm">
-                                                    Price: ₹<%= item.price %>
-                                                    <% if (item.discount > 0) { %>
+                                                    Price: ₹<%= item.finalPrice.toFixed(2) %>
+                                                    <% if (item.offerDiscount > 0 || item.couponDiscount > 0) { %>
                                                         <span class="text-red-600">
-                                                            (<%= item.discount %>% OFF)
+                                                            (₹<%= (item.originalPrice - item.finalPrice).toFixed(2) %> OFF)
                                                         </span>
                                                     <% } %>
+                                                </p>
+                                                <p class="text-sm text-gray-600">
+                                                    Total: ₹<%= item.finalAmount.toFixed(2) %>
                                                 </p>
                                                 <div class="mt-2 flex items-center justify-between">
                                                     <span class="px-2 py-1 text-sm rounded

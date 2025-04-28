@@ -461,10 +461,13 @@ const orderController = {
                 );
             }
 
+            // Clear cart items after order creation, regardless of payment method
+            await CartItem.deleteMany({ userId });
+            console.log('Cart cleared for user:', userId);
+
             if (paymentMethod === 'cod') {
                 order.paymentStatus = 'unpaid';
                 await order.save();
-                await CartItem.deleteMany({ userId });
 
                 return res.json({
                     success: true,
@@ -547,9 +550,6 @@ const orderController = {
                 // Update order payment status
                 order.paymentStatus = 'paid';
                 await order.save();
-
-                // Clear cart
-                await CartItem.deleteMany({ userId });
 
                 return res.json({
                     success: true,
