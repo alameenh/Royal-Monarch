@@ -1,156 +1,213 @@
 <%- include("../partials/navbar") %>
 
-<div class="container mx-auto px-4 py-8">
-    <!-- Main Product Section -->
-    <section class="flex flex-col md:flex-row gap-8">
-        <!-- Image Gallery -->
-        <div class="w-full md:w-1/2 flex gap-4">
-            <!-- Thumbnails -->
-            <div class="flex flex-col gap-4">
-                <% product.images.forEach((image, index) => { %>
-                    <img 
-                        src="<%= image.path %>" 
-                        alt="<%= product.name %> thumbnail" 
-                        class="w-20 h-20 object-cover cursor-pointer thumbnail-img"
-                        onclick="updateMainImage(this.src)"
-                    >
-                <% }) %>
-            </div>
-
-            <!-- Main Image -->
-            <div class="flex-grow relative overflow-hidden">
-                <div class="image-zoom-container w-full">
-                    <img 
-                        id="mainImage" 
-                        src="<%= product.images[0].path %>" 
-                        alt="<%= product.name %>" 
-                        class="w-full h-auto object-cover rounded-lg"
-                    >
-                </div>
-            </div>
-        </div>
-
-        <!-- Product Details -->
-        <div class="w-full md:w-1/2 space-y-6">
-            <div class="flex items-center justify-between mb-4">
-                <h1 class="text-3xl font-bold"><%= product.name %></h1>
-                <button id="wishlistBtn" class="focus:outline-none" onclick="toggleWishlist('<%= product._id %>')">
-                    <i class="fas fa-heart text-2xl <%= isInWishlist ? 'text-red-500' : 'text-gray-400' %>"></i>
-                </button>
-            </div>
-            <p class="text-gray-600"><%= product.description %></p>
-            
-            <div class="space-y-2">
-                <p class="font-semibold">Brand: <span class="text-gray-600"><%= product.brand %></span></p>
-                <p class="font-semibold">Color: <span class="text-gray-600"><%= product.color %></span></p>
-                <p class="font-semibold">Category: <span class="text-gray-600"><%= product.categoryData[0].name %></span></p>
-            </div>
-
-            <!-- Variant Selection -->
-            <div class="space-y-4">
-                <label class="block font-semibold">Select Variant:</label>
-                <select id="variantSelect" class="w-full p-2 border rounded" onchange="updateVariantDetails()">
-                    <% product.variants.forEach((variant, index) => { %>
-                        <option value="<%= index %>" 
-                                data-type="<%= variant.type %>"
-                                data-price="<%= variant.price %>"
-                                data-stock="<%= variant.stock %>"
-                                data-discount="<%= variant.discount %>"
-                                data-offer-name="<%= variant.offerName %>"
-                                data-specs='<%= JSON.stringify(variant.specifications || []) %>'
-                                data-in-cart="<%= variant.inCart %>">
-                            <%= variant.type %> 
-                        </option>
-                    <% }) %>
-                </select>
-            </div>
-
-            <!-- Price Display -->
-            <div class="space-y-2">
-                <div class="flex items-center gap-4 flex-wrap">
-                    <% const firstVariant = product.variants[0]; %>
-                    <% const discountedPrice = Math.round(firstVariant.price * (1 - firstVariant.discount/100)); %>
-                    <div class="flex items-baseline gap-3">
-                        <span id="currentPrice" class="text-3xl font-bold text-gray-900">₹<%= discountedPrice %></span>
-                        <% if (firstVariant.discount > 0) { %>
-                            <span id="originalPrice" class="text-xl text-gray-500 line-through">₹<%= firstVariant.price %></span>
-                        <% } %>
+<div class="container mx-auto px-4 py-6">
+    <!-- Product Overview Section -->
+    <section class="mb-12">
+        <div class="flex flex-col md:flex-row gap-8">
+            <!-- Image Gallery -->
+            <div class="w-full md:w-1/2">
+                <div class="flex gap-4">
+                    <!-- Thumbnails -->
+                    <div class="flex flex-col gap-2 w-24">
+                        <% product.images.forEach((image, index) => { %>
+                            <img 
+                                src="<%= image.path %>" 
+                                alt="<%= product.name %> thumbnail" 
+                                class="w-full aspect-square object-cover cursor-pointer thumbnail-img rounded-lg border border-gray-200 hover:border-[#8B4513] transition-all duration-300"
+                                onclick="updateMainImage(this.src)"
+                            >
+                        <% }) %>
                     </div>
-                    <% if (firstVariant.discount > 0) { %>
-                        <span id="discountBadge" class="px-2 py-1 bg-red-100 text-red-700 rounded-md text-sm font-medium">
-                            <%= firstVariant.discount %>% OFF
-                        </span>
-                    <% } %>
+
+                    <!-- Main Image -->
+                    <div class="flex-grow relative overflow-hidden rounded-xl h-[550px] shadow-xl">
+                        <div class="image-zoom-container w-full h-full">
+                            <img 
+                                id="mainImage" 
+                                src="<%= product.images[0].path %>" 
+                                alt="<%= product.name %>" 
+                                class="w-full h-full object-cover rounded-xl"
+                            >
+                        </div>
+                    </div>
                 </div>
-                <p id="stockStatus" class="font-medium mt-2"></p>
             </div>
 
-            <!-- Specifications -->
-            <div class="space-y-2">
-                <h3 class="font-semibold">Specifications:</h3>
-                <ul id="specsList" class="list-disc list-inside text-gray-600">
-                    <% if (product.variants[0].specifications && product.variants[0].specifications.length > 0) { %>
-                        <% product.variants[0].specifications.forEach(spec => { %>
-                            <li class="mb-1"><%= spec %></li>
-                        <% }); %>
-                    <% } else { %>
-                        <li>No specifications available</li>
-                    <% } %>
-                </ul>
-            </div>
+            <!-- Product Information -->
+            <div class="w-full md:w-1/2">
+                <div class="space-y-6">
+                    <!-- Product Header -->
+                    <div class="flex items-center justify-between border-b border-gray-200 pb-4">
+                        <h1 class="text-2xl font-serif font-bold text-[#2c2c2c]"><%= product.name %></h1>
+                        <button id="wishlistBtn" class="focus:outline-none transform hover:scale-110 transition-transform duration-300" onclick="toggleWishlist('<%= product._id %>')">
+                            <i class="fas fa-heart text-2xl <%= isInWishlist ? 'text-red-500' : 'text-gray-400' %>"></i>
+                        </button>
+                    </div>
 
-            <!-- Action Buttons -->
-            <div class="flex gap-4">
-                <button id="cartBtn" onclick="handleCart('<%= product._id %>')" 
-                        class="flex-1 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors disabled:bg-gray-400">
-                    Add to Cart
-                </button>
-                <button id="buyNowBtn" onclick="buyNow('<%= product._id %>')" 
-                        class="flex-1 border-2 border-black py-3 rounded-lg hover:bg-gray-100 transition-colors disabled:border-gray-400 disabled:text-gray-400">
-                    Buy Now
-                </button>
+                    <!-- Description -->
+                    <div class="border-b border-gray-200 pb-4">
+                        <p class="text-gray-600 text-base font-serif leading-relaxed"><%= product.description %></p>
+                    </div>
+
+                    <!-- Product Details & Price -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Price Section -->
+                        <div class="bg-[#8B4513]/5 p-4 rounded-xl shadow-sm">
+                            <div class="flex flex-col gap-2">
+                                <% const firstVariant = product.variants[0]; %>
+                                <% const discountedPrice = Math.round(firstVariant.price * (1 - firstVariant.discount/100)); %>
+                                <div class="flex flex-col gap-2">
+                                    <div class="flex items-baseline gap-2">
+                                        <span id="currentPrice" class="text-3xl font-bold text-[#8B4513]">₹<%= discountedPrice %></span>
+                                        <% if (firstVariant.discount > 0) { %>
+                                            <span id="originalPrice" class="text-lg text-gray-500 line-through">₹<%= firstVariant.price %></span>
+                                        <% } %>
+                                    </div>
+                                    <% if (firstVariant.discount > 0) { %>
+                                        <div class="flex justify-start">
+                                            <span id="discountBadge" class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium max-w-[80px]">
+                                                <%= firstVariant.discount %>% OFF
+                                            </span>
+                                        </div>
+                                    <% } %>
+                                </div>
+                                <p id="stockStatus" class="font-medium text-sm"></p>
+                            </div>
+                        </div>
+
+                        <!-- Product Details -->
+                        <div class="bg-gray-50 p-4 rounded-xl shadow-sm space-y-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-gray-700 text-sm">Brand:</span>
+                                <span class="text-gray-600 text-sm"><%= product.brand %></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-gray-700 text-sm">Color:</span>
+                                <span class="text-gray-600 text-sm"><%= product.color %></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-gray-700 text-sm">Category:</span>
+                                <span class="text-gray-600 text-sm"><%= product.category.name %></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Specifications -->
+                    <div class="bg-white p-4 rounded-xl shadow-sm">
+                        <h3 class="font-serif text-lg font-bold text-[#2c2c2c] mb-3">Specifications</h3>
+                        <ul id="specsList" class="list-disc list-inside text-gray-600 space-y-2 text-sm">
+                            <% if (product.variants[0].specifications && product.variants[0].specifications.length > 0) { %>
+                                <% product.variants[0].specifications.forEach(spec => { %>
+                                    <li><%= spec %></li>
+                                <% }); %>
+                            <% } else { %>
+                                <li>No specifications available</li>
+                            <% } %>
+                        </ul>
+                    </div>
+
+                    <!-- Variant Selection -->
+                    <div class="space-y-2">
+                        <label class="block font-serif text-base font-medium text-gray-700">Select Variant:</label>
+                        <select id="variantSelect" class="w-full p-2 border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300 text-sm" onchange="updateVariantDetails()">
+                            <% product.variants.forEach((variant, index) => { %>
+                                <option value="<%= index %>" 
+                                        data-type="<%= variant.type %>"
+                                        data-price="<%= variant.price %>"
+                                        data-stock="<%= variant.stock %>"
+                                        data-discount="<%= variant.discount %>"
+                                        data-offer-name="<%= variant.offerName %>"
+                                        data-specs='<%= JSON.stringify(variant.specifications || []) %>'
+                                        data-in-cart="<%= variant.inCart %>">
+                                    <%= variant.type %> 
+                                </option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-4">
+                        <button id="cartBtn" onclick="handleCart('<%= product._id %>')" 
+                                class="flex-1 text-white py-3 rounded-lg transition-colors duration-300 font-serif text-base disabled:bg-gray-400 shadow-lg hover:shadow-xl <%= initialCartStatus ? 'bg-red-600 hover:bg-red-700' : 'bg-[#8B4513] hover:bg-[#6B3513]' %>">
+                            <%= initialCartStatus ? 'Remove from Cart' : 'Add to Cart' %>
+                        </button>
+                        <button id="buyNowBtn" onclick="buyNow('<%= product._id %>')" 
+                                class="flex-1 border-2 border-[#8B4513] py-3 rounded-lg hover:bg-[#8B4513]/5 transition-colors duration-300 font-serif text-base disabled:border-gray-400 disabled:text-gray-400 shadow-lg hover:shadow-xl">
+                            Buy Now
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- Similar Products -->
-    <section class="mt-16">
-        <h2 class="text-2xl font-bold mb-6">Similar Products</h2>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <% similarProducts.forEach(similar => { %>
-                <div class="border rounded-lg overflow-hidden group cursor-pointer hover:shadow-lg transition-shadow"
-                     onclick="window.location.href='/product/view/<%= similar._id %>'">
-                    <div class="aspect-w-1 aspect-h-1 overflow-hidden">
-                        <img 
-                            src="<%= similar.images[0].path %>" 
-                            alt="<%= similar.name %>" 
-                            class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        >
-                    </div>
-                    <div class="p-4 space-y-2">
-                        <h3 class="font-semibold text-lg truncate"><%= similar.name %></h3>
-                        <p class="text-gray-600"><%= similar.brand %></p>
-                        
-                        <div class="flex items-center gap-2">
-                            <% const similarVariant = similar.variants[0]; %>
-                            <% 
-                            // Only show discounts from offers, not from product model
-                            const hasOffer = similarVariant.offerName && similarVariant.discount > 0;
-                            const similarDiscountedPrice = hasOffer ? 
-                                Math.round(similarVariant.price * (1 - similarVariant.discount/100)) : 
-                                similarVariant.price; 
-                            %>
-                            <span class="text-lg font-bold">₹<%= similarDiscountedPrice %></span>
-                            <% if (hasOffer) { %>
-                                <span class="text-sm text-gray-500 line-through">₹<%= similarVariant.price %></span>
-                                <span class="text-sm text-red-600 font-medium">
-                                    (<%= similarVariant.discount %>% OFF<%= similarVariant.offerName ? ` - ${similarVariant.offerName}` : '' %>)
-                                </span>
-                            <% } %>
+    <!-- Similar Products Section -->
+    <section>
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+            <h2 class="text-2xl font-serif font-bold text-[#2c2c2c] mb-6 relative inline-block">
+                Similar Products
+                <div class="absolute bottom-0 left-0 w-20 h-[2px] bg-gradient-to-r from-transparent via-[#8B4513] to-transparent"></div>
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                <% similarProducts.forEach(similar => { %>
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden group">
+                        <a href="/product/view/<%= similar._id %>" class="block">
+                            <div class="aspect-w-1 aspect-h-1 overflow-hidden">
+                                <img 
+                                    src="<%= similar.images[0].path %>" 
+                                    alt="<%= similar.name %>"
+                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 product-image"
+                                    data-fallback="/images/placeholder.jpg"
+                                >
+                            </div>
+                            <div class="p-3">
+                                <h3 class="text-sm font-serif mb-1 text-[#2c2c2c] group-hover:text-[#8B4513] transition-colors duration-300"><%= similar.name %></h3>
+                                <p class="text-gray-600 mb-2 font-serif text-xs"><%= similar.brand %></p>
+                                <div class="flex justify-between items-center mb-2">
+                                    <div class="flex items-center gap-1">
+                                        <% const similarVariant = similar.variants[0]; %>
+                                        <% 
+                                        const hasOffer = similar.offer && similar.offer.discount > 0;
+                                        const similarDiscountedPrice = hasOffer ? 
+                                            Math.round(similarVariant.price * (1 - similar.offer.discount/100)) : 
+                                            similarVariant.price; 
+                                        %>
+                                        <span class="text-base font-serif text-[#8B4513]">₹<%= similarDiscountedPrice %></span>
+                                        <% if (hasOffer) { %>
+                                            <span class="text-xs text-gray-500 line-through">₹<%= similarVariant.price %></span>
+                                            <span class="text-xs text-[#8B4513] font-serif ml-1"><%= similar.offer.discount %>% OFF</span>
+                                        <% } %>
+                                    </div>
+                                    <span class="text-gray-600 hover:text-[#8B4513] transition-colors">
+                                        <i class="fas fa-eye text-sm"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </a>
+                        <div class="p-3 pt-0">
+                            <div class="flex flex-col gap-1.5">
+                                <select class="variant-select w-full p-1 text-xs border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300" data-product-id="<%= similar._id %>">
+                                    <% if (similar.variants && similar.variants.length > 0) { %>
+                                        <% similar.variants.forEach(variant => { %>
+                                            <option value="<%= variant.type %>" data-stock="<%= variant.stock %>" data-price="<%= variant.price %>">
+                                                <%= variant.type %> - ₹<%= variant.price %>
+                                            </option>
+                                        <% }) %>
+                                    <% } else { %>
+                                        <option value="default">No variants available</option>
+                                    <% } %>
+                                </select>
+                                <button 
+                                    class="add-to-cart-btn w-full bg-white text-[#8B4513] py-1 text-xs uppercase border border-[#8B4513] hover:bg-[#8B4513] hover:text-white transition-all duration-300 font-serif rounded-lg group" 
+                                    data-product-id="<%= similar._id %>">
+                                    Add to Cart
+                                    <span class="inline-block transform group-hover:translate-x-1 transition-transform duration-300 ml-1">→</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            <% }) %>
+                <% }) %>
+            </div>
         </div>
     </section>
 </div>
@@ -173,6 +230,67 @@
     position: relative;
     transform: scale(2);
 }
+
+.zoom-lens {
+    position: absolute;
+    border: 2px solid #d1d5db;
+    width: 150px;
+    height: 150px;
+    cursor: none;
+    background-color: rgba(255, 255, 255, 0.4);
+    display: none;
+    z-index: 10;
+}
+
+.zoom-result {
+    position: absolute;
+    border: 2px solid #d1d5db;
+    width: 150px;
+    height: 150px;
+    overflow: hidden;
+    display: none;
+    z-index: 20;
+    background-color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.zoom-result img {
+    position: absolute;
+    max-width: none;
+    max-height: none;
+}
+
+.thumbnail-img {
+    transition: all 0.3s ease;
+}
+
+.thumbnail-img:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+#variantSelect {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238B4513'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.5em;
+    padding-right: 2.5rem;
+    appearance: none;
+}
+
+#cartBtn, #buyNowBtn {
+    transition: all 0.3s ease;
+}
+
+#cartBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(139, 69, 19, 0.2);
+}
+
+#buyNowBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(139, 69, 19, 0.1);
+}
 </style>
 
 <script>
@@ -182,18 +300,28 @@ function updateMainImage(src) {
     // Reset zoom state when changing images
     mainImage.classList.remove('zoomed');
     mainImage.style.transformOrigin = 'center center';
+    
+    // Reset zoom lens and result
+    const zoomLens = document.querySelector('.zoom-lens');
+    const zoomResult = document.querySelector('.zoom-result');
+    if (zoomLens) zoomLens.style.display = 'none';
+    if (zoomResult) zoomResult.style.display = 'none';
+    
+    // Update zoomed image source
+    const zoomedImg = document.querySelector('.zoom-result img');
+    if (zoomedImg) zoomedImg.src = src;
 }
 
 function updateCartButton(inCart) {
     const cartBtn = document.getElementById('cartBtn');
     if (inCart) {
         cartBtn.textContent = 'Remove from Cart';
-        cartBtn.classList.remove('bg-black');
+        cartBtn.classList.remove('bg-[#8B4513]', 'hover:bg-[#6B3513]');
         cartBtn.classList.add('bg-red-600', 'hover:bg-red-700');
     } else {
         cartBtn.textContent = 'Add to Cart';
         cartBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
-        cartBtn.classList.add('bg-black');
+        cartBtn.classList.add('bg-[#8B4513]', 'hover:bg-[#6B3513]');
     }
 }
 
@@ -313,6 +441,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const firstVariantSpecs = variants[0].specifications || [];
             console.log('Initializing with specs:', firstVariantSpecs);
             
+            // Initialize cart button with first variant's status
+            updateCartButton(variants[0].inCart);
+            
             // Force update variant details
             updateVariantDetails();
         }
@@ -325,26 +456,83 @@ function setupZoom() {
     const container = document.querySelector('.image-zoom-container');
     const img = document.getElementById('mainImage');
     
+    // Create zoom lens and result elements
+    const zoomLens = document.createElement('div');
+    zoomLens.className = 'zoom-lens';
+    container.appendChild(zoomLens);
+    
+    const zoomResult = document.createElement('div');
+    zoomResult.className = 'zoom-result';
+    container.appendChild(zoomResult);
+    
+    // Create zoomed image inside result
+    const zoomedImg = document.createElement('img');
+    zoomedImg.src = img.src;
+    zoomResult.appendChild(zoomedImg);
+    
+    // Show zoom elements on mouse enter
+    container.addEventListener('mouseenter', function() {
+        zoomLens.style.display = 'block';
+        zoomResult.style.display = 'block';
+    });
+    
+    // Hide zoom elements on mouse leave
+    container.addEventListener('mouseleave', function() {
+        zoomLens.style.display = 'none';
+        zoomResult.style.display = 'none';
+    });
+    
+    // Update zoom on mouse move
     container.addEventListener('mousemove', function(e) {
-        if (!img.classList.contains('zoomed')) {
-            img.classList.add('zoomed');
-        }
-        
         const rect = container.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         
-        // Calculate the position in percentages
-        const xPercent = (x / rect.width) * 100;
-        const yPercent = (y / rect.height) * 100;
+        // Calculate lens position (centered on cursor)
+        const lensWidth = 150;
+        const lensHeight = 150;
         
-        // Update transform origin based on mouse position
-        img.style.transformOrigin = `${xPercent}% ${yPercent}%`;
-    });
-    
-    container.addEventListener('mouseleave', function() {
-        img.classList.remove('zoomed');
-        img.style.transformOrigin = 'center center';
+        // Calculate the position of the lens, ensuring it stays within the container
+        let lensX = x - (lensWidth / 2);
+        let lensY = y - (lensHeight / 2);
+        
+        // Keep lens within container bounds
+        if (lensX < 0) lensX = 0;
+        if (lensY < 0) lensY = 0;
+        if (lensX > rect.width - lensWidth) lensX = rect.width - lensWidth;
+        if (lensY > rect.height - lensHeight) lensY = rect.height - lensHeight;
+        
+        // Position the lens
+        zoomLens.style.left = lensX + 'px';
+        zoomLens.style.top = lensY + 'px';
+        
+        // Position the zoom result (overlay on top of the lens)
+        zoomResult.style.left = lensX + 'px';
+        zoomResult.style.top = lensY + 'px';
+        
+        // Calculate zoom ratio
+        const zoomRatio = 3;
+        
+        // Set the zoomed image size
+        zoomedImg.style.width = (rect.width * zoomRatio) + 'px';
+        zoomedImg.style.height = (rect.height * zoomRatio) + 'px';
+        
+        // Calculate the position of the zoomed image
+        // This is the key part that ensures the correct portion is zoomed
+        const posX = (x / rect.width) * (rect.width * zoomRatio) - (lensWidth / 2);
+        const posY = (y / rect.height) * (rect.height * zoomRatio) - (lensHeight / 2);
+        
+        // Calculate maximum positions to prevent white space at edges
+        const maxX = (rect.width * zoomRatio) - lensWidth;
+        const maxY = (rect.height * zoomRatio) - lensHeight;
+        
+        // Clamp the position values to prevent going beyond the image boundaries
+        const clampedPosX = Math.max(0, Math.min(posX, maxX));
+        const clampedPosY = Math.max(0, Math.min(posY, maxY));
+        
+        // Apply the clamped position
+        zoomedImg.style.left = -clampedPosX + 'px';
+        zoomedImg.style.top = -clampedPosY + 'px';
     });
 }
 
@@ -483,4 +671,72 @@ function toggleWishlist(productId) {
         });
     });
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners to all "Add to Cart" buttons in similar products
+    document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+        button.addEventListener('click', async function() {
+            const productId = this.getAttribute('data-product-id');
+            const variantSelect = document.querySelector(`.variant-select[data-product-id="${productId}"]`);
+            const variantType = variantSelect.value;
+            const stock = variantSelect.options[variantSelect.selectedIndex].getAttribute('data-stock');
+            
+            // Check if product is in stock
+            if (parseInt(stock) <= 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Out of Stock',
+                    text: 'This variant is currently out of stock'
+                });
+                return;
+            }
+            
+            try {
+                const response = await fetch('/cart/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        productId,
+                        variantType
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Trigger cart updated event
+                    document.dispatchEvent(new CustomEvent('cartUpdated'));
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Added to Cart!',
+                        text: `${variantType} added to cart successfully`,
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: error.message || 'Failed to add to cart'
+                });
+            }
+        });
+    });
+
+    // Handle image loading errors
+    document.querySelectorAll('.product-image').forEach(img => {
+        img.addEventListener('error', function() {
+            const fallback = this.getAttribute('data-fallback');
+            if (fallback && this.src !== fallback) {
+                this.src = fallback;
+            }
+        });
+    });
+});
 </script>

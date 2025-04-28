@@ -8,6 +8,7 @@ import orderController from '../controller/admin/adminOrderController.js';
 import offerController from '../controller/admin/offerController.js';
 import couponController from '../controller/admin/couponController.js';
 import salesController from '../controller/admin/salesController.js';
+import { getHomeSettings, updateHeroImage, updateCategoryImage, updateCategoryAssignment, updateHandpickedProducts, updateHandpickedProduct } from '../controller/admin/homeSettingsController.js';
 
 const router = express.Router();
 
@@ -63,5 +64,13 @@ router.patch('/coupons/:id/toggle-status', adminMiddleware.checkSession, couponC
 router.get('/sales-report', adminMiddleware.checkSession, salesController.getSalesReport);
 router.get('/sales-report/download-pdf', adminMiddleware.checkSession, salesController.downloadPDF);
 router.get('/sales-report/download-excel', adminMiddleware.checkSession, salesController.downloadExcel);
+
+// Home Settings Routes
+router.get('/home-settings', adminMiddleware.checkSession, getHomeSettings);
+router.post('/home-settings/hero', adminMiddleware.checkSession, updateHeroImage);
+router.post('/home-settings/category', adminMiddleware.checkSession, updateCategoryImage);
+router.post('/home-settings/category/assignment', adminMiddleware.checkSession, updateCategoryAssignment);
+router.post('/home-settings/handpicked-products', adminMiddleware.checkSession, updateHandpickedProducts);
+router.post('/home-settings/handpicked-product', adminMiddleware.checkSession, updateHandpickedProduct);
 
 export default router;

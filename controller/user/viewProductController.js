@@ -6,129 +6,153 @@ import CartItem from '../../model/cartModel.js';
 import mongoose from 'mongoose';
 import Offer from '../../model/offerModel.js';
 
-const getProductDetails = async (req, res) => {
+const viewProduct = async (req, res) => {
     try {
         const productId = req.params.productId;
         const userId = req.session.userId;
-        
-        // Fetch product and check both product and category status
-        const product = await Product.aggregate([
-            {
-                $match: {
-                    _id: new mongoose.Types.ObjectId(productId)
-                }
-            },
-            {
-                $lookup: {
-                    from: 'categories',
-                    localField: 'category',
-                    foreignField: '_id',
-                    as: 'categoryData'
-                }
-            },
-            {
-                $match: {
-                    'categoryData.status': 'Active',  // Only if category is active
-                    status: 'Active'  // Only if product is active
-                }
-            }
-        ]);
 
-        if (!product || product.length === 0) {
+        console.log('Viewing product:', { productId, userId });
+
+        if (!productId) {
+            console.log('No product ID provided');
+            return res.status(400).render('error', { 
+                message: 'Product ID is required' 
+            });
+        }
+        
+        // Get the product details with proper population
+        const product = await Product.findById(productId)
+            .populate({
+                path: 'category',
+                select: 'name'
+            })
+            .lean();
+
+        if (!product) {
+            console.log('Product not found');
             return res.status(404).render('error', { 
-                message: 'Product not found or unavailable' 
+                message: 'Product not found' 
             });
         }
 
-        // Get the first (and only) product from aggregate result
-        const productData = product[0];
+        if (product.status !== 'Active') {
+            console.log('Product not active');
+            return res.status(404).render('error', { 
+                message: 'This product is not available' 
+            });
+        }
 
-        // Update the cart items query to include variant information
-        const cartItems = await CartItem.find({ 
-            userId: userId,
-            productId: productId
-        });
-
-        // Create a map of variant types in cart
-        const cartVariants = cartItems.reduce((acc, item) => {
-            acc[item.variantType] = true;
-            return acc;
-        }, {});
-
-        // Fetch active offers for this product and its category
+        // Get current date for offer validation
         const currentDate = new Date();
+
+        // Fetch active offers
         const activeOffers = await Offer.find({
-            $or: [
-                { productIds: new mongoose.Types.ObjectId(productId) },
-                { categoryId: productData.category }
-            ],
             isActive: true,
             startDate: { $lte: currentDate },
             endDate: { $gte: currentDate }
-        }).sort({ type: -1 }); // Sort by type to prioritize product offers (-1 makes 'product' come before 'category')
-
-        // Get the applicable offer (product offer takes priority)
-        const productOffer = activeOffers.find(offer => offer.type === 'product' && 
-            offer.productIds.some(id => id.toString() === productId));
-        const categoryOffer = activeOffers.find(offer => offer.type === 'category');
-        const applicableOffer = productOffer || categoryOffer;
-
-        // Apply offer discount to variants
-        productData.variants = productData.variants.map(variant => ({
-            ...variant,
-            inCart: !!cartVariants[variant.type],
-            discount: applicableOffer ? applicableOffer.discount : 0,
-            offerType: applicableOffer ? applicableOffer.type : null,
-            offerName: applicableOffer ? applicableOffer.name : null
-        }));
-
-        // Check if the product is in user's wishlist
-        let isInWishlist = false;
-        if (userId) {
-            const wishlist = await Wishlist.findOne({ 
-                userId: userId,
-                products: new mongoose.Types.ObjectId(productId)
-            });
-            isInWishlist = !!wishlist;
-        }
-
-        // Fetch similar products (also only from active categories)
-        const similarProducts = await Product.aggregate([
-            {
-                $match: {
-                    category: productData.category,
-                    _id: { $ne: new mongoose.Types.ObjectId(productId) },
-                    status: 'Active'
-                }
-            },
-            {
-                $lookup: {
-                    from: 'categories',
-                    localField: 'category',
-                    foreignField: '_id',
-                    as: 'categoryData'
-                }
-            },
-            {
-                $match: {
-                    'categoryData.status': 'Active'
-                }
-            },
-            {
-                $limit: 4
-            }
-        ]);
-
-        return res.render('user/viewProduct', {
-            product: productData,
-            similarProducts,
-            isInWishlist: isInWishlist,
-            offer: applicableOffer
         });
 
+        // Check if products are in the user's wishlist
+        let isInWishlist = false;
+        if (userId) {
+            const user = await User.findById(userId);
+            if (user && user.wishlist && user.wishlist.includes(productId)) {
+                isInWishlist = true;
+            }
+        }
+
+        // Check if any variants are in the user's cart
+        const cartItems = userId ? await CartItem.find({ 
+            userId, 
+            productId 
+        }) : [];
+
+        // Mark which variants are in cart and add offer information
+        product.variants = product.variants.map(variant => {
+            const inCart = cartItems.some(item => item.variantType === variant.type);
+            
+            // Find applicable offer for this variant
+            const productOffer = activeOffers.find(offer => 
+                offer.type === 'product' && 
+                offer.productIds.some(id => id.toString() === productId)
+            );
+
+            const categoryOffer = activeOffers.find(offer => 
+                offer.type === 'category' && 
+                offer.categoryId.toString() === product.category._id.toString()
+            );
+
+            const applicableOffer = productOffer || categoryOffer;
+            const offerName = applicableOffer ? applicableOffer.name : null;
+            const offerDiscount = applicableOffer ? applicableOffer.discount : 0;
+
+            return { 
+                ...variant,
+                inCart,
+                offerName,
+                discount: Math.max(variant.discount || 0, offerDiscount)
+            };
+        });
+
+        // Get similar products from same category
+        const similarProducts = await Product.find({
+            category: product.category._id,
+            _id: { $ne: productId },
+            status: 'Active'
+        })
+        .populate('category', 'name')
+        .lean()
+        .limit(5);
+
+        // Process similar products to include offer information and cart status
+        const processedSimilarProducts = similarProducts.map(similarProduct => {
+            // Find product-specific offer
+            const productOffer = activeOffers.find(offer => 
+                offer.type === 'product' && 
+                offer.productIds.some(id => id.toString() === similarProduct._id.toString())
+            );
+
+            // Find category offer
+            const categoryOffer = activeOffers.find(offer => 
+                offer.type === 'category' && 
+                offer.categoryId.toString() === similarProduct.category._id.toString()
+            );
+
+            // Use product offer if available, otherwise use category offer
+            const applicableOffer = productOffer || categoryOffer;
+
+            // Check if any variants are in cart
+            const similarCartItems = userId ? cartItems.filter(item => 
+                item.productId.toString() === similarProduct._id.toString()
+            ) : [];
+
+            // Process variants with cart status and offers
+            similarProduct.variants = similarProduct.variants.map(variant => {
+                const inCart = similarCartItems.some(item => item.variantType === variant.type);
+                return {
+                    ...variant,
+                    inCart,
+                    offerName: applicableOffer ? applicableOffer.name : null,
+                    discount: applicableOffer ? applicableOffer.discount : 0
+                };
+            });
+
+            return {
+                ...similarProduct,
+                offer: applicableOffer
+            };
+        });
+
+        console.log('Rendering viewProduct template');
+        res.render('user/viewProduct', {
+            product,
+            similarProducts: processedSimilarProducts,
+            isInWishlist,
+            initialCartStatus: product.variants[0].inCart // Pass initial cart status
+        });
     } catch (error) {
         console.error('View Product Error:', error);
-        return res.status(500).render('error', { 
+        res.status(500).render('error', { 
             message: 'Error loading product details' 
         });
     }
@@ -303,7 +327,7 @@ const toggleWishlist = async (req, res) => {
 };
 
 export default {
-    getProductDetails,
+    viewProduct,
     getProductsByCategory,
     searchProducts,
     toggleWishlist

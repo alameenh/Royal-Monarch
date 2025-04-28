@@ -1,26 +1,33 @@
 <%- include("../partials/navbar") %>
 
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 pt-10 pb-8">
     <!-- Filters and Search Section -->
-    <div class="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="md:col-span-1">
+    <div class="mb-6 flex flex-wrap items-center justify-start gap-4">
+        <!-- Search Input -->
+        <div class="w-full sm:w-64">
             <input 
                 type="text" 
                 id="searchInput" 
                 placeholder="Search products..." 
-                class="w-full p-2 border rounded"
+                class="w-full p-2 border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300"
             >
         </div>
-        <div class="md:col-span-1">
-            <select id="categoryFilter" class="w-full p-2 border rounded">
+        
+        <!-- Category Filter -->
+        <div class="w-full sm:w-48">
+            <select id="categoryFilter" class="w-full p-2 border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300">
                 <option value="">All Categories</option>
                 <% categories.forEach(category => { %>
-                    <option value="<%= category._id %>"><%= category.name %></option>
+                    <option value="<%= category._id %>" <%= initialCategory === category._id.toString() ? 'selected' : '' %>>
+                        <%= category.name %>
+                    </option>
                 <% }); %>
             </select>
         </div>
-        <div class="md:col-span-1">
-            <select id="sortBy" class="w-full p-2 border rounded">
+        
+        <!-- Sort Options -->
+        <div class="w-full sm:w-48">
+            <select id="sortBy" class="w-full p-2 border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300">
                 <option value="createdAt:desc">Latest</option>
                 <option value="price:asc">Price: Low to High</option>
                 <option value="price:desc">Price: High to Low</option>
@@ -28,24 +35,26 @@
                 <option value="name:desc">Name: Z to A</option>
             </select>
         </div>
-        <div class="md:col-span-1 flex gap-2">
+        
+        <!-- Price Range -->
+        <div class="w-full sm:w-48 flex gap-2">
             <input 
                 type="number" 
                 id="minPrice" 
                 placeholder="Min Price" 
-                class="w-1/2 p-2 border rounded"
+                class="w-1/2 p-2 border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300"
             >
             <input 
                 type="number" 
                 id="maxPrice" 
                 placeholder="Max Price" 
-                class="w-1/2 p-2 border rounded"
+                class="w-1/2 p-2 border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300"
             >
         </div>
     </div>
 
     <!-- Products Grid -->
-    <div id="productsGrid" class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         <!-- Products will be loaded here -->
     </div>
 
@@ -57,7 +66,7 @@
     <!-- Loading Spinner -->
     <div id="loading" class="hidden">
         <div class="flex justify-center items-center h-32">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B4513]"></div>
         </div>
     </div>
 </div>
@@ -68,7 +77,7 @@
 let currentPage = 1;
 let currentFilters = {
     search: '',
-    category: '',
+    category: '<%= initialCategory %>',
     sortBy: 'createdAt',
     order: 'desc',
     minPrice: '',
@@ -78,49 +87,46 @@ let currentFilters = {
 
 // Product card template
 const createProductCard = (product) => `
-    <div class="bg-white rounded-lg shadow-md overflow-hidden group">
-        <div class="aspect-w-1 aspect-h-1 overflow-hidden cursor-pointer" onclick="window.location.href='/product/view/${product._id}'">
-            <img 
-                src="${product.images[0].path}" 
-                alt="${product.name}"
-                class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-            >
-        </div>
-        <div class="p-4">
-            <h3 class="text-lg font-semibold mb-2">${product.name}</h3>
-            <p class="text-gray-600 mb-2">${product.brand}</p>
-            <div class="flex justify-between items-center mb-3">
-                <div class="flex flex-col">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xl font-bold">₹${product.discountedPrice}</span>
+    <a href="/product/view/${product._id}" class="block">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden group">
+            <div class="aspect-w-1 aspect-h-1 overflow-hidden">
+                <img 
+                    src="${product.images[0].path}" 
+                    alt="${product.name}"
+                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                >
+            </div>
+            <div class="p-3">
+                <h3 class="text-sm font-serif mb-1 text-[#2c2c2c] group-hover:text-[#8B4513] transition-colors duration-300">${product.name}</h3>
+                <p class="text-gray-600 mb-2 font-serif text-xs">${product.brand}</p>
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex items-center gap-1">
+                        <span class="text-base font-serif text-[#8B4513]">₹${product.discountedPrice}</span>
                         ${product.offer ? `
-                            <span class="text-sm text-gray-500 line-through">₹${product.originalPrice}</span>
+                            <span class="text-xs text-gray-500 line-through">₹${product.originalPrice}</span>
+                            <span class="text-xs text-[#8B4513] font-serif ml-1">${product.offer.discount}% OFF</span>
                         ` : ''}
                     </div>
-                    ${product.offer ? `
-                        <span class="text-sm text-red-500">
-                            ${product.offer.discount}% OFF - ${product.offer.name}
-                        </span>
-                    ` : ''}
+                    <span class="text-gray-600 hover:text-[#8B4513] transition-colors">
+                        <i class="fas fa-eye text-sm"></i>
+                    </span>
                 </div>
-                <span class="text-black hover:text-gray-700 cursor-pointer" onclick="window.location.href='/product/view/${product._id}'">
-                    <i class="fas fa-eye"></i>
-                </span>
-            </div>
-            <div class="flex flex-col gap-2">
-                <select class="variant-select w-full p-2 text-sm border rounded" data-product-id="${product._id}">
-                    ${product.variants.map(variant => `
-                        <option value="${variant.type}" data-stock="${variant.stock}">${variant.type} (${variant.stock} left)</option>
-                    `).join('')}
-                </select>
-                <button 
-                    class="add-to-cart-btn w-full bg-black text-white py-2 text-sm rounded hover:bg-gray-800 transition-colors" 
-                    data-product-id="${product._id}">
-                    Add to Cart
-                </button>
+                <div class="flex flex-col gap-1.5">
+                    <select class="variant-select w-full p-1 text-xs border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300" data-product-id="${product._id}">
+                        ${product.variants.map(variant => `
+                            <option value="${variant.type}" data-stock="${variant.stock}">${variant.type}</option>
+                        `).join('')}
+                    </select>
+                    <button 
+                        class="add-to-cart-btn w-full bg-white text-[#8B4513] py-1 text-xs uppercase border border-[#8B4513] hover:bg-[#8B4513] hover:text-white transition-all duration-300 font-serif rounded-lg group" 
+                        data-product-id="${product._id}">
+                        Add to Cart
+                        <span class="inline-block transform group-hover:translate-x-1 transition-transform duration-300 ml-1">→</span>
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
+    </a>
 `;
 
 // Create pagination buttons
@@ -128,23 +134,40 @@ const createPagination = (pagination) => {
     const { currentPage, totalPages } = pagination;
     let html = '';
     
-    if (pagination.hasPrevPage) {
-        html += `<button class="px-4 py-2 border rounded" onclick="changePage(${currentPage - 1})">Previous</button>`;
-    }
+    // Previous button
+    html += `
+        <button 
+            class="px-4 py-2 border border-gray-300 rounded-lg ${!pagination.hasPrevPage ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'hover:bg-[#8B4513] hover:text-white hover:border-[#8B4513] transition-colors duration-300'}" 
+            ${!pagination.hasPrevPage ? 'disabled' : ''}
+            onclick="${pagination.hasPrevPage ? `changePage(${currentPage - 1})` : ''}"
+            title="Previous Page"
+        >
+            <i class="fas fa-chevron-left"></i>
+        </button>
+    `;
     
+    // Page numbers
     for (let i = 1; i <= totalPages; i++) {
         if (i === currentPage) {
-            html += `<button class="px-4 py-2 bg-black text-white rounded">${i}</button>`;
+            html += `<button class="px-4 py-2 bg-[#8B4513] text-white rounded-lg">${i}</button>`;
         } else if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-            html += `<button class="px-4 py-2 border rounded" onclick="changePage(${i})">${i}</button>`;
+            html += `<button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-[#8B4513] hover:text-white hover:border-[#8B4513] transition-colors duration-300" onclick="changePage(${i})">${i}</button>`;
         } else if (i === currentPage - 2 || i === currentPage + 2) {
             html += `<span class="px-4 py-2">...</span>`;
         }
     }
     
-    if (pagination.hasNextPage) {
-        html += `<button class="px-4 py-2 border rounded" onclick="changePage(${currentPage + 1})">Next</button>`;
-    }
+    // Next button
+    html += `
+        <button 
+            class="px-4 py-2 border border-gray-300 rounded-lg ${!pagination.hasNextPage ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'hover:bg-[#8B4513] hover:text-white hover:border-[#8B4513] transition-colors duration-300'}" 
+            ${!pagination.hasNextPage ? 'disabled' : ''}
+            onclick="${pagination.hasNextPage ? `changePage(${currentPage + 1})` : ''}"
+            title="Next Page"
+        >
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    `;
     
     return html;
 };
@@ -190,7 +213,13 @@ const debounce = (func, wait) => {
 };
 
 document.getElementById('searchInput').addEventListener('input', debounce((e) => {
-    currentFilters.search = e.target.value;
+    const searchTerm = e.target.value.trim();
+    if (searchTerm) {
+        // Search in both product name and brand
+        currentFilters.search = searchTerm;
+    } else {
+        currentFilters.search = '';
+    }
     currentPage = 1;
     fetchProducts();
 }, 300));
@@ -210,16 +239,26 @@ document.getElementById('sortBy').addEventListener('change', (e) => {
 });
 
 document.getElementById('minPrice').addEventListener('input', debounce((e) => {
-    currentFilters.minPrice = e.target.value;
+    const minPrice = parseFloat(e.target.value);
+    if (!isNaN(minPrice) && minPrice >= 0) {
+        currentFilters.minPrice = minPrice;
+    } else {
+        currentFilters.minPrice = '';
+    }
     currentPage = 1;
     fetchProducts();
-}, 300));
+}, 500));
 
 document.getElementById('maxPrice').addEventListener('input', debounce((e) => {
-    currentFilters.maxPrice = e.target.value;
+    const maxPrice = parseFloat(e.target.value);
+    if (!isNaN(maxPrice) && maxPrice >= 0) {
+        currentFilters.maxPrice = maxPrice;
+    } else {
+        currentFilters.maxPrice = '';
+    }
     currentPage = 1;
     fetchProducts();
-}, 300));
+}, 500));
 
 const changePage = (page) => {
     currentPage = page;

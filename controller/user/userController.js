@@ -1,11 +1,16 @@
 import nodemailer from 'nodemailer';
 import userModel from '../../model/userModel.js';
 import { config } from 'dotenv';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import Category from '../../model/categoryModel.js';
 import Product from '../../model/productModel.js';
 import passport from 'passport';
 import CartItem from '../../model/cartModel.js';
+import Offer from '../../model/offerModel.js';
+import HomeSettings from '../../model/homeSettingsModel.js';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 config();
 
@@ -153,32 +158,229 @@ const getHomePage = async (req, res) => {
         if (!user || user.status !== 'Active') {
             return res.redirect('/');
         }
+
+        // Fetch home settings
+        let homeSettings = await HomeSettings.findOne();
+        if (!homeSettings) {
+            // Create default home settings if none exist
+            homeSettings = new HomeSettings({
+                heroImage: '/images/2026-Bugatti-Tourbillon-007-1440w.jpg',
+                leftCategoryImage: '/images/Bugatti.jpg',
+                rightCategoryImage: '/images/Koenigsegg Gemera.jpg',
+                topCategoryImage: '/images/Aston Martin.jpg',
+                bottomCategoryImage: '/images/Rolls Royce.jpg'
+            });
+            await homeSettings.save();
+        }
+
         // Fetch active categories
         const categories = await Category.find({ status: 'Active' });
+        
+        // Get current date for offer validation
+        const currentDate = new Date();
 
+        // Fetch active offers
+        const activeOffers = await Offer.find({
+            isActive: true,
+            startDate: { $lte: currentDate },
+            endDate: { $gte: currentDate }
+        });
 
-        const featuredProducts = await Product.find({ 
-            status: 'Active',
-            discount: { $gt: 0 }
-        })
-        .populate('category')
-        .sort({ discount: -1 })
-        .limit(8);
-
-   
+        // Fetch new arrivals
         const newArrivals = await Product.find({ status: 'Active' })
-        .populate('category')
-        .sort({ createdAt: -1 })
-        .limit(8);
+            .populate('category')
+            .sort({ createdAt: -1 })
+            .limit(10);
+
+        // Fetch 5 most sold products
+        const featuredProducts = await Product.find({ status: 'Active' })
+            .populate('category')
+            .sort({ soldcount: -1 })
+            .limit(5);
+
+        // Process products to include offer information
+        const processedNewArrivals = newArrivals.map(product => {
+            // Get the base price from the first variant
+            const basePrice = product.variants && product.variants.length > 0 ? 
+                product.variants[0].price : 0;
+            
+            // Find product-specific offer
+            const productOffer = activeOffers.find(offer => 
+                offer.type === 'product' && 
+                offer.productIds && offer.productIds.some(id => id.toString() === product._id.toString())
+            );
+
+            // Find category offer - check both categoryId and categoryIds fields
+            const categoryOffer = activeOffers.find(offer => 
+                offer.type === 'category' && 
+                product.category && (
+                    (offer.categoryId && offer.categoryId.toString() === product.category._id.toString()) ||
+                    (offer.categoryIds && offer.categoryIds.some(id => id.toString() === product.category._id.toString()))
+                )
+            );
+
+            // Use product-specific offer if available, otherwise use category offer
+            const offer = productOffer || categoryOffer;
+
+            if (offer) {
+                const discountedPrice = basePrice - (basePrice * offer.discount / 100);
+                return {
+                    ...product.toObject(),
+                    offer: {
+                        discount: offer.discount,
+                        type: offer.type
+                    },
+                    originalPrice: basePrice,
+                    discountedPrice: Math.round(discountedPrice)
+                };
+            }
+
+            return {
+                ...product.toObject(),
+                originalPrice: basePrice,
+                discountedPrice: basePrice
+            };
+        });
+
+        // Process featured products similarly
+        const processedFeaturedProducts = featuredProducts.map(product => {
+            // Get the base price from the first variant
+            const basePrice = product.variants && product.variants.length > 0 ? 
+                product.variants[0].price : 0;
+            
+            // Find product-specific offer
+            const productOffer = activeOffers.find(offer => 
+                offer.type === 'product' && 
+                offer.productIds && offer.productIds.some(id => id.toString() === product._id.toString())
+            );
+
+            // Find category offer - check both categoryId and categoryIds fields
+            const categoryOffer = activeOffers.find(offer => 
+                offer.type === 'category' && 
+                product.category && (
+                    (offer.categoryId && offer.categoryId.toString() === product.category._id.toString()) ||
+                    (offer.categoryIds && offer.categoryIds.some(id => id.toString() === product.category._id.toString()))
+                )
+            );
+
+            // Use product-specific offer if available, otherwise use category offer
+            const offer = productOffer || categoryOffer;
+
+            if (offer) {
+                const discountedPrice = basePrice - (basePrice * offer.discount / 100);
+                return {
+                    ...product.toObject(),
+                    offer: {
+                        discount: offer.discount,
+                        type: offer.type
+                    },
+                    originalPrice: basePrice,
+                    discountedPrice: Math.round(discountedPrice)
+                };
+            }
+
+            return {
+                ...product.toObject(),
+                originalPrice: basePrice,
+                discountedPrice: basePrice
+            };
+        });
+
+        // Process handpicked products with offer information
+        let processedHandpickedProducts = [];
+        const handpickedProducts = [
+            homeSettings.handpickedProduct1,
+            homeSettings.handpickedProduct2,
+            homeSettings.handpickedProduct3
+        ].filter(product => product && product._id);
+
+        if (handpickedProducts.length > 0) {
+            // Get product IDs from handpicked products
+            const handpickedProductIds = handpickedProducts.map(product => product._id);
+            
+            // Fetch full product details for handpicked products
+            const handpickedProductsFull = await Product.find({ 
+                _id: { $in: handpickedProductIds },
+                status: 'Active'
+            })
+            .populate('category')
+            .select('_id name brand variants images category')
+            .lean();
+            
+            // Create a map for quick lookup
+            const handpickedProductsMap = new Map();
+            handpickedProductsFull.forEach(product => {
+                handpickedProductsMap.set(product._id.toString(), product);
+            });
+            
+            // Process each handpicked product
+            processedHandpickedProducts = handpickedProducts.map(handpickedProduct => {
+                const productId = handpickedProduct._id.toString();
+                const fullProduct = handpickedProductsMap.get(productId);
+                
+                if (!fullProduct) {
+                    return null;
+                }
+                
+                // Get the base price from the first variant
+                const basePrice = fullProduct.variants && fullProduct.variants.length > 0 ? 
+                    fullProduct.variants[0].price : 0;
+                
+                // Find product-specific offer
+                const productOffer = activeOffers.find(offer => 
+                    offer.type === 'product' && 
+                    offer.productIds && offer.productIds.some(id => id.toString() === productId)
+                );
+
+                // Find category offer
+                const categoryOffer = activeOffers.find(offer => 
+                    offer.type === 'category' && 
+                    fullProduct.category && (
+                        (offer.categoryId && offer.categoryId.toString() === fullProduct.category._id.toString()) ||
+                        (offer.categoryIds && offer.categoryIds.some(id => id.toString() === fullProduct.category._id.toString()))
+                    )
+                );
+
+                // Use product-specific offer if available, otherwise use category offer
+                const offer = productOffer || categoryOffer;
+
+                if (offer) {
+                    const discountedPrice = basePrice - (basePrice * offer.discount / 100);
+                    return {
+                        _id: handpickedProduct._id,
+                        name: handpickedProduct.name,
+                        imagePath: handpickedProduct.imagePath || (fullProduct.images && fullProduct.images.length > 0 ? fullProduct.images[0].path : ''),
+                        brand: fullProduct.brand || 'N/A',
+                        offer: {
+                            discount: offer.discount,
+                            type: offer.type
+                        },
+                        originalPrice: basePrice,
+                        discountedPrice: Math.round(discountedPrice)
+                    };
+                }
+
+                return {
+                    _id: handpickedProduct._id,
+                    name: handpickedProduct.name,
+                    imagePath: handpickedProduct.imagePath || (fullProduct.images && fullProduct.images.length > 0 ? fullProduct.images[0].path : ''),
+                    brand: fullProduct.brand || 'N/A',
+                    originalPrice: basePrice,
+                    discountedPrice: basePrice
+                };
+            }).filter(Boolean); // Remove any null values
+        }
 
         // Get cart count for navbar
         const cartCount = await CartItem.countDocuments({ userId: req.session.userId });
 
         res.render('user/home', {
-            user,
+            user: req.session.user,
+            homeSettings,
             categories,
-            featuredProducts,
-            newArrivals,
+            newArrivals: processedNewArrivals,
+            featuredProducts: processedFeaturedProducts,
+            handpickedProducts: processedHandpickedProducts,
             cartCount
         });
         
@@ -269,6 +471,7 @@ const postLogin = async (req, res) => {
 };
 
 const getGoogle = (req, res) => {
+    console.log('Starting Google authentication');
     passport.authenticate("google", {
         scope: ["email", "profile"],
         prompt: "select_account"
@@ -276,8 +479,10 @@ const getGoogle = (req, res) => {
 };
 
 const getGoogleCallback = (req, res) => {
+    console.log('Google callback received');
     passport.authenticate("google", { failureRedirect: "/" }, async (err, profile) => {
         try {
+            console.log('Google authentication result:', { err, profile });
             if (err || !profile) {
                 console.log("Authentication failed:", err);
                 return res.redirect("/?message=Authentication failed&alertType=error");
@@ -624,4 +829,151 @@ const postChangePassword = async (req, res) => {
     }
 };
 
-export default { getLogin, getSignup, postSignup, postLogin, getOtpPage, verifyOtp, getHomePage, getLogout, getGoogle, getGoogleCallback, getForgotPassword, postForgotPassword, getResetPassword, postResetPassword, getChangePassword, postChangePassword };
+// Add this new function to get product images for carousels
+export const getProductImages = async (req, res) => {
+    try {
+        const { productIds } = req.body;
+        
+        if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Product IDs are required'
+            });
+        }
+        
+        // Fetch products with their images
+        const products = await Product.find({
+            _id: { $in: productIds },
+            status: 'Active'
+        }).select('_id images');
+        
+        // Format the response
+        const formattedProducts = products.map(product => ({
+            _id: product._id,
+            images: product.images || []
+        }));
+        
+        res.json({
+            success: true,
+            products: formattedProducts
+        });
+    } catch (error) {
+        console.error('Error fetching product images:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch product images'
+        });
+    }
+};
+
+// Multer configuration
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'public/uploads/profile')
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname)
+    }
+});
+
+export const upload = multer({ storage: storage });
+
+export const getProfile = async (req, res) => {
+    try {
+        // Get userId from session
+        const userId = req.session.userId;
+        
+        if (!userId) {
+            return res.redirect('/login');
+        }
+        
+        // Find user by ID instead of email
+        const userData = await userModel.findById(userId);
+        
+        if (!userData) {
+            return res.redirect('/login');
+        }
+
+        res.render('user/profile', {
+            user: userData,
+            title: 'User Profile',
+            currentPage: 'profile'
+        });
+    } catch (error) {
+        console.error('Profile fetch error:', error);
+        res.status(500).render('user/error', { message: 'Internal server error', currentPage: 'profile' });
+    }
+};
+
+export const getEditProfile = async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        
+        if (!userId) {
+            return res.redirect('/login');
+        }
+        
+        const userData = await userModel.findById(userId);
+        
+        if (!userData) {
+            return res.redirect('/login');
+        }
+
+        res.render('user/editProfile', {
+            user: userData,
+            title: 'Edit Profile',
+            currentPage: 'profile'
+        });
+    } catch (error) {
+        console.error('Edit Profile fetch error:', error);
+        res.status(500).render('user/error', { message: 'Internal server error', currentPage: 'profile' });
+    }
+};
+
+export const updateProfile = async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const { firstname, lastname } = req.body;
+        
+        // Create update object
+        const updateData = { 
+            firstname, 
+            lastname 
+        };
+        
+        // If a profile image was uploaded, add it to the update data
+        if (req.file) {
+            // Get the current user to find their old profile image
+            const currentUser = await userModel.findById(userId);
+            
+            // If user has an existing profile image that's not the default, delete it
+            if (currentUser.profileImage && currentUser.profileImage !== '/images/default-avatar.png') {
+                const oldImagePath = path.join(process.cwd(), 'public', currentUser.profileImage);
+                if (fs.existsSync(oldImagePath)) {
+                    fs.unlinkSync(oldImagePath);
+                }
+            }
+
+            // Add new profile image path to update data
+            updateData.profileImage = `/uploads/profile/${req.file.filename}`;
+        }
+
+        // Find and update user by ID
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            updateData,
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        res.json({ success: true, message: 'Profile updated successfully' });
+    } catch (error) {
+        console.error('Profile update error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+export default { getLogin, getSignup, postSignup, postLogin, getOtpPage, verifyOtp, getHomePage, getLogout, getGoogle, getGoogleCallback, getForgotPassword, postForgotPassword, getResetPassword, postResetPassword, getChangePassword, postChangePassword, getProductImages };

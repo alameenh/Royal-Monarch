@@ -16,6 +16,7 @@
             font-family: 'Georgia', serif;
             background-color: #f8f5f0;
             color: #2c2c2c;
+            padding-top: 4rem; /* Reduced from previous value */
         }
         
         /* Classic font styling */
@@ -54,7 +55,7 @@
         
         /* Navbar height */
         .nav-height {
-            height: 6rem;
+            height: 4rem; /* Reduced from 6rem */
         }
 
         /* Enhanced Navbar Animations */
@@ -113,7 +114,7 @@
             margin: 0 auto;
             border-radius: 0.5rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            height: 4.5rem;
+            height: 3.5rem; /* Reduced from 4.5rem */
         }
 
         .navbar-scrolled .logo-container {
@@ -132,20 +133,20 @@
 
 <body>
 
-<nav class="navbar fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-10 py-7 border-b border-gray-200 shadow-sm bg-white transition-all duration-300 w-full">
+<nav class="navbar fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-10 py-4 border-b border-gray-200 shadow-sm bg-white transition-all duration-300 w-full">
     <!-- Left navigation links -->
     <div class="flex items-center space-x-12 ml-4">
-        <a href="/home" class="nav-link text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic text-base uppercase tracking-wider">Home</a>
-        <a href="/shop" class="nav-link text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic text-base uppercase tracking-wider">Shop</a>
+        <a href="/home" class="nav-link text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic text-sm uppercase tracking-wider">Home</a>
+        <a href="/shop" class="nav-link text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic text-sm uppercase tracking-wider">Shop</a>
         <!-- <a href="#" class="text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic text-base uppercase tracking-wider">Contact Us</a>
         <a href="#" class="text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic text-base uppercase tracking-wider">About Us</a> -->
     </div>
     
     <!-- Logo and brand name - centered with greater spacing -->
     <div class="logo-container flex items-center space-x-3 absolute left-1/2 transform -translate-x-1/2">
-        <img alt="Royal Monarch logo" src="/images/Royal Monarch logo.png" class="h-12 transition-transform duration-300 hover:scale-105"/>
+        <img alt="Royal Monarch logo" src="/images/Royal Monarch logo.png" class="h-10 transition-transform duration-300 hover:scale-105"/>
         <div class="flex flex-col items-start justify-center">
-            <span class="text-[#8B4513] text-2xl font-serif tracking-wider transition-colors duration-300 hover:text-[#6B3610]">ROYAL MONARCH</span>
+            <span class="text-[#8B4513] text-xl font-serif tracking-wider transition-colors duration-300 hover:text-[#6B3610]">ROYAL MONARCH</span>
             <span class="text-gray-600 text-xs tracking-wider uppercase transition-colors duration-300 hover:text-gray-800">Luxury Automobiles</span>
         </div>
     </div>
@@ -153,13 +154,13 @@
     <!-- Right icons with increased spacing -->
     <div class="flex items-center space-x-10 mr-4">
         <a href="/wishlist" class="nav-icon text-gray-800 hover:text-[#8B4513] transition-colors duration-300">
-            <i class="fas fa-heart text-xl"></i>
+            <i class="fas fa-heart text-lg"></i>
         </a>
         <a href="/profile" class="nav-icon text-gray-800 hover:text-[#8B4513] transition-colors duration-300">
-            <i class="fas fa-user text-xl"></i>
+            <i class="fas fa-user text-lg"></i>
         </a>
         <a href="/cart" class="nav-icon text-gray-800 hover:text-[#8B4513] transition-colors duration-300 relative">
-            <i class="fas fa-shopping-cart text-xl"></i>
+            <i class="fas fa-shopping-cart text-lg"></i>
             <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
                 <span class="cart-badge absolute -top-2 -right-2 bg-[#8B4513] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     <%= cartCount %>
@@ -194,17 +195,45 @@ document.addEventListener('cartUpdated', function() {
         .catch(error => console.error('Error updating cart count:', error));
 });
 
-// Navbar scroll effects
+// Navbar scroll effects with velocity-based animation
+let lastScrollTop = 0;
+let lastScrollTime = Date.now();
+let scrollVelocity = 0;
+const navbar = document.querySelector('.navbar');
+const scrollThreshold = 50; // Minimum scroll amount to trigger animation
+const velocityThreshold = 0.5; // Minimum velocity to trigger animation
+
 window.addEventListener('scroll', function() {
-    const navbar = document.querySelector('.navbar');
-    if (window.scrollY > 50) {
+    const currentScroll = window.scrollY;
+    const currentTime = Date.now();
+    const timeDiff = currentTime - lastScrollTime;
+    
+    // Calculate scroll velocity (pixels per millisecond)
+    scrollVelocity = Math.abs(currentScroll - lastScrollTop) / timeDiff;
+    
+    // Update last scroll position and time
+    lastScrollTop = currentScroll;
+    lastScrollTime = currentTime;
+    
+    // Only trigger animation if we've scrolled past threshold and have sufficient velocity
+    if (currentScroll > scrollThreshold && scrollVelocity > velocityThreshold) {
         navbar.classList.add('navbar-scrolled');
         navbar.classList.add('py-4');
         navbar.classList.remove('py-6');
-    } else {
+        
+        // Adjust animation speed based on scroll velocity
+        const animationSpeed = Math.min(0.4, 0.2 + (scrollVelocity * 0.1));
+        navbar.style.transition = `all ${animationSpeed}s cubic-bezier(0.4, 0, 0.2, 1)`;
+    } else if (currentScroll <= scrollThreshold) {
         navbar.classList.remove('navbar-scrolled');
         navbar.classList.add('py-6');
         navbar.classList.remove('py-4');
+        navbar.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
     }
+});
+
+// Add smooth transition for hover effects
+document.querySelectorAll('.nav-link, .nav-icon, .logo-container, .cart-badge').forEach(element => {
+    element.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
 });
 </script>

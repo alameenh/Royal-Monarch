@@ -10,9 +10,7 @@ import cartController from '../controller/user/cartController.js';
 import orderController from '../controller/user/orderController.js';
 import walletController from '../controller/user/walletController.js';
 
-
 const router = express.Router();
-
 
 router.get('/', userMiddleware.isLogin, userController.getLogin);
 
@@ -40,7 +38,7 @@ router.get('/shop/products', userMiddleware.checkSession, shopController.getProd
 
 router.get('/shop/category/:categoryId', userMiddleware.checkSession, shopController.getShopPage);
 
-router.get('/product/view/:productId', userMiddleware.checkSession, viewProductController.getProductDetails);
+router.get('/product/view/:productId', userMiddleware.checkSession, viewProductController.viewProduct);
 
 router.get('/category/:categoryId/products', userMiddleware.checkSession, viewProductController.getProductsByCategory);
 
@@ -58,7 +56,7 @@ router.get('/reset-password', userController.getResetPassword);
 
 router.post('/reset-password', userController.postResetPassword);
 
-// Update these profile routes
+// Profile routes
 router.get('/profile', userMiddleware.checkSession, getProfile);
 router.get('/profile/edit', userMiddleware.checkSession, getEditProfile);
 router.post('/profile/update', userMiddleware.checkSession, upload.single('profileImage'), updateProfile);
@@ -107,5 +105,8 @@ router.post('/wallet/create-order', userMiddleware.checkSession, walletControlle
 router.post('/wallet/verify-payment', userMiddleware.checkSession, walletController.verifyPayment);
 
 router.post('/order/verify-payment', orderController.verifyPayment);
+
+// Update the route for fetching product images
+router.post('/api/products/images', userController.getProductImages);
 
 export default router;

@@ -1,7 +1,7 @@
 <%- include("../partials/navbar") %>
 
 <!-- Hero Section -->
-<div class="relative h-[550px] bg-cover bg-center" style="background-image: url('/images/2026-Bugatti-Tourbillon-007-1440w.jpg');">
+<div class="relative h-[550px] bg-cover bg-center" id="heroSection" style="background-image: url('<%= homeSettings?.heroImage || '/images/placeholder.jpg' %>');">
     <!-- Classic overlay with subtle gradient -->
     <div class="absolute inset-0 bg-black opacity-50"></div>
     
@@ -22,64 +22,311 @@
 </div>
 
 <!-- Featured Products Section -->
-<section class="py-16 px-8 bg-[#f8f5f0]">
+<section class="py-8 px-8 bg-[#f8f5f0]">
     <div class="max-w-7xl mx-auto">
-        <div class="text-center mb-12">
+        <div class="text-center mb-8">
             <h2 class="text-3xl font-serif relative inline-block pb-4 text-[#2c2c2c]">
-                Featured Collection
+                Featured Products
+                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-24 h-[1px] bg-gradient-to-r from-transparent via-[#8B4513] to-transparent"></div>
+            </h2>
+            <p class="text-gray-600 mt-4 max-w-2xl mx-auto font-serif">Discover our most popular luxury automobiles, chosen by our discerning clientele.</p>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <% featuredProducts.forEach(product => { %>
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden group">
+                    <a href="/product/view/<%= product._id %>" class="block">
+                        <div class="aspect-w-1 aspect-h-1 overflow-hidden">
+                            <img 
+                                src="<%= product.images && product.images.length > 0 ? product.images[0].path : '/images/placeholder.jpg' %>" 
+                                alt="<%= product.name %>"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 product-image"
+                                data-fallback="/images/placeholder.jpg"
+                            >
+                        </div>
+                        <div class="p-3">
+                            <h3 class="text-sm font-serif mb-1 text-[#2c2c2c] group-hover:text-[#8B4513] transition-colors duration-300"><%= product.name %></h3>
+                            <p class="text-gray-600 mb-2 font-serif text-xs"><%= product.brand || 'No brand' %></p>
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="flex items-center gap-1">
+                                    <span class="text-base font-serif text-[#8B4513]">₹<%= product.discountedPrice || 'N/A' %></span>
+                                    <% if (product.offer) { %>
+                                        <span class="text-xs text-gray-500 line-through">₹<%= product.originalPrice || 'N/A' %></span>
+                                        <span class="text-xs text-[#8B4513] font-serif ml-1"><%= product.offer.discount %>% OFF</span>
+                                    <% } %>
+                                </div>
+                                <span class="text-gray-600 hover:text-[#8B4513] transition-colors">
+                                    <i class="fas fa-eye text-sm"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                    <div class="p-3 pt-0">
+                        <div class="flex flex-col gap-1.5">
+                            <select class="variant-select w-full p-1 text-xs border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300" data-product-id="<%= product._id %>">
+                                <% if (product.variants && product.variants.length > 0) { %>
+                                    <% product.variants.forEach(variant => { %>
+                                        <option value="<%= variant.type %>" data-stock="<%= variant.stock %>" data-price="<%= variant.price %>">
+                                            <%= variant.type %> - ₹<%= variant.price %>
+                                        </option>
+                                    <% }) %>
+                                <% } else { %>
+                                    <option value="default">No variants available</option>
+                                <% } %>
+                            </select>
+                            <button 
+                                class="add-to-cart-btn w-full bg-white text-[#8B4513] py-1 text-xs uppercase border border-[#8B4513] hover:bg-[#8B4513] hover:text-white transition-all duration-300 font-serif rounded-lg group" 
+                                data-product-id="<%= product._id %>">
+                                Add to Cart
+                                <span class="inline-block transform group-hover:translate-x-1 transition-transform duration-300 ml-1">→</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+    </div>
+</section>
+
+<!-- Luxury Cars Grid Section -->
+<section class="py-8 px-8 bg-[#f8f5f0]">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-serif relative inline-block pb-4 text-[#2c2c2c]">
+                View Our Range of Categories
+                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-24 h-[1px] bg-gradient-to-r from-transparent via-[#8B4513] to-transparent"></div>
+            </h2>
+            <p class="text-gray-600 mt-4 max-w-2xl mx-auto font-serif">Explore our exclusive collection of luxury automobiles, each representing the pinnacle of automotive excellence and craftsmanship.</p>
+        </div>
+        <div class="grid grid-cols-12 gap-6 h-[450px]">
+            <!-- Left Category -->
+            <div class="col-span-4 h-[450px]">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden h-full group cursor-pointer" onclick="redirectToShop('<%= homeSettings?.leftCategory?._id %>')">
+                    <div class="h-full relative">
+                        <img 
+                            src="<%= homeSettings?.leftCategoryImage || '/images/placeholder.jpg' %>" 
+                            alt="<%= homeSettings?.leftCategory?.name || 'Left Category' %>"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 category-image"
+                            data-fallback="/images/placeholder.jpg"
+                        >
+                        <!-- Permanent category name label -->
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 z-20">
+                            <span class="text-white text-xl font-serif block">
+                                <%= homeSettings?.leftCategory?.name || 'Category' %>
+                            </span>
+                        </div>
+                        <!-- Hover overlay -->
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end z-10">
+                           
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Middle Column - Top and Bottom Categories -->
+            <div class="col-span-4 grid grid-rows-2 gap-6 h-[450px]">
+                <!-- Top Category -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden h-[215px] group cursor-pointer" onclick="redirectToShop('<%= homeSettings?.topCategory?._id %>')">
+                    <div class="h-full relative">
+                        <img 
+                            src="<%= homeSettings?.topCategoryImage || '/images/placeholder.jpg' %>" 
+                            alt="<%= homeSettings?.topCategory?.name || 'Top Category' %>"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 category-image"
+                            data-fallback="/images/placeholder.jpg"
+                        >
+                        <!-- Permanent category name label -->
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 z-20">
+                            <span class="text-white text-xl font-serif block">
+                                <%= homeSettings?.topCategory?.name || 'Category' %>
+                            </span>
+                        </div>
+                        <!-- Hover overlay -->
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end z-10">
+                           
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bottom Category -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden h-[215px] group cursor-pointer" onclick="redirectToShop('<%= homeSettings?.bottomCategory?._id %>')">
+                    <div class="h-full relative">
+                        <img 
+                            src="<%= homeSettings?.bottomCategoryImage || '/images/placeholder.jpg' %>" 
+                            alt="<%= homeSettings?.bottomCategory?.name || 'Bottom Category' %>"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 category-image"
+                            data-fallback="/images/placeholder.jpg"
+                        >
+                        <!-- Permanent category name label -->
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 z-20">
+                            <span class="text-white text-xl font-serif block">
+                                <%= homeSettings?.bottomCategory?.name || 'Category' %>
+                            </span>
+                        </div>
+                        <!-- Hover overlay -->
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end z-10">
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Category -->
+            <div class="col-span-4 h-[450px]">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden h-full group cursor-pointer" onclick="redirectToShop('<%= homeSettings?.rightCategory?._id %>')">
+                    <div class="h-full relative">
+                        <img 
+                            src="<%= homeSettings?.rightCategoryImage || '/images/placeholder.jpg' %>" 
+                            alt="<%= homeSettings?.rightCategory?.name || 'Right Category' %>"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 category-image"
+                            data-fallback="/images/placeholder.jpg"
+                        >
+                        <!-- Permanent category name label -->
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 z-20">
+                            <span class="text-white text-xl font-serif block">
+                                <%= homeSettings?.rightCategory?.name || 'Category' %>
+                            </span>
+                        </div>
+                        <!-- Hover overlay -->
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end z-10">
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Products Section -->
+<section class="py-8 px-8 bg-[#f8f5f0]">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-serif relative inline-block pb-4 text-[#2c2c2c]">
+                New Launches
                 <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-24 h-[1px] bg-gradient-to-r from-transparent via-[#8B4513] to-transparent"></div>
             </h2>
             <p class="text-gray-600 mt-4 max-w-2xl mx-auto font-serif">Explore our handpicked selection of the finest automobiles, each representing the pinnacle of luxury and performance.</p>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             <% newArrivals.forEach(product => { %>
-                <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
-                    <a href="/product/view/<%= product._id %>" class="block relative">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden group">
+                    <a href="/product/view/<%= product._id %>" class="block">
                         <div class="aspect-w-1 aspect-h-1 overflow-hidden">
                             <img 
-                                src="<%= product.images[0].path %>" 
+                                src="<%= product.images && product.images.length > 0 ? product.images[0].path : '/images/placeholder.jpg' %>" 
                                 alt="<%= product.name %>"
-                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 product-image"
+                                data-fallback="/images/placeholder.jpg"
                             >
-                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300"></div>
                         </div>
-                        <% if (product.discount > 0) { %>
-                            <div class="absolute top-0 right-0 bg-[#8B4513] text-white px-3 py-1 text-sm font-serif rounded-tr-lg">
-                                <%= product.discount %>% OFF
-                            </div>
-                        <% } %>
-                    </a>
-                    <div class="p-4">
-                        <a href="/product/view/<%= product._id %>" class="block">
-                            <h3 class="text-base font-serif mb-2 text-[#2c2c2c] group-hover:text-[#8B4513] transition-colors duration-300"><%= product.name %></h3>
-                            <p class="text-gray-600 mb-3 font-serif text-sm"><%= product.brand %></p>
-                            <div class="flex justify-between items-center mb-3">
-                                <div>
-                                    <span class="text-lg font-serif text-[#8B4513]">₹<%= product.variants[0].price %></span>
-                                    <% if (product.discount > 0) { %>
-                                        <span class="text-sm text-gray-500 ml-2 line-through">₹<%= Math.round(product.variants[0].price * 100 / (100 - product.discount)) %></span>
+                        <div class="p-3">
+                            <h3 class="text-sm font-serif mb-1 text-[#2c2c2c] group-hover:text-[#8B4513] transition-colors duration-300"><%= product.name %></h3>
+                            <p class="text-gray-600 mb-2 font-serif text-xs"><%= product.brand || 'No brand' %></p>
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="flex items-center gap-1">
+                                    <span class="text-base font-serif text-[#8B4513]">₹<%= product.discountedPrice || 'N/A' %></span>
+                                    <% if (product.offer) { %>
+                                        <span class="text-xs text-gray-500 line-through">₹<%= product.originalPrice || 'N/A' %></span>
+                                        <span class="text-xs text-[#8B4513] font-serif ml-1"><%= product.offer.discount %>% OFF</span>
                                     <% } %>
                                 </div>
                                 <span class="text-gray-600 hover:text-[#8B4513] transition-colors">
-                                    <i class="fas fa-eye"></i>
+                                    <i class="fas fa-eye text-sm"></i>
                                 </span>
                             </div>
-                        </a>
-                        <div class="flex flex-col gap-2">
-                            <select class="variant-select w-full p-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300" data-product-id="<%= product._id %>">
-                                <% product.variants.forEach(variant => { %>
-                                    <option value="<%= variant.type %>" data-stock="<%= variant.stock %>"><%= variant.type %> (<%= variant.stock %> left)</option>
-                                <% }) %>
+                        </div>
+                    </a>
+                    <div class="p-3 pt-0">
+                        <div class="flex flex-col gap-1.5">
+                            <select class="variant-select w-full p-1 text-xs border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300" data-product-id="<%= product._id %>">
+                                <% if (product.variants && product.variants.length > 0) { %>
+                                    <% product.variants.forEach(variant => { %>
+                                        <option value="<%= variant.type %>" data-stock="<%= variant.stock %>"><%= variant.type %></option>
+                                    <% }) %>
+                                <% } else { %>
+                                    <option value="default">No variants available</option>
+                                <% } %>
                             </select>
                             <button 
-                                class="add-to-cart-btn w-full bg-white text-[#8B4513] py-1.5 text-sm uppercase border border-[#8B4513] hover:bg-[#8B4513] hover:text-white transition-all duration-300 font-serif rounded-lg group" 
+                                class="add-to-cart-btn w-full bg-white text-[#8B4513] py-1 text-xs uppercase border border-[#8B4513] hover:bg-[#8B4513] hover:text-white transition-all duration-300 font-serif rounded-lg group" 
                                 data-product-id="<%= product._id %>">
                                 Add to Cart
-                                <span class="inline-block transform group-hover:translate-x-1 transition-transform duration-300 ml-2">→</span>
+                                <span class="inline-block transform group-hover:translate-x-1 transition-transform duration-300 ml-1">→</span>
                             </button>
                         </div>
                     </div>
+                </div>
+            <% }); %>
+        </div>
+    </div>
+</section>
+
+<!-- Handpicked Products Section -->
+<section class="py-12 px-8 bg-[#f8f5f0]">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-10">
+            <h2 class="text-4xl font-serif relative inline-block pb-4 text-[#2c2c2c]">
+                Handpicked Products
+                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-32 h-[2px] bg-gradient-to-r from-transparent via-[#8B4513] to-transparent"></div>
+            </h2>
+            <p class="text-gray-700 mt-6 max-w-2xl mx-auto font-serif text-lg">Our expert curators have selected these exceptional automobiles, representing the pinnacle of luxury and craftsmanship.</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <% 
+            // Define positions and their corresponding products
+            const positions = [
+                { position: 'left', product: homeSettings?.handpickedProduct1 },
+                { position: 'middle', product: homeSettings?.handpickedProduct2 },
+                { position: 'right', product: homeSettings?.handpickedProduct3 }
+            ];
+            %>
+            
+            <% positions.forEach(({ position, product }) => { %>
+                <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden group transform hover:scale-[1.02] transition-all duration-500 h-[550px] hover:shadow-2xl"
+                     data-position="<%= position %>">
+                    <% if (product && product._id) { %>
+                        <a href="/product/view/<%= product._id %>" class="block h-full">
+                            <div class="h-full relative">
+                                <!-- Carousel container -->
+                                <div class="handpicked-carousel h-full" data-product-id="<%= product._id %>" data-position="<%= position %>">
+                                    <!-- Initial image (will be replaced by carousel) -->
+                                    <img 
+                                        src="<%= product.imagePath || '/images/placeholder.jpg' %>" 
+                                        alt="<%= product.name %>"
+                                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 handpicked-image"
+                                        data-fallback="/images/placeholder.jpg"
+                                        data-product-id="<%= product._id %>"
+                                        data-position="<%= position %>"
+                                    >
+                                </div>
+                                
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end">
+                                    <div class="p-4 w-full translate-y-[-20%]">
+                                        <h3 class="text-2xl font-serif text-white mb-2">
+                                            <%= product.name %>
+                                        </h3>
+                                        <div class="w-16 h-[2px] bg-white transform origin-left group-hover:scale-x-150 transition-transform duration-300"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <!-- Carousel navigation dots - positioned below product name -->
+                        <div class="absolute bottom-4 left-0 right-0 flex justify-center items-center space-x-2 carousel-dots z-5" data-product-id="<%= product._id %>" data-position="<%= position %>">
+                            <!-- Dots will be added dynamically via JavaScript -->
+                        </div>
+                    <% } else { %>
+                        <div class="flex flex-col items-center justify-center h-full p-8 text-center bg-gradient-to-b from-white to-gray-50">
+                            <div class="rounded-full bg-gray-100 p-6 mb-4">
+                                <i class="fas fa-car text-5xl text-[#8B4513]/30"></i>
+                            </div>
+                            <h3 class="text-xl font-serif text-gray-400 mb-2">Coming Soon</h3>
+                            <p class="text-sm text-gray-400 font-serif capitalize"><%= position %> Position</p>
+                            <div class="mt-4 w-16 h-[1px] bg-gray-200"></div>
+                        </div>
+                    <% } %>
                 </div>
             <% }); %>
         </div>
@@ -118,12 +365,340 @@
     .delay-200 {
         animation-delay: 200ms;
     }
+    
+    /* Update carousel styles for smoother transitions */
+    .carousel-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: opacity 1s cubic-bezier(0.4, 0, 0.2, 1), transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: scale(1.05);
+        will-change: transform, opacity;
+    }
+    
+    .carousel-image.opacity-100 {
+        transform: scale(1);
+    }
+
+    /* Add smooth fade effect */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .carousel-image.opacity-100 {
+        animation: fadeIn 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    /* Add subtle parallax effect */
+    @keyframes subtleParallax {
+        0% {
+            transform: scale(1) translateY(0);
+        }
+        100% {
+            transform: scale(1.05) translateY(-5px);
+        }
+    }
+
+    .carousel-image.opacity-100 {
+        animation: subtleParallax 20s infinite alternate ease-in-out;
+    }
+
+    /* Update carousel dots styles */
+    .carousel-dots {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: absolute;
+        bottom: 1rem;
+        left: 0;
+        right: 0;
+        margin: 0 auto;
+        z-index: 5;
+        background-color: rgba(0, 0, 0, 0.2);
+        padding: 0.5rem 1.5rem;
+        border-radius: 3rem;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        width: fit-content;
+        transition: all 0.3s ease;
+    }
+
+    .carousel-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.3);
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        margin: 0 4px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    .carousel-dot.active {
+        width: 10px;
+        height: 10px;
+        background-color: white;
+        transform: scale(1.3);
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+    }
 </style>
 
 <%- include("../partials/footer") %>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Shared interval for all carousels
+    let sharedInterval;
+    let carouselInstances = [];
+    
+    // Function to handle image loading errors
+    function handleImageErrors() {
+        // Handle product images
+        document.querySelectorAll('.product-image').forEach(img => {
+            // Remove any existing error handlers
+            img.onerror = null;
+            
+            // Add new error handler
+            img.addEventListener('error', function() {
+                const fallback = this.getAttribute('data-fallback');
+                if (fallback && this.src !== fallback) {
+                    this.src = fallback;
+                }
+            }, { once: true });
+        });
+        
+        // Handle category images
+        document.querySelectorAll('.category-image').forEach(img => {
+            // Remove any existing error handlers
+            img.onerror = null;
+            
+            // Add new error handler
+            img.addEventListener('error', function() {
+                const fallback = this.getAttribute('data-fallback');
+                if (fallback && this.src !== fallback) {
+                    this.src = fallback;
+                }
+            }, { once: true });
+        });
+        
+        // Handle handpicked product images
+        document.querySelectorAll('.handpicked-image').forEach(img => {
+            // Remove any existing error handlers
+            img.onerror = null;
+            
+            // Add new error handler
+            img.addEventListener('error', function() {
+                const fallback = this.getAttribute('data-fallback');
+                if (fallback && this.src !== fallback) {
+                    this.src = fallback;
+                }
+            }, { once: true });
+        });
+        
+        // Handle hero section background
+        const heroSection = document.getElementById('heroSection');
+        if (heroSection) {
+            // Create a test image to check if the hero image exists
+            const testImg = new Image();
+            const heroImageUrl = window.getComputedStyle(heroSection).backgroundImage.replace(/url\(['"](.+)['"]\)/, '$1');
+            
+            // Remove any existing error handlers
+            testImg.onerror = null;
+            
+            // Add new error handler
+            testImg.addEventListener('error', function() {
+                heroSection.style.backgroundImage = 'url("/images/placeholder.jpg")';
+            }, { once: true });
+            
+            testImg.src = heroImageUrl;
+        }
+    }
+    
+    // Call the function to handle image errors
+    handleImageErrors();
+
+    // Initialize handpicked product carousels
+    function initHandpickedCarousels() {
+        // Get all handpicked product IDs and positions
+        const handpickedProducts = Array.from(document.querySelectorAll('.handpicked-carousel'))
+            .map(carousel => ({
+                id: carousel.getAttribute('data-product-id'),
+                position: carousel.getAttribute('data-position')
+            }))
+            .filter(product => product.id);
+        
+        if (handpickedProducts.length === 0) return;
+        
+        // Fetch product images for all handpicked products
+        fetch('/api/products/images', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ productIds: handpickedProducts.map(p => p.id) })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Initialize carousels with the fetched images
+                data.products.forEach(product => {
+                    const positions = handpickedProducts
+                        .filter(p => p.id === product._id)
+                        .map(p => p.position);
+                    
+                    positions.forEach(position => {
+                        initCarousel(product._id, product.images, position);
+                    });
+                });
+                
+                // Start the shared interval after all carousels are initialized
+                startSharedInterval();
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching product images:', error);
+        });
+    }
+    
+    function startSharedInterval() {
+        if (sharedInterval) clearInterval(sharedInterval);
+        
+        sharedInterval = setInterval(() => {
+            carouselInstances.forEach(instance => {
+                if (!instance.isHovered && !instance.isUserInteracted) {
+                    const nextIndex = (instance.currentIndex + 1) % instance.totalImages;
+                    instance.showImage(nextIndex);
+                }
+            });
+        }, 4000);
+    }
+    
+    function initCarousel(productId, images, position) {
+        const carouselContainer = document.querySelector(`.handpicked-carousel[data-product-id="${productId}"][data-position="${position}"]`);
+        const dotsContainer = document.querySelector(`.carousel-dots[data-product-id="${productId}"][data-position="${position}"]`);
+        
+        if (!carouselContainer || !dotsContainer || !images || images.length <= 1) return;
+        
+        // Clear the container
+        carouselContainer.innerHTML = '';
+        
+        // Preload images
+        const preloadedImages = [];
+        let loadedCount = 0;
+        
+        // Create loading indicator
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.classList.add('absolute', 'inset-0', 'flex', 'items-center', 'justify-center', 'bg-black', 'bg-opacity-30', 'z-10');
+        loadingIndicator.innerHTML = `
+            <div class="flex flex-col items-center">
+                <div class="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mb-2"></div>
+                <span class="text-white text-sm font-serif">Loading luxury images...</span>
+            </div>
+        `;
+        carouselContainer.appendChild(loadingIndicator);
+        
+        // Preload all images
+        images.forEach((image, index) => {
+            const img = new Image();
+            img.onload = function() {
+                loadedCount++;
+                if (loadedCount === images.length) {
+                    loadingIndicator.remove();
+                    initializeCarousel();
+                }
+            };
+            img.onerror = function() {
+                img.src = '/images/placeholder.jpg';
+            };
+            img.src = image.path;
+            preloadedImages.push(img);
+        });
+        
+        function initializeCarousel() {
+            // Add all images to the carousel
+            preloadedImages.forEach((img, index) => {
+                const imgElement = document.createElement('img');
+                imgElement.src = img.src;
+                imgElement.alt = `Product image ${index + 1}`;
+                imgElement.classList.add('w-full', 'h-full', 'object-cover', 'carousel-image', 'absolute', 'inset-0');
+                if (index === 0) imgElement.classList.add('opacity-100');
+                else imgElement.classList.add('opacity-0');
+                carouselContainer.appendChild(imgElement);
+                
+                // Create dot
+                const dot = document.createElement('div');
+                dot.classList.add('carousel-dot');
+                if (index === 0) dot.classList.add('active');
+                dot.setAttribute('data-index', index);
+                dotsContainer.appendChild(dot);
+            });
+            
+            // Create carousel instance
+            const carouselInstance = {
+                currentIndex: 0,
+                totalImages: images.length,
+                isHovered: false,
+                isUserInteracted: false,
+                showImage: function(index) {
+                    // Update images
+                    carouselContainer.querySelectorAll('.carousel-image').forEach((img, i) => {
+                        if (i === index) {
+                            img.classList.remove('opacity-0');
+                            img.classList.add('opacity-100');
+                        } else {
+                            img.classList.remove('opacity-100');
+                            img.classList.add('opacity-0');
+                        }
+                    });
+                    
+                    // Update dots
+                    dotsContainer.querySelectorAll('.carousel-dot').forEach((dot, i) => {
+                        if (i === index) {
+                            dot.classList.add('active');
+                        } else {
+                            dot.classList.remove('active');
+                        }
+                    });
+                    
+                    this.currentIndex = index;
+                }
+            };
+            
+            // Add to carousel instances
+            carouselInstances.push(carouselInstance);
+            
+            // Add click event to dots
+            dotsContainer.querySelectorAll('.carousel-dot').forEach(dot => {
+                dot.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    carouselInstance.showImage(index);
+                    carouselInstance.isUserInteracted = true;
+                    
+                    // Reset user interaction after 8 seconds
+                    setTimeout(() => {
+                        carouselInstance.isUserInteracted = false;
+                    }, 8000);
+                });
+            });
+            
+            // Add hover events
+            carouselContainer.addEventListener('mouseenter', function() {
+                carouselInstance.isHovered = true;
+            });
+            
+            carouselContainer.addEventListener('mouseleave', function() {
+                carouselInstance.isHovered = false;
+            });
+        }
+    }
+    
+    // Initialize carousels
+    initHandpickedCarousels();
+
     // Add event listeners to all "Add to Cart" buttons
     document.querySelectorAll('.add-to-cart-btn').forEach(button => {
         button.addEventListener('click', async function() {
@@ -180,4 +755,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+function redirectToShop(categoryId) {
+    if (categoryId) {
+        window.location.href = `/shop?category=${categoryId}`;
+    }
+}
 </script>

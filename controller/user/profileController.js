@@ -1,5 +1,7 @@
 import User from '../../model/userModel.js';
 import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 // Multer configuration
 const storage = multer.diskStorage({
@@ -78,6 +80,18 @@ export const updateProfile = async (req, res) => {
         
         // If a profile image was uploaded, add it to the update data
         if (req.file) {
+            // Get the current user to find their old profile image
+            const currentUser = await User.findById(userId);
+            
+            // If user has an existing profile image that's not the default, delete it
+            if (currentUser.profileImage && currentUser.profileImage !== '/images/default-avatar.png') {
+                const oldImagePath = path.join(process.cwd(), 'public', currentUser.profileImage);
+                if (fs.existsSync(oldImagePath)) {
+                    fs.unlinkSync(oldImagePath);
+                }
+            }
+
+            // Add new profile image path to update data
             updateData.profileImage = `/uploads/profile/${req.file.filename}`;
         }
 
@@ -97,4 +111,4 @@ export const updateProfile = async (req, res) => {
         console.error('Profile update error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
-};
+}; 

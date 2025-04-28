@@ -19,10 +19,14 @@ const getShopPage = async (req, res) => {
         // Get cart count for navbar
         const userId = req.session.userId;
         const cartCount = await CartItem.countDocuments({ userId });
+
+        // Get category filter from URL if present
+        const categoryFilter = req.query.category || '';
         
         res.render('user/shop', { 
             categories,
-            cartCount 
+            cartCount,
+            initialCategory: categoryFilter // Pass the category filter to the view
         });
     } catch (error) {
         console.error('Shop Page Error:', error);
@@ -38,8 +42,8 @@ const getProducts = async (req, res) => {
         const category = req.query.category || '';
         const sortBy = req.query.sortBy || 'createdAt';
         const order = req.query.order || 'desc';
-        const minPrice = req.query.minPrice ? parseInt(req.query.minPrice) : 0;
-        const maxPrice = req.query.maxPrice ? parseInt(req.query.maxPrice) : Number.MAX_SAFE_INTEGER;
+        const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice) : 0;
+        const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice) : Number.MAX_SAFE_INTEGER;
 
         // Get current date for offer validation
         const currentDate = new Date();
@@ -54,20 +58,11 @@ const getProducts = async (req, res) => {
         // Build base query
         let query = { status: 'Active' };
 
-        // Add price filter
-        if (minPrice || maxPrice) {
-            query['variants.0.price'] = { 
-                $gte: minPrice, 
-                $lte: maxPrice 
-            };
-        }
-
         // Add search conditions
         if (search) {
             query.$or = [
                 { name: { $regex: search, $options: 'i' } },
-                { brand: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } }
+                { brand: { $regex: search, $options: 'i' } }
             ];
         }
 
@@ -76,14 +71,7 @@ const getProducts = async (req, res) => {
             query.category = new mongoose.Types.ObjectId(category);
         }
 
-        // Build sort configuration
-        let sortConfig = {};
-        if (sortBy === 'price') {
-            sortConfig['variants.0.price'] = order === 'desc' ? -1 : 1;
-        } else {
-            sortConfig[sortBy] = order === 'desc' ? -1 : 1;
-        }
-
+        // First get all products without price filtering
         const products = await Product.aggregate([
             {
                 $lookup: {
@@ -101,19 +89,10 @@ const getProducts = async (req, res) => {
                     ...query,
                     'categoryData.status': 'Active'
                 }
-            },
-            {
-                $sort: sortConfig
-            },
-            {
-                $skip: (page - 1) * limit
-            },
-            {
-                $limit: limit
             }
         ]);
 
-        // Process products to include offer information
+        // Process products to include offer information and calculate final prices
         const processedProducts = products.map(product => {
             // Find product-specific offer
             const productOffer = activeOffers.find(offer => 
@@ -141,50 +120,57 @@ const getProducts = async (req, res) => {
                 ...product,
                 offer: applicableOffer,
                 discountedPrice,
-                originalPrice,
-                variants: product.variants.map(variant => ({
-                    type: variant.type,
-                    price: variant.price,
-                    stock: variant.stock,
-                    specifications: variant.specifications || []
-                }))
+                originalPrice
             };
         });
 
-        // Get total count
-        const totalProducts = await Product.aggregate([
-            {
-                $lookup: {
-                    from: 'categories',
-                    localField: 'category',
-                    foreignField: '_id',
-                    as: 'categoryData'
-                }
-            },
-            {
-                $unwind: '$categoryData'
-            },
-            {
-                $match: {
-                    ...query,
-                    'categoryData.status': 'Active'
-                }
-            },
-            {
-                $count: 'total'
-            }
-        ]);
+        // Apply price filtering after calculating discounted prices
+        const filteredProducts = processedProducts.filter(product => {
+            const price = product.discountedPrice;
+            return price >= minPrice && price <= maxPrice;
+        });
 
-        const total = totalProducts[0]?.total || 0;
-        const totalPages = Math.ceil(total / limit);
+        // Apply sorting after filtering
+        let sortedProducts = [...filteredProducts];
+        if (sortBy === 'price') {
+            sortedProducts.sort((a, b) => {
+                const priceA = a.discountedPrice;
+                const priceB = b.discountedPrice;
+                if (priceA === priceB) {
+                    return a.name.localeCompare(b.name);
+                }
+                if (order === 'desc') {
+                    return priceB - priceA; // High to low
+                } else {
+                    return priceA - priceB; // Low to high
+                }
+            });
+        } else {
+            sortedProducts.sort((a, b) => {
+                if (sortBy === 'name') {
+                    return order === 'desc' 
+                        ? b.name.localeCompare(a.name)
+                        : a.name.localeCompare(b.name);
+                } else {
+                    return order === 'desc' 
+                        ? new Date(b[sortBy]) - new Date(a[sortBy])
+                        : new Date(a[sortBy]) - new Date(b[sortBy]);
+                }
+            });
+        }
+
+        // Apply pagination
+        const totalProducts = sortedProducts.length;
+        const totalPages = Math.ceil(totalProducts / limit);
+        const paginatedProducts = sortedProducts.slice((page - 1) * limit, page * limit);
 
         res.json({
             success: true,
-            products: processedProducts,
+            products: paginatedProducts,
             pagination: {
                 currentPage: page,
                 totalPages,
-                totalProducts: total,
+                totalProducts,
                 hasNextPage: page < totalPages,
                 hasPrevPage: page > 1
             }
