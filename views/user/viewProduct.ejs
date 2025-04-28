@@ -71,7 +71,13 @@
                                         </div>
                                     <% } %>
                                 </div>
-                                <p id="stockStatus" class="font-medium text-sm"></p>
+                                <p id="stockStatus" class="font-medium text-sm">
+                                    <% if (firstVariant.stock > 0) { %>
+                                        <span class="text-green-600">In Stock (<%= firstVariant.stock %> available)</span>
+                                    <% } else { %>
+                                        <span class="text-red-600">Out of Stock</span>
+                                    <% } %>
+                                </p>
                             </div>
                         </div>
 
@@ -354,9 +360,6 @@ function updateVariantDetails() {
         
         // Show discount badge with offer name if available
         let discountText = `${discount}% OFF`;
-        if (offerName) {
-            discountText += ` (${offerName})`;
-        }
         discountBadge.textContent = discountText;
         discountBadge.style.display = 'inline-block';
     } else {
@@ -444,7 +447,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Initialize cart button with first variant's status
             updateCartButton(variants[0].inCart);
             
-            // Force update variant details
+            // Force update variant details to initialize stock status
             updateVariantDetails();
         }
     } catch (err) {
