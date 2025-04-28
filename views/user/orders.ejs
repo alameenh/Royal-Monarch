@@ -1,5 +1,8 @@
 <%- include('../partials/navbar') %>
 
+<!-- Add Razorpay script -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
 <div class="container mx-auto px-4 py-8">
     <div class="flex flex-col lg:flex-row gap-8">
         <!-- Sidebar -->
@@ -132,6 +135,13 @@
                                                 <%= order.paymentStatus.toUpperCase() %>
                                             </span>
                                         </p>
+                                        <% if (order.paymentMethod === 'online' && order.paymentStatus === 'pending') { %>
+                                            <button onclick="retryPayment('<%= order.orderId %>')"
+                                                    class="mt-2 px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#6B3513] transition-colors text-sm flex items-center gap-2">
+                                                <i class="fas fa-credit-card"></i>
+                                                Try Payment Again
+                                            </button>
+                                        <% } %>
                                     </div>
 
                                     <!-- Shipping Address -->
@@ -317,6 +327,108 @@ async function cancelItem(orderId, itemId) {
             icon: 'error',
             title: 'Error',
             text: error.message || 'Failed to cancel item'
+        });
+    }
+}
+
+async function retryPayment(orderId) {
+    try {
+        const response = await fetch(`/order/${orderId}/retry-payment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Initialize Razorpay payment
+            const options = {
+                key: data.razorpayKey,
+                amount: data.amount,
+                currency: data.currency,
+                order_id: data.order_id,
+                name: 'Royal Monarch',
+                description: 'Order Payment',
+                handler: async function (response) {
+                    try {
+                        // Verify payment
+                        const verifyResponse = await fetch('/order/verify-payment', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_signature: response.razorpay_signature
+                            })
+                        });
+
+                        const verifyData = await verifyResponse.json();
+                        
+                        if (verifyData.success) {
+                            window.location.href = verifyData.redirect;
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Payment Failed',
+                                text: 'Payment verification failed. Please contact support.'
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Payment verification error:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Payment Failed',
+                            text: 'Payment verification failed. Please try again.'
+                        });
+                    }
+                },
+                modal: {
+                    ondismiss: function() {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Payment Cancelled',
+                            text: 'Payment was cancelled. Please try again.'
+                        });
+                    }
+                },
+                prefill: {
+                    name: data.customerName,
+                    email: data.customerEmail,
+                    contact: data.customerPhone
+                },
+                theme: {
+                    color: '#000000'
+                }
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.open();
+            
+            // Handle payment failures
+            rzp.on('payment.failed', function (response) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Payment Failed',
+                    text: 'The payment failed. Please try again.'
+                });
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.message || 'Failed to process payment retry'
+            });
+        }
+    } catch (error) {
+        console.error('Payment retry error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to process payment retry. Please try again.'
         });
     }
 }

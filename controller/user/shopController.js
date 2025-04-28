@@ -782,11 +782,73 @@ const createOrder = async (req, res) => {
     }
 };
 
+const retryPayment = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const userId = req.session.userId;
+
+        // Find the order
+        const order = await Order.findOne({ 
+            orderId,
+            userId,
+            paymentMethod: 'online',
+            paymentStatus: 'pending'
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found or not eligible for payment retry'
+            });
+        }
+
+        // Create new Razorpay order
+        const options = {
+            amount: Math.round(order.totalAmount * 100), // Convert to paise
+            currency: "INR",
+            receipt: order.orderId,
+            notes: {
+                orderId: order.orderId,
+                userId: userId.toString()
+            }
+        };
+
+        const razorpayOrder = await razorpay.orders.create(options);
+
+        if (!razorpayOrder || !razorpayOrder.id) {
+            throw new Error('Failed to create Razorpay order');
+        }
+
+        // Update order with new Razorpay order ID
+        order.paymentDetails.razorpayOrderId = razorpayOrder.id;
+        await order.save();
+
+        res.json({
+            success: true,
+            razorpayKey: process.env.RAZORPAY_KEY_ID,
+            amount: Math.round(order.totalAmount * 100),
+            currency: "INR",
+            order_id: razorpayOrder.id,
+            customerName: req.session.user.name,
+            customerEmail: req.session.user.email,
+            customerPhone: req.session.user.phone
+        });
+
+    } catch (error) {
+        console.error('Retry Payment Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to process payment retry'
+        });
+    }
+};
+
 export default { 
     getShopPage, 
     getProducts, 
     getProductDetails, 
     getCategories, 
     getCheckout, 
-    createOrder 
+    createOrder,
+    retryPayment 
 };

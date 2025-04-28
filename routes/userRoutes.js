@@ -106,6 +106,9 @@ router.post('/wallet/verify-payment', userMiddleware.checkSession, walletControl
 
 router.post('/order/verify-payment', orderController.verifyPayment);
 
+// Add retry payment route
+router.post('/order/:orderId/retry-payment', userMiddleware.checkSession, orderController.retryPayment);
+
 // Update the route for fetching product images
 router.post('/api/products/images', userController.getProductImages);
 
