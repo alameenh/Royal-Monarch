@@ -572,17 +572,40 @@ const orderController = {
             const userId = req.session.userId;
             const user = await User.findById(userId);
 
+            // Search and filter parameters
+            const searchTerm = req.query.searchTerm || '';
+            const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice) : null;
+            const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice) : null;
+
             // Pagination parameters
             const page = parseInt(req.query.page) || 1;
             const limit = 5; // Orders per page
             const skip = (page - 1) * limit;
 
+            // Build query
+            let query = { userId };
+
+            // Add search conditions
+            if (searchTerm) {
+                query.$or = [
+                    { orderId: { $regex: searchTerm, $options: 'i' } },
+                    { 'items.name': { $regex: searchTerm, $options: 'i' } }
+                ];
+            }
+
+            // Add price range conditions
+            if (minPrice !== null || maxPrice !== null) {
+                query.totalAmount = {};
+                if (minPrice !== null) query.totalAmount.$gte = minPrice;
+                if (maxPrice !== null) query.totalAmount.$lte = maxPrice;
+            }
+
             // Get total count of orders
-            const totalOrders = await Order.countDocuments({ userId });
+            const totalOrders = await Order.countDocuments(query);
             const totalPages = Math.ceil(totalOrders / limit);
 
             // Fetch paginated orders for the user, sorted by date (newest first)
-            const orders = await Order.find({ userId })
+            const orders = await Order.find(query)
                 .sort({ orderDate: -1 })
                 .skip(skip)
                 .limit(limit);
@@ -593,6 +616,9 @@ const orderController = {
                 orders,
                 currentPage: 'orders',
                 totalOrders,
+                searchTerm,
+                minPrice,
+                maxPrice,
                 pagination: {
                     page,
                     totalPages,
@@ -1363,6 +1389,67 @@ const orderController = {
             res.status(500).json({
                 success: false,
                 message: error.message || 'Failed to process payment retry'
+            });
+        }
+    },
+
+    searchOrders: async (req, res) => {
+        try {
+            const userId = req.session.userId;
+            const { searchTerm, minPrice, maxPrice, page = 1 } = req.query;
+            
+            // Build the search query
+            let query = { userId };
+            
+            // Add search term conditions
+            if (searchTerm) {
+                query.$or = [
+                    { orderId: { $regex: searchTerm, $options: 'i' } },
+                    { 'items.name': { $regex: searchTerm, $options: 'i' } }
+                ];
+            }
+            
+            // Add price range conditions
+            if (minPrice || maxPrice) {
+                query.totalAmount = {};
+                if (minPrice) query.totalAmount.$gte = parseFloat(minPrice);
+                if (maxPrice) query.totalAmount.$lte = parseFloat(maxPrice);
+            }
+            
+            // Pagination
+            const limit = 5;
+            const skip = (parseInt(page) - 1) * limit;
+            
+            // Get total count for pagination
+            const totalOrders = await Order.countDocuments(query);
+            const totalPages = Math.ceil(totalOrders / limit);
+            
+            // Fetch orders with search criteria
+            const orders = await Order.find(query)
+                .sort({ orderDate: -1 })
+                .skip(skip)
+                .limit(limit);
+            
+            res.render('user/orders', {
+                title: 'My Orders',
+                orders,
+                currentPage: 'orders',
+                totalOrders,
+                pagination: {
+                    page: parseInt(page),
+                    totalPages,
+                    hasNext: parseInt(page) < totalPages,
+                    hasPrev: parseInt(page) > 1
+                },
+                searchTerm,
+                minPrice,
+                maxPrice
+            });
+            
+        } catch (error) {
+            console.error('Search Orders Error:', error);
+            res.status(500).render('error', {
+                message: 'Error searching orders'
             });
         }
     }

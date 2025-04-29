@@ -169,26 +169,26 @@ const downloadPDF = async (req, res) => {
             
             switch (filter) {
                 case 'daily':
-                    query.deliveryDate = {
+                    query['items.deliveredDate'] = {
                         $gte: startOfDay,
                         $lt: new Date(now.setDate(now.getDate() + 1))
                     };
                     break;
                 case 'weekly':
-                    query.deliveryDate = {
+                    query['items.deliveredDate'] = {
                         $gte: new Date(now.setDate(now.getDate() - 7)),
                         $lt: new Date()
                     };
                     break;
                 case 'monthly':
-                    query.deliveryDate = {
+                    query['items.deliveredDate'] = {
                         $gte: new Date(now.setMonth(now.getMonth() - 1)),
                         $lt: new Date()
                     };
                     break;
                 case 'custom':
                     if (startDate && endDate) {
-                        query.deliveryDate = {
+                        query['items.deliveredDate'] = {
                             $gte: new Date(startDate),
                             $lt: new Date(new Date(endDate).setDate(new Date(endDate).getDate() + 1))
                         };
@@ -198,8 +198,8 @@ const downloadPDF = async (req, res) => {
         }
 
         const orders = await Order.find(query)
-            .sort({ deliveryDate: -1 })
-            .populate('userId', 'name email');
+            .sort({ 'items.deliveredDate': -1 })
+            .populate('userId', 'firstname lastname email');
 
         // Create PDF document
         const doc = new PDFDocument({ margin: 30, size: 'A4' });
@@ -227,14 +227,49 @@ const downloadPDF = async (req, res) => {
         doc.fontSize(12).text(`Period: ${dateRangeText}`, { align: 'center' });
         doc.moveDown();
 
+        // Process orders to extract delivered items
+        const processedItems = [];
+        let totalRevenue = 0;
+
+        for (const order of orders) {
+            const deliveredItems = order.items.filter(item => item.status === 'delivered');
+            
+            for (const item of deliveredItems) {
+                // Skip if date filter exists and item doesn't match
+                if (Object.keys(query['items.deliveredDate'] || {}).length > 0 && 
+                    (!item.deliveredDate || 
+                     item.deliveredDate < query['items.deliveredDate'].$gte || 
+                     item.deliveredDate >= query['items.deliveredDate'].$lt)) {
+                    continue;
+                }
+
+                const itemRevenue = item.finalAmount + item.gstAmount + item.shippingCost;
+                totalRevenue += itemRevenue;
+
+                processedItems.push({
+                    orderId: order.orderId,
+                    itemName: item.name,
+                    variantType: item.variantType,
+                    quantity: item.quantity,
+                    customerName: order.userId ? `${order.userId.firstname} ${order.userId.lastname}` : 'Unknown',
+                    customerEmail: order.userId?.email || 'N/A',
+                    deliveredDate: item.deliveredDate,
+                    amount: itemRevenue
+                });
+            }
+        }
+
         // Add table
         const table = {
-            headers: ['Order ID', 'Customer', 'Date', 'Amount'],
-            rows: orders.map(order => [
-                order.orderId,
-                order.userId.name,
-                new Date(order.deliveryDate).toLocaleDateString(),
-                `₹${order.totalAmount.toFixed(2)}`
+            headers: ['Order ID', 'Product', 'Variant', 'Qty', 'Customer', 'Date', 'Amount'],
+            rows: processedItems.map(item => [
+                item.orderId,
+                item.itemName,
+                item.variantType,
+                item.quantity.toString(),
+                item.customerName,
+                new Date(item.deliveredDate).toLocaleDateString(),
+                `₹${item.amount.toFixed(2)}`
             ])
         };
 
@@ -244,7 +279,6 @@ const downloadPDF = async (req, res) => {
         });
 
         // Add total
-        const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
         doc.moveDown().fontSize(12).text(`Total Revenue: ₹${totalRevenue.toFixed(2)}`, { align: 'right' });
 
         doc.end();
@@ -271,26 +305,26 @@ const downloadExcel = async (req, res) => {
             
             switch (filter) {
                 case 'daily':
-                    query.deliveryDate = {
+                    query['items.deliveredDate'] = {
                         $gte: startOfDay,
                         $lt: new Date(now.setDate(now.getDate() + 1))
                     };
                     break;
                 case 'weekly':
-                    query.deliveryDate = {
+                    query['items.deliveredDate'] = {
                         $gte: new Date(now.setDate(now.getDate() - 7)),
                         $lt: new Date()
                     };
                     break;
                 case 'monthly':
-                    query.deliveryDate = {
+                    query['items.deliveredDate'] = {
                         $gte: new Date(now.setMonth(now.getMonth() - 1)),
                         $lt: new Date()
                     };
                     break;
                 case 'custom':
                     if (startDate && endDate) {
-                        query.deliveryDate = {
+                        query['items.deliveredDate'] = {
                             $gte: new Date(startDate),
                             $lt: new Date(new Date(endDate).setDate(new Date(endDate).getDate() + 1))
                         };
@@ -300,8 +334,8 @@ const downloadExcel = async (req, res) => {
         }
 
         const orders = await Order.find(query)
-            .sort({ deliveryDate: -1 })
-            .populate('userId', 'name email');
+            .sort({ 'items.deliveredDate': -1 })
+            .populate('userId', 'firstname lastname email');
 
         // Create Excel workbook
         const workbook = new ExcelJS.Workbook();
@@ -328,25 +362,47 @@ const downloadExcel = async (req, res) => {
         // Add headers
         worksheet.columns = [
             { header: 'Order ID', key: 'orderId', width: 20 },
+            { header: 'Product Name', key: 'productName', width: 30 },
+            { header: 'Variant', key: 'variant', width: 15 },
+            { header: 'Quantity', key: 'quantity', width: 10 },
             { header: 'Customer Name', key: 'customerName', width: 20 },
             { header: 'Customer Email', key: 'customerEmail', width: 25 },
-            { header: 'Date', key: 'date', width: 15 },
+            { header: 'Delivery Date', key: 'deliveryDate', width: 15 },
             { header: 'Amount', key: 'amount', width: 15 }
         ];
 
-        // Add rows
-        orders.forEach(order => {
-            worksheet.addRow({
-                orderId: order.orderId,
-                customerName: order.userId.name,
-                customerEmail: order.userId.email,
-                date: new Date(order.deliveryDate).toLocaleDateString(),
-                amount: order.totalAmount.toFixed(2)
-            });
-        });
+        // Process orders to extract delivered items
+        let totalRevenue = 0;
+
+        for (const order of orders) {
+            const deliveredItems = order.items.filter(item => item.status === 'delivered');
+            
+            for (const item of deliveredItems) {
+                // Skip if date filter exists and item doesn't match
+                if (Object.keys(query['items.deliveredDate'] || {}).length > 0 && 
+                    (!item.deliveredDate || 
+                     item.deliveredDate < query['items.deliveredDate'].$gte || 
+                     item.deliveredDate >= query['items.deliveredDate'].$lt)) {
+                    continue;
+                }
+
+                const itemRevenue = item.finalAmount + item.gstAmount + item.shippingCost;
+                totalRevenue += itemRevenue;
+
+                worksheet.addRow({
+                    orderId: order.orderId,
+                    productName: item.name,
+                    variant: item.variantType,
+                    quantity: item.quantity,
+                    customerName: order.userId ? `${order.userId.firstname} ${order.userId.lastname}` : 'Unknown',
+                    customerEmail: order.userId?.email || 'N/A',
+                    deliveryDate: new Date(item.deliveredDate).toLocaleDateString(),
+                    amount: itemRevenue.toFixed(2)
+                });
+            }
+        }
 
         // Add total row
-        const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
         worksheet.addRow({});
         worksheet.addRow({
             orderId: 'Total Revenue:',

@@ -112,4 +112,6 @@ router.post('/order/:orderId/retry-payment', userMiddleware.checkSession, orderC
 // Update the route for fetching product images
 router.post('/api/products/images', userController.getProductImages);
 
+router.get('/orders/search', userMiddleware.checkSession, orderController.searchOrders);
+
 export default router;

@@ -2072,6 +2072,11 @@
       box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
     }
   }
+  .focus\:ring-\[\#8B4513\] {
+    &:focus {
+      --tw-ring-color: #8B4513;
+    }
+  }
   .focus\:ring-black {
     &:focus {
       --tw-ring-color: var(--color-black);
@@ -2202,6 +2207,11 @@
   .md\:w-32 {
     @media (width >= 48rem) {
       width: calc(var(--spacing) * 32);
+    }
+  }
+  .md\:w-48 {
+    @media (width >= 48rem) {
+      width: calc(var(--spacing) * 48);
     }
   }
   .md\:w-auto {

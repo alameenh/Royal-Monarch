@@ -171,8 +171,8 @@
                         <div class="mt-6">
                             <h3 class="font-semibold mb-3">Payment Method</h3>
                             <div class="space-y-2">
-                                <label class="flex items-center gap-2">
-                                    <input type="radio" name="paymentMethod" value="cod" checked>
+                                <label class="flex items-center gap-2" id="codPaymentLabel">
+                                    <input type="radio" name="paymentMethod" value="cod" checked id="codPayment">
                                     <span>Cash on Delivery</span>
                                 </label>
                                 <label class="flex items-center gap-2">
@@ -573,6 +573,20 @@ function updatePaymentOptions() {
     const walletBalance = parseFloat('<%= walletBalance %>');
     const walletPayment = document.getElementById('walletPayment');
     const walletPaymentLabel = document.getElementById('walletPaymentLabel');
+    const codPayment = document.getElementById('codPayment');
+    const codPaymentLabel = document.getElementById('codPaymentLabel');
+
+    // Disable COD if total is above 2000
+    if (currentTotal > 2000) {
+        codPayment.disabled = true;
+        codPaymentLabel.classList.add('opacity-50');
+        if (codPayment.checked) {
+            document.querySelector('input[name="paymentMethod"][value="online"]').checked = true;
+        }
+    } else {
+        codPayment.disabled = false;
+        codPaymentLabel.classList.remove('opacity-50');
+    }
 
     if (walletBalance < currentTotal) {
         walletPayment.disabled = true;
