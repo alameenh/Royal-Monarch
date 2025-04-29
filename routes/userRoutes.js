@@ -12,13 +12,33 @@ import walletController from '../controller/user/walletController.js';
 
 const router = express.Router();
 
+const logRoute = (req, res, next) => {
+    console.log('=====================');
+    console.log('ROUTE MIDDLEWARE CALLED');
+    console.log('=====================');
+    console.log('Route:', req.method, req.path);
+    console.log('Time:', new Date().toISOString());
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+    console.log('Query:', JSON.stringify(req.query, null, 2));
+    console.log('=====================');
+    next();
+};
+
+const logRequest = (req, res, next) => {
+    console.log('Route hit:', req.method, req.path);
+    console.log('Request body:', req.body);
+    console.log('Request headers:', req.headers);
+    next();
+};
+
 router.get('/', userMiddleware.isLogin, userController.getLogin);
 
 router.get('/signup', userMiddleware.isLogin, userController.getSignup);
 
 router.post('/signup', userController.postSignup);
 
-router.post('/login', userController.postLogin);
+router.post('/login', logRoute, userController.postLogin);
 
 router.get('/logout', userMiddleware.checkSession, userController.getLogout);
 
@@ -91,6 +111,7 @@ router.post('/order/create', userMiddleware.checkSession, orderController.create
 // Order management routes
 router.get('/orders', userMiddleware.checkSession, orderController.getOrders);
 router.post('/order/:orderId/cancel/:itemId', userMiddleware.checkSession, orderController.cancelOrderItem);
+router.post('/order/:orderId/cancel', userMiddleware.checkSession, orderController.cancelOrder);
 router.post('/order/:orderId/return/:itemId', userMiddleware.checkSession, orderController.requestReturn);
 
 // Add this route

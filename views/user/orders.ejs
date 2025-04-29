@@ -1,7 +1,9 @@
 <%- include('../partials/navbar') %>
 
-<!-- Add Razorpay script -->
+<!-- Add necessary CDNs -->
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <div class="container mx-auto px-4 py-8">
     <div class="flex flex-col lg:flex-row gap-8">
@@ -22,21 +24,16 @@
                         <input type="text" id="searchTerm" name="searchTerm" 
                                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] focus:border-[#8B4513]"
                                placeholder="Search by order ID or product name"
-                               value="<%= searchTerm || '' %>">
+                               value="<%= filters.searchTerm || '' %>">
                     </div>
                     <div class="w-full md:w-48">
-                        <label for="minPrice" class="block text-sm font-medium text-gray-700 mb-1">Min Price</label>
-                        <input type="number" id="minPrice" name="minPrice" 
-                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] focus:border-[#8B4513]"
-                               placeholder="Min price"
-                               value="<%= minPrice || '' %>">
-                    </div>
-                    <div class="w-full md:w-48">
-                        <label for="maxPrice" class="block text-sm font-medium text-gray-700 mb-1">Max Price</label>
-                        <input type="number" id="maxPrice" name="maxPrice" 
-                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] focus:border-[#8B4513]"
-                               placeholder="Max price"
-                               value="<%= maxPrice || '' %>">
+                        <label for="sortBy" class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                        <select id="sortBy" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] focus:border-[#8B4513]">
+                            <option value="orderDate:desc" <%= filters.sortBy === 'orderDate' && filters.order === 'desc' ? 'selected' : '' %>>Latest Orders</option>
+                            <option value="orderDate:asc" <%= filters.sortBy === 'orderDate' && filters.order === 'asc' ? 'selected' : '' %>>Oldest Orders</option>
+                            <option value="totalAmount:desc" <%= filters.sortBy === 'totalAmount' && filters.order === 'desc' ? 'selected' : '' %>>Price: High to Low</option>
+                            <option value="totalAmount:asc" <%= filters.sortBy === 'totalAmount' && filters.order === 'asc' ? 'selected' : '' %>>Price: Low to High</option>
+                        </select>
                     </div>
                     <div class="flex items-end">
                         <button type="submit" 
@@ -47,224 +44,399 @@
                 </form>
             </div>
 
-            <% if (orders && orders.length > 0) { %>
-                <div class="space-y-4">
-                    <% orders.forEach(order => { %>
-                        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                            <!-- Order Summary (Always Visible) -->
-                            <div class="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50"
-                                 onclick="toggleOrderDetails('<%= order._id %>')">
-                                <div class="flex-grow">
-                                    <div class="flex items-center justify-between">
-                                        <h3 class="font-semibold">ORD NO : #<%= order.orderId.slice(-6) %></h3>
-                                        <p class="text-sm text-gray-600">
-                                            <%= new Date(order.orderDate).toLocaleDateString() %>
-                                        </p>
-                                    </div>
-                                    <div class="flex items-center justify-between mt-2">
-                                        <p class="font-semibold">₹<%= order.totalAmount %></p>
-                                        <span class="text-sm px-3 py-1 rounded-full
-                                            <% 
-                                                // Define completed statuses
-                                                const completedStatuses = ['delivered', 'rejected', 'returned'];
-                                                const processingStatuses = ['return requested'];
-                                                
-                                                // Check order status
-                                                const allCompleted = order.items.every(item => completedStatuses.includes(item.status));
-                                                const anyProcessing = order.items.some(item => processingStatuses.includes(item.status));
-                                                const allCancelled = order.items.every(item => item.status === 'cancelled');
-                                                const someCancelled = order.items.some(item => item.status === 'cancelled');
-                                                const someShipped = order.items.some(item => item.status === 'shipped');
-                                            %>
-                                            <%= allCompleted ? 'bg-green-100 text-green-800' :
-                                                anyProcessing ? 'bg-orange-100 text-orange-800' :
-                                                allCancelled ? 'bg-red-100 text-red-800' :
-                                                someCancelled ? 'bg-red-100 text-red-800' :
-                                                someShipped ? 'bg-blue-100 text-blue-800' :
-                                                'bg-orange-100 text-orange-800' %>">
-                                            <%= allCompleted ? 'Completed' :
-                                                anyProcessing ? 'Processing' :
-                                                allCancelled ? 'Cancelled' :
-                                                someCancelled ? 'Partially Cancelled' :
-                                                someShipped ? 'Shipped' : 'Processing' %>
-                                        </span>
-                                    </div>
-                                </div>
-                                <i class="fas fa-chevron-down text-gray-400 ml-4 transform transition-transform" 
-                                   id="arrow-<%= order._id %>"></i>
-                            </div>
-
-                            <!-- Collapsible Order Details -->
-                            <div class="hidden border-t" id="details-<%= order._id %>">
-                                <!-- Order Items -->
-                                <div class="p-4">
-                                    <% order.items.forEach(item => { %>
-                                        <div class="flex gap-4 py-4 border-b last:border-0">
-                                            <div class="w-20 h-20">
-                                                <img src="<%= item.images[0].path %>" 
-                                                     alt="<%= item.name %>"
-                                                     class="w-full h-full object-cover rounded">
-                                            </div>
-                                            <div class="flex-grow">
-                                                <h4 class="font-semibold"><%= item.name %></h4>
-                                                <p class="text-sm text-gray-600">
-                                                    Variant: <%= item.variant %> | Quantity: <%= item.quantity %>
-                                                </p>
-                                                <p class="text-sm">
-                                                    Price: ₹<%= item.finalPrice.toFixed(2) %>
-                                                    <% if (item.offerDiscount > 0 || item.couponDiscount > 0) { %>
-                                                        <span class="text-red-600">
-                                                            (₹<%= (item.originalPrice - item.finalPrice).toFixed(2) %> OFF)
-                                                        </span>
-                                                    <% } %>
-                                                </p>
-                                                <p class="text-sm text-gray-600">
-                                                    Total: ₹<%= item.finalAmount.toFixed(2) %>
-                                                </p>
-                                                <div class="mt-2 flex items-center justify-between">
-                                                    <span class="px-2 py-1 text-sm rounded
-                                                        <% 
-                                                        // Define status styling groups
-                                                        const completedItemStatuses = ['delivered'];
-                                                        const rejectedStatuses = ['rejected', 'cancelled'];
-                                                        const returnStatuses = ['returned', 'return requested'];
-                                                        %>
-                                                        <%= completedItemStatuses.includes(item.status) ? 'bg-green-100 text-green-800' :
-                                                            rejectedStatuses.includes(item.status) ? 'bg-red-100 text-red-800' :
-                                                            item.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
-                                                            item.status === 'return requested' ? 'bg-yellow-100 text-yellow-800' :
-                                                            item.status === 'returned' ? 'bg-gray-100 text-gray-800' :
-                                                            'bg-orange-100 text-orange-800' %>">
-                                                        <%= item.status.toUpperCase() %>
-                                                    </span>
-                                                    <div class="flex items-center gap-2">
-                                                        <% if (['delivered', 'return requested', 'return rejected', 'returned', 'rejected'].includes(item.status)) { %>
-                                                            <a href="/order/<%= order.orderId %>/invoice/<%= item._id %>" target="_blank" 
-                                                               class="text-blue-600 hover:text-blue-800 text-sm flex items-center">
-                                                                <i class="fas fa-file-invoice mr-1"></i> Invoice
-                                                            </a>
-                                                        <% } %>
-                                                        <% if (item.status === 'delivered') { %>
-                                                            <button onclick="requestReturn('<%= order.orderId %>', '<%= item._id %>')"
-                                                                    class="text-red-600 hover:text-red-800 text-sm">
-                                                                Request Return
-                                                            </button>
-                                                        <% } %>
-                                                        <% if (item.status === 'pending' || item.status === 'processing') { %>
-                                                            <button onclick="cancelItem('<%= order.orderId %>', '<%= item._id %>')"
-                                                                    class="text-red-600 hover:text-red-800 text-sm">
-                                                                Cancel
-                                                            </button>
-                                                        <% } %>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    <% }); %>
-
-                                    <!-- Payment Info -->
-                                    <div class="mt-4 pt-4 border-t">
-                                        <h4 class="font-semibold mb-2">Payment Information</h4>
-                                        <p class="text-sm text-gray-600">
-                                            Method: <%= order.paymentMethod.toUpperCase() %><br>
-                                            Status: <span class="<%= order.paymentStatus === 'paid' ? 'text-green-600' : 'text-orange-600' %>">
-                                                <%= order.paymentStatus.toUpperCase() %>
-                                            </span>
-                                        </p>
-                                        <% if (order.paymentMethod === 'online' && order.paymentStatus === 'pending') { %>
-                                            <button onclick="retryPayment('<%= order.orderId %>')"
-                                                    class="mt-2 px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#6B3513] transition-colors text-sm flex items-center gap-2">
-                                                <i class="fas fa-credit-card"></i>
-                                                Try Payment Again
-                                            </button>
-                                        <% } %>
-                                    </div>
-
-                                    <!-- Shipping Address -->
-                                    <div class="mt-4 pt-4 border-t">
-                                        <h4 class="font-semibold mb-2">Shipping Address</h4>
-                                        <p class="text-sm text-gray-600">
-                                            <%= order.shippingAddress.name %><br>
-                                            <%= order.shippingAddress.houseName %>,
-                                            <%= order.shippingAddress.localityStreet %><br>
-                                            <%= order.shippingAddress.city %>,
-                                            <%= order.shippingAddress.state %> - 
-                                            <%= order.shippingAddress.pincode %><br>
-                                            Phone: <%= order.shippingAddress.phone %>
-                                            <% if (order.shippingAddress.alternatePhone) { %>
-                                                | Alt: <%= order.shippingAddress.alternatePhone %>
-                                            <% } %>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    <% }); %>
+            <!-- Loading Spinner -->
+            <div id="loading" class="hidden">
+                <div class="flex justify-center items-center h-32">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B4513]"></div>
                 </div>
+            </div>
 
-                <div class="mt-8 flex justify-center">
-                    <div class="flex items-center gap-2">
-                        <!-- Previous Page -->
-                        <% if (pagination.hasPrev) { %>
-                            <a href="/orders?page=<%= pagination.page - 1 %>"
-                               class="px-3 py-2 bg-white border rounded-lg hover:bg-gray-50 text-gray-700">
-                                <i class="fas fa-chevron-left"></i>
-                            </a>
-                        <% } else { %>
-                            <button disabled
-                                    class="px-3 py-2 bg-gray-100 border rounded-lg text-gray-400 cursor-not-allowed">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                        <% } %>
+            <!-- Orders List -->
+            <div id="ordersList">
+                <!-- Orders will be loaded here -->
+            </div>
 
-                        <!-- Page Numbers -->
-                        <% for(let i = 1; i <= pagination.totalPages; i++) { %>
-                            <a href="/orders?page=<%= i %>"
-                               class="px-4 py-2 border rounded-lg <%= pagination.page === i ? 'bg-black text-white' : 'bg-white text-gray-700 hover:bg-gray-50' %>">
-                                <%= i %>
-                            </a>
-                        <% } %>
+            <!-- Pagination -->
+            <div id="pagination" class="mt-8 flex justify-center space-x-2">
+                <!-- Pagination will be loaded here -->
+            </div>
 
-                        <!-- Next Page -->
-                        <% if (pagination.hasNext) { %>
-                            <a href="/orders?page=<%= pagination.page + 1 %>"
-                               class="px-3 py-2 bg-white border rounded-lg hover:bg-gray-50 text-gray-700">
-                                <i class="fas fa-chevron-right"></i>
-                            </a>
-                        <% } else { %>
-                            <button disabled
-                                    class="px-3 py-2 bg-gray-100 border rounded-lg text-gray-400 cursor-not-allowed">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        <% } %>
-                    </div>
+            <!-- Order Count Display -->
+            <div id="orderCount" class="text-center text-sm text-gray-600 mt-4">
+                <!-- Order count will be loaded here -->
+            </div>
+
+            <!-- No Orders Message -->
+            <div id="noOrdersMessage" class="hidden text-center py-12">
+                <div class="bg-white rounded-lg shadow-md p-8">
+                    <i class="fas fa-box-open text-5xl text-gray-400 mb-4"></i>
+                    <h2 class="text-2xl font-semibold text-gray-700 mb-2">No Orders Found</h2>
+                    <p class="text-gray-600 mb-6">
+                        You haven't placed any orders yet. Start shopping to see your orders here.
+                    </p>
+                    <a href="/shop" 
+                       class="inline-block px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors">
+                        Start Shopping
+                    </a>
                 </div>
-
-                <!-- Order Count -->
-                <div class="text-center text-sm text-gray-600 mt-4">
-                    Showing <%= (pagination.page - 1) * 5 + 1 %> to <%= Math.min(pagination.page * 5, totalOrders) %> 
-                    of <%= totalOrders %> orders
-                </div>
-            <% } else { %>
-                <div class="text-center py-12">
-                    <div class="bg-white rounded-lg shadow-md p-8">
-                        <i class="fas fa-box-open text-5xl text-gray-400 mb-4"></i>
-                        <h2 class="text-2xl font-semibold text-gray-700 mb-2">No Orders Found</h2>
-                        <p class="text-gray-600 mb-6">
-                            You haven't placed any orders yet. Start shopping to see your orders here.
-                        </p>
-                        <a href="/shop" 
-                           class="inline-block px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors">
-                            Start Shopping
-                        </a>
-                    </div>
-                </div>
-            <% } %>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
+let currentFilters = {
+    searchTerm: '<%= filters.searchTerm || "" %>',
+    minPrice: '<%= filters.minPrice || "" %>',
+    maxPrice: '<%= filters.maxPrice || "" %>',
+    sortBy: '<%= filters.sortBy || "orderDate" %>',
+    order: '<%= filters.order || "desc" %>',
+    page: <%= pagination.currentPage || 1 %>,
+    limit: 5
+};
+
+// Create order card template
+const createOrderCard = (order) => `
+    <div class="bg-white rounded-lg shadow-md overflow-hidden mb-4" data-order-id="${order.orderId}">
+        <!-- Order Summary -->
+        <div class="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50"
+             onclick="toggleOrderDetails('${order.orderId}')">
+            <div class="flex-grow">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-semibold">ORD NO : #${order.orderId.slice(-6)}</h3>
+                    <p class="text-sm text-gray-600">
+                        ${new Date(order.orderDate).toLocaleDateString()}
+                    </p>
+                </div>
+                <div class="flex items-center justify-between mt-2">
+                    <p class="font-semibold">₹${order.totalAmount.toFixed(2)}</p>
+                    <span class="text-sm px-3 py-1 rounded-full ${getStatusClass(order)} order-status">
+                        ${getStatusText(order)}
+                    </span>
+                </div>
+            </div>
+            <i class="fas fa-chevron-down text-gray-400 ml-4 transform transition-transform" 
+               id="arrow-${order.orderId}"></i>
+        </div>
+
+        <!-- Order Details -->
+        <div class="hidden border-t" id="details-${order.orderId}">
+            <div class="p-4">
+                <div class="space-y-4">
+                    ${order.items.map(item => `
+                        <div class="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg" data-item-id="${item._id}">
+                            <div class="w-20 h-20 flex-shrink-0">
+                                <img src="${item.productId?.images[0]?.path || '/images/placeholder.jpg'}" 
+                                     alt="${item.name}"
+                                     class="w-full h-full object-cover rounded">
+                            </div>
+                            <div class="flex-grow">
+                                <h4 class="font-medium">${item.name}</h4>
+                                <p class="text-sm text-gray-600">${item.brand}</p>
+                                <p class="text-sm text-gray-600">Variant: ${item.variantType}</p>
+                                <p class="text-sm text-gray-600">Quantity: ${item.quantity}</p>
+                                <p class="text-sm text-gray-600">Price: ₹${item.finalPrice.toFixed(2)}</p>
+                                <p class="text-sm text-gray-600">Total: ₹${item.finalAmount.toFixed(2)}</p>
+                                <div class="mt-2 flex items-center justify-between">
+                                    <span class="text-sm px-2 py-1 rounded-full ${getItemStatusClass(item)} item-status">
+                                        ${item.status}
+                                    </span>
+                                    ${item.status === 'pending' || item.status === 'processing' ? `
+                                        <button onclick="cancelItem('${order.orderId}', '${item._id}')" 
+                                                class="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors cancel-item-button">
+                                            Cancel Item
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="mt-4 pt-4 border-t">
+                    <div class="flex justify-between text-sm">
+                        <span>Subtotal:</span>
+                        <span>₹${order.subtotal.toFixed(2)}</span>
+                    </div>
+                    ${order.totalOfferDiscount > 0 ? `
+                        <div class="flex justify-between text-sm text-green-600">
+                            <span>Offer Discount:</span>
+                            <span>-₹${order.totalOfferDiscount.toFixed(2)}</span>
+                        </div>
+                    ` : ''}
+                    ${order.totalCouponDiscount > 0 ? `
+                        <div class="flex justify-between text-sm text-green-600">
+                            <span>Coupon Discount:</span>
+                            <span>-₹${order.totalCouponDiscount.toFixed(2)}</span>
+                        </div>
+                    ` : ''}
+                    <div class="flex justify-between text-sm">
+                        <span>GST (18%):</span>
+                        <span>₹${order.gstAmount.toFixed(2)}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span>Shipping:</span>
+                        <span>₹${order.shippingCost.toFixed(2)}</span>
+                    </div>
+                    <div class="flex justify-between font-medium mt-2">
+                        <span>Total Amount:</span>
+                        <span>₹${order.totalAmount.toFixed(2)}</span>
+                    </div>
+                    ${order.items[0]?.status === 'pending' || order.items[0]?.status === 'processing' ? `
+                        <div class="mt-4 flex justify-end">
+                            <button onclick="cancelOrder('${order.orderId}')" 
+                                    class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors cancel-order-button">
+                                Cancel Order
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    </div>
+`;
+
+// Helper functions for status styling
+const getStatusClass = (order) => {
+    const status = order.items[0]?.status || 'pending';
+    switch (status) {
+        case 'delivered':
+            return 'bg-green-100 text-green-800';
+        case 'processing':
+            return 'bg-blue-100 text-blue-800';
+        case 'shipped':
+            return 'bg-purple-100 text-purple-800';
+        case 'cancelled':
+            return 'bg-red-100 text-red-800';
+        case 'return requested':
+            return 'bg-yellow-100 text-yellow-800';
+        case 'returned':
+            return 'bg-gray-100 text-gray-800';
+        default:
+            return 'bg-gray-100 text-gray-800';
+    }
+};
+
+const getItemStatusClass = (item) => {
+    switch (item.status) {
+        case 'delivered':
+            return 'bg-green-100 text-green-800';
+        case 'processing':
+            return 'bg-blue-100 text-blue-800';
+        case 'shipped':
+            return 'bg-purple-100 text-purple-800';
+        case 'cancelled':
+            return 'bg-red-100 text-red-800';
+        case 'return requested':
+            return 'bg-yellow-100 text-yellow-800';
+        case 'returned':
+            return 'bg-gray-100 text-gray-800';
+        default:
+            return 'bg-gray-100 text-gray-800';
+    }
+};
+
+const getStatusText = (order) => {
+    const status = order.items[0]?.status || 'pending';
+    return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
+// Fetch orders with filters
+const fetchOrders = async () => {
+    try {
+        document.getElementById('loading').classList.remove('hidden');
+        
+        const queryString = new URLSearchParams({
+            ...currentFilters,
+            page: currentFilters.page
+        }).toString();
+        
+        console.log('Fetching orders with query:', queryString);
+        
+        const response = await fetch(`/orders/search?${queryString}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Received orders data:', data);
+        
+        if (data.success) {
+            const ordersList = document.getElementById('ordersList');
+            const paginationDiv = document.getElementById('pagination');
+            const orderCountDiv = document.getElementById('orderCount');
+            const noOrdersMessage = document.getElementById('noOrdersMessage');
+            
+            if (data.orders && data.orders.length > 0) {
+                ordersList.innerHTML = data.orders.map(createOrderCard).join('');
+                paginationDiv.innerHTML = createPagination(data.pagination);
+                
+                // Update order count display
+                const startOrder = (data.pagination.currentPage - 1) * currentFilters.limit + 1;
+                const endOrder = Math.min(startOrder + data.orders.length - 1, data.pagination.totalOrders);
+                orderCountDiv.innerHTML = `Showing ${startOrder} to ${endOrder} of ${data.pagination.totalOrders} orders`;
+                
+                // Hide no orders message
+                noOrdersMessage.classList.add('hidden');
+            } else {
+                ordersList.innerHTML = '';
+                paginationDiv.innerHTML = '';
+                orderCountDiv.innerHTML = '';
+                noOrdersMessage.classList.remove('hidden');
+            }
+            
+            // Update URL without page reload
+            window.history.pushState({}, '', `/orders?${queryString}`);
+        } else {
+            throw new Error(data.message || 'Failed to load orders');
+        }
+    } catch (error) {
+        console.error('Error fetching orders:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to load orders. Please try again.'
+        });
+    } finally {
+        document.getElementById('loading').classList.add('hidden');
+    }
+};
+
+// Event handlers
+const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+};
+
+// Initialize event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const searchTermInput = document.getElementById('searchTerm');
+    const minPriceInput = document.getElementById('minPrice');
+    const maxPriceInput = document.getElementById('maxPrice');
+    const sortBySelect = document.getElementById('sortBy');
+
+    if (searchTermInput) {
+        searchTermInput.addEventListener('input', debounce((e) => {
+            currentFilters.searchTerm = e.target.value;
+            currentFilters.page = 1;
+            fetchOrders();
+        }, 300));
+    }
+
+    if (minPriceInput) {
+        minPriceInput.addEventListener('input', debounce((e) => {
+            currentFilters.minPrice = e.target.value;
+            currentFilters.page = 1;
+            fetchOrders();
+        }, 500));
+    }
+
+    if (maxPriceInput) {
+        maxPriceInput.addEventListener('input', debounce((e) => {
+            currentFilters.maxPrice = e.target.value;
+            currentFilters.page = 1;
+            fetchOrders();
+        }, 500));
+    }
+
+    if (sortBySelect) {
+        sortBySelect.addEventListener('change', (e) => {
+            const [sortBy, order] = e.target.value.split(':');
+            currentFilters.sortBy = sortBy;
+            currentFilters.order = order;
+            currentFilters.page = 1;
+            fetchOrders();
+        });
+    }
+
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        currentFilters.page = parseInt(urlParams.get('page')) || 1;
+        currentFilters.searchTerm = urlParams.get('searchTerm') || '';
+        currentFilters.minPrice = urlParams.get('minPrice') || '';
+        currentFilters.maxPrice = urlParams.get('maxPrice') || '';
+        currentFilters.sortBy = urlParams.get('sortBy') || 'orderDate';
+        currentFilters.order = urlParams.get('order') || 'desc';
+        
+        // Update form inputs
+        if (searchTermInput) searchTermInput.value = currentFilters.searchTerm;
+        if (minPriceInput) minPriceInput.value = currentFilters.minPrice;
+        if (maxPriceInput) maxPriceInput.value = currentFilters.maxPrice;
+        if (sortBySelect) sortBySelect.value = `${currentFilters.sortBy}:${currentFilters.order}`;
+        
+        fetchOrders();
+    });
+
+    // Initial load
+    fetchOrders();
+});
+
+// Change page function
+function changePage(page) {
+    currentFilters.page = page;
+    fetchOrders();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Create pagination buttons
+const createPagination = (pagination) => {
+    const { currentPage, totalPages } = pagination;
+    let html = '';
+    
+    // Previous button
+    html += `
+        <button 
+            class="px-4 py-2 border border-gray-300 rounded-lg ${!pagination.hasPrevPage ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'hover:bg-[#8B4513] hover:text-white hover:border-[#8B4513] transition-colors duration-300'}" 
+            ${!pagination.hasPrevPage ? 'disabled' : ''}
+            onclick="changePage(${currentPage - 1})"
+            title="Previous Page"
+        >
+            <i class="fas fa-chevron-left"></i>
+        </button>
+    `;
+    
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === currentPage) {
+            html += `<button class="px-4 py-2 bg-[#8B4513] text-white rounded-lg">${i}</button>`;
+        } else if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+            html += `<button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-[#8B4513] hover:text-white hover:border-[#8B4513] transition-colors duration-300" onclick="changePage(${i})">${i}</button>`;
+        } else if (i === currentPage - 2 || i === currentPage + 2) {
+            html += `<span class="px-4 py-2">...</span>`;
+        }
+    }
+    
+    // Next button
+    html += `
+        <button 
+            class="px-4 py-2 border border-gray-300 rounded-lg ${!pagination.hasNextPage ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'hover:bg-[#8B4513] hover:text-white hover:border-[#8B4513] transition-colors duration-300'}" 
+            ${!pagination.hasNextPage ? 'disabled' : ''}
+            onclick="changePage(${currentPage + 1})"
+            title="Next Page"
+        >
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    `;
+    
+    return html;
+};
+
 function toggleOrderDetails(orderId) {
     const details = document.getElementById(`details-${orderId}`);
     const arrow = document.getElementById(`arrow-${orderId}`);
@@ -327,6 +499,8 @@ async function requestReturn(orderId, itemId) {
 
 async function cancelItem(orderId, itemId) {
     try {
+        console.log('Cancelling item:', { orderId, itemId });
+        
         const result = await Swal.fire({
             title: 'Cancel Item?',
             text: 'Are you sure you want to cancel this item?',
@@ -338,27 +512,86 @@ async function cancelItem(orderId, itemId) {
         });
 
         if (result.isConfirmed) {
+            console.log('Sending cancel request to:', `/order/${orderId}/cancel/${itemId}`);
+            
             const response = await fetch(`/order/${orderId}/cancel/${itemId}`, {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'include'
             });
 
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
+            console.log('Response data:', data);
 
             if (data.success) {
+                // Find the item element
+                const itemElement = document.querySelector(`[data-order-id="${orderId}"] [data-item-id="${itemId}"]`);
+                console.log('Found item element:', itemElement);
+                
+                if (itemElement) {
+                    // Update the status text and class
+                    const statusSpan = itemElement.querySelector('.item-status');
+                    if (statusSpan) {
+                        statusSpan.textContent = 'Cancelled';
+                        statusSpan.className = 'text-sm px-2 py-1 rounded-full bg-red-100 text-red-800 item-status';
+                    }
+
+                    // Remove the cancel button
+                    const cancelButton = itemElement.querySelector('.cancel-item-button');
+                    if (cancelButton) {
+                        cancelButton.remove();
+                    }
+
+                    // Update the order status if all items are cancelled
+                    const orderCard = document.querySelector(`[data-order-id="${orderId}"]`);
+                    const allItems = orderCard.querySelectorAll('.item-status');
+                    const allCancelled = Array.from(allItems).every(item => item.textContent === 'Cancelled');
+                    
+                    if (allCancelled) {
+                        // Update order status
+                        const orderStatus = orderCard.querySelector('.order-status');
+                        if (orderStatus) {
+                            orderStatus.textContent = 'Cancelled';
+                            orderStatus.className = 'text-sm px-3 py-1 rounded-full bg-red-100 text-red-800 order-status';
+                        }
+
+                        // Remove the cancel order button
+                        const cancelOrderButton = orderCard.querySelector('.cancel-order-button');
+                        if (cancelOrderButton) {
+                            const buttonContainer = cancelOrderButton.parentElement;
+                            if (buttonContainer) {
+                                buttonContainer.remove();
+                            } else {
+                                cancelOrderButton.remove();
+                            }
+                        }
+                    }
+                }
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Item Cancelled',
                     text: data.message,
                     showConfirmButton: false,
                     timer: 1500
-                }).then(() => {
-                    location.reload();
                 });
             } else {
                 throw new Error(data.message);
             }
         }
     } catch (error) {
+        console.error('Cancel Item Error:', error);
         Swal.fire({
             icon: 'error',
             title: 'Error',
@@ -465,6 +698,96 @@ async function retryPayment(orderId) {
             icon: 'error',
             title: 'Error',
             text: 'Failed to process payment retry. Please try again.'
+        });
+    }
+}
+
+// Add cancelOrder function
+async function cancelOrder(orderId) {
+    try {
+        console.log('Cancelling order:', orderId);
+        
+        const result = await Swal.fire({
+            title: 'Cancel Order?',
+            text: 'Are you sure you want to cancel this order?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, cancel it!'
+        });
+
+        if (result.isConfirmed) {
+            console.log('Sending cancel request to:', `/order/${orderId}/cancel`);
+            
+            const response = await fetch(`/order/${orderId}/cancel`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'include'
+            });
+
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('Response data:', data);
+
+            if (data.success) {
+                // Find the order card element
+                const orderCard = document.querySelector(`[data-order-id="${orderId}"]`);
+                console.log('Found order card:', orderCard);
+                
+                if (orderCard) {
+                    // Update the status text and class
+                    const statusSpan = orderCard.querySelector('.order-status');
+                    if (statusSpan) {
+                        statusSpan.textContent = 'Cancelled';
+                        statusSpan.className = 'text-sm px-3 py-1 rounded-full bg-red-100 text-red-800 order-status';
+                    }
+
+                    // Remove the cancel button
+                    const cancelButton = orderCard.querySelector('.cancel-order-button');
+                    if (cancelButton) {
+                        cancelButton.remove();
+                    }
+
+                    // Update the status in the order items
+                    const itemStatuses = orderCard.querySelectorAll('.item-status');
+                    itemStatuses.forEach(status => {
+                        status.textContent = 'Cancelled';
+                        status.className = 'text-sm px-2 py-1 rounded-full bg-red-100 text-red-800 item-status';
+                    });
+
+                    // Remove all cancel item buttons
+                    const cancelItemButtons = orderCard.querySelectorAll('.cancel-item-button');
+                    cancelItemButtons.forEach(button => button.remove());
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Order Cancelled',
+                    text: data.message,
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+            } else {
+                throw new Error(data.message || 'Failed to cancel order');
+            }
+        }
+    } catch (error) {
+        console.error('Cancel Order Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to cancel order'
         });
     }
 }

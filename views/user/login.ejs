@@ -5,13 +5,13 @@
             <p class="text-center text-gray-700 mb-4">Login</p>
             <form class="space-y-4" id="loginForm" novalidate>
                 <div>
-                    <input type="email" id="email" placeholder="Email" 
+                    <input type="email" id="email" name="email" placeholder="Email" required
                         class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200" />
                     <p class="text-red-500 text-xs mt-1 hidden" id="emailError"></p>
                 </div>
 
                 <div>
-                    <input type="password" id="password" placeholder="Password"
+                    <input type="password" id="password" name="password" placeholder="Password" required
                         class="border-gray-300 rounded w-full px-4 py-2 bg-gray-200" />
                     <p class="text-red-500 text-xs mt-1 hidden" id="passwordError"></p>
                 </div>
@@ -21,8 +21,14 @@
                     <a href="/forgot-password" class="ml-auto">Forget Password?</a>
                 </div>
                 <button type="submit" id="loginButton" 
-                    class="rounded w-full py-2 mt-2 bg-black text-white hover:bg-gray-800 disabled:bg-gray-400">
-                    Login
+                    class="rounded w-full py-2 mt-2 bg-black text-white hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <span id="buttonText">Login</span>
+                    <span id="loadingSpinner" class="hidden">
+                        <svg class="animate-spin h-5 w-5 text-white mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </span>
                 </button>
             </form>
 
@@ -39,11 +45,13 @@
         </div>
     </div>
 
-
-
+    <!-- Add Axios CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
         const loginForm = document.getElementById('loginForm');
         const loginButton = document.getElementById('loginButton');
+        const buttonText = document.getElementById('buttonText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
 
         // Validation functions
         function validateEmail(email) {
@@ -72,10 +80,24 @@
             document.getElementById('passwordError').classList.toggle('hidden', !error);
         });
 
+        function showLoading() {
+            buttonText.classList.add('hidden');
+            loadingSpinner.classList.remove('hidden');
+            loginButton.disabled = true;
+        }
+
+        function hideLoading() {
+            buttonText.classList.remove('hidden');
+            loadingSpinner.classList.add('hidden');
+            loginButton.disabled = false;
+        }
+
         loginForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+
+            console.log('Form submitted with:', { email, password: password ? '***' : 'undefined' });
 
             // Validate all fields
             const emailError = validateEmail(email);
@@ -89,22 +111,28 @@
 
             // If there are validation errors, stop form submission
             if (emailError || passwordError) {
+                console.log('Validation errors:', { emailError, passwordError });
                 return;
             }
 
             try {
-                loginButton.disabled = true;
-                const loadingAlert = Swal.fire({
-                    title: 'Logging in...',
-                    allowOutsideClick: false,
-                    showConfirmButton: false,
-                    willOpen: () => {
-                        Swal.showLoading();
+                showLoading();
+                console.log('Sending login request...');
+                const loginData = {
+                    email: email.trim(),
+                    password: password
+                };
+                console.log('Login data being sent:', { 
+                    email: loginData.email, 
+                    password: loginData.password ? '***' : 'undefined' 
+                });
+                
+                const response = await axios.post('/login', loginData, {
+                    headers: {
+                        'Content-Type': 'application/json'
                     }
                 });
-
-                const response = await axios.post('/login', { email, password });
-                loadingAlert.close();
+                console.log('Login response:', response.data);
 
                 if (response.data.success) {
                     await Swal.fire({
@@ -115,9 +143,11 @@
                         showConfirmButton: false
                     });
                     window.location.href = response.data.redirect;
+                } else {
+                    throw new Error(response.data.message || 'Login failed');
                 }
             } catch (error) {
-                const message = error.response?.data?.message || 'An error occurred';
+                const message = error.response?.data?.message || error.message || 'An error occurred';
                 const redirect = error.response?.data?.redirect;
 
                 if (redirect) {
@@ -136,7 +166,7 @@
                     });
                 }
             } finally {
-                loginButton.disabled = false;
+                hideLoading();
             }
         });
     </script>

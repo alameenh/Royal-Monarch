@@ -59,6 +59,7 @@ const getSalesReport = async (req, res) => {
         // Process orders to extract only delivered items
         const processedOrders = [];
         let totalRevenue = 0;
+        let totalDiscounts = 0;
 
         for (const order of orders) {
             const userData = order.userId ? {
@@ -84,12 +85,13 @@ const getSalesReport = async (req, res) => {
                     continue;
                 }
 
-                // Calculate item revenue (finalAmount includes all discounts)
-                const itemRevenue = parseFloat(item.finalAmount || 0) + 
-                                   parseFloat(item.gstAmount || 0) + 
-                                   parseFloat(item.shippingCost || 0);
+                // Calculate item amounts using the correct fields
+                const originalPrice = item.originalPrice * item.quantity;
+                const discount = (item.couponDiscount || 0) + (item.offerDiscount || 0);
+                const finalAmount = item.finalAmount;
                 
-                totalRevenue += itemRevenue;
+                totalRevenue += originalPrice;
+                totalDiscounts += discount;
 
                 processedOrders.push({
                     orderId: order.orderId,
@@ -99,7 +101,9 @@ const getSalesReport = async (req, res) => {
                     variantType: item.variantType,
                     quantity: item.quantity,
                     deliveredDate: item.deliveredDate,
-                    amount: itemRevenue
+                    originalPrice: originalPrice,
+                    discount: discount,
+                    finalAmount: finalAmount
                 });
             }
         }
@@ -133,6 +137,7 @@ const getSalesReport = async (req, res) => {
         res.render('admin/sales-report', {
             orders: paginatedOrders,
             totalRevenue,
+            totalDiscounts,
             currentFilter: filter || 'all',
             startDate,
             endDate,
@@ -230,6 +235,7 @@ const downloadPDF = async (req, res) => {
         // Process orders to extract delivered items
         const processedItems = [];
         let totalRevenue = 0;
+        let totalDiscounts = 0;
 
         for (const order of orders) {
             const deliveredItems = order.items.filter(item => item.status === 'delivered');
@@ -243,8 +249,12 @@ const downloadPDF = async (req, res) => {
                     continue;
                 }
 
-                const itemRevenue = item.finalAmount + item.gstAmount + item.shippingCost;
-                totalRevenue += itemRevenue;
+                const originalPrice = item.originalPrice * item.quantity;
+                const discount = (item.couponDiscount || 0) + (item.offerDiscount || 0);
+                const finalAmount = item.finalAmount;
+                
+                totalRevenue += originalPrice;
+                totalDiscounts += discount;
 
                 processedItems.push({
                     orderId: order.orderId,
@@ -254,14 +264,16 @@ const downloadPDF = async (req, res) => {
                     customerName: order.userId ? `${order.userId.firstname} ${order.userId.lastname}` : 'Unknown',
                     customerEmail: order.userId?.email || 'N/A',
                     deliveredDate: item.deliveredDate,
-                    amount: itemRevenue
+                    originalPrice: originalPrice,
+                    discount: discount,
+                    finalAmount: finalAmount
                 });
             }
         }
 
         // Add table
         const table = {
-            headers: ['Order ID', 'Product', 'Variant', 'Qty', 'Customer', 'Date', 'Amount'],
+            headers: ['Order ID', 'Product', 'Variant', 'Qty', 'Customer', 'Date', 'Original Price', 'Discount', 'Final Amount'],
             rows: processedItems.map(item => [
                 item.orderId,
                 item.itemName,
@@ -269,7 +281,9 @@ const downloadPDF = async (req, res) => {
                 item.quantity.toString(),
                 item.customerName,
                 new Date(item.deliveredDate).toLocaleDateString(),
-                `₹${item.amount.toFixed(2)}`
+                `₹${item.originalPrice.toFixed(2)}`,
+                `₹${item.discount.toFixed(2)}`,
+                `₹${item.finalAmount.toFixed(2)}`
             ])
         };
 
@@ -278,8 +292,11 @@ const downloadPDF = async (req, res) => {
             prepareRow: () => doc.fontSize(10)
         });
 
-        // Add total
-        doc.moveDown().fontSize(12).text(`Total Revenue: ₹${totalRevenue.toFixed(2)}`, { align: 'right' });
+        // Add totals
+        doc.moveDown().fontSize(12);
+        doc.text(`Total Revenue: ₹${totalRevenue.toFixed(2)}`, { align: 'right' });
+        doc.text(`Total Discounts: ₹${totalDiscounts.toFixed(2)}`, { align: 'right' });
+        doc.text(`Net Revenue: ₹${(totalRevenue - totalDiscounts).toFixed(2)}`, { align: 'right' });
 
         doc.end();
 
@@ -368,11 +385,14 @@ const downloadExcel = async (req, res) => {
             { header: 'Customer Name', key: 'customerName', width: 20 },
             { header: 'Customer Email', key: 'customerEmail', width: 25 },
             { header: 'Delivery Date', key: 'deliveryDate', width: 15 },
-            { header: 'Amount', key: 'amount', width: 15 }
+            { header: 'Original Price', key: 'originalPrice', width: 15 },
+            { header: 'Discount', key: 'discount', width: 15 },
+            { header: 'Final Amount', key: 'finalAmount', width: 15 }
         ];
 
         // Process orders to extract delivered items
         let totalRevenue = 0;
+        let totalDiscounts = 0;
 
         for (const order of orders) {
             const deliveredItems = order.items.filter(item => item.status === 'delivered');
@@ -386,8 +406,12 @@ const downloadExcel = async (req, res) => {
                     continue;
                 }
 
-                const itemRevenue = item.finalAmount + item.gstAmount + item.shippingCost;
-                totalRevenue += itemRevenue;
+                const originalPrice = item.originalPrice * item.quantity;
+                const discount = (item.couponDiscount || 0) + (item.offerDiscount || 0);
+                const finalAmount = item.finalAmount;
+                
+                totalRevenue += originalPrice;
+                totalDiscounts += discount;
 
                 worksheet.addRow({
                     orderId: order.orderId,
@@ -397,16 +421,26 @@ const downloadExcel = async (req, res) => {
                     customerName: order.userId ? `${order.userId.firstname} ${order.userId.lastname}` : 'Unknown',
                     customerEmail: order.userId?.email || 'N/A',
                     deliveryDate: new Date(item.deliveredDate).toLocaleDateString(),
-                    amount: itemRevenue.toFixed(2)
+                    originalPrice: originalPrice.toFixed(2),
+                    discount: discount.toFixed(2),
+                    finalAmount: finalAmount.toFixed(2)
                 });
             }
         }
 
-        // Add total row
+        // Add total rows
         worksheet.addRow({});
         worksheet.addRow({
             orderId: 'Total Revenue:',
-            amount: totalRevenue.toFixed(2)
+            originalPrice: totalRevenue.toFixed(2)
+        });
+        worksheet.addRow({
+            orderId: 'Total Discounts:',
+            discount: totalDiscounts.toFixed(2)
+        });
+        worksheet.addRow({
+            orderId: 'Net Revenue:',
+            finalAmount: (totalRevenue - totalDiscounts).toFixed(2)
         });
 
         // Set response headers

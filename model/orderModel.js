@@ -18,11 +18,6 @@ const orderItemSchema = new mongoose.Schema({
     enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'return requested', 'returned','refunded','rejected'],
     default: 'pending'
   },
-  previousStatus: {
-    type: String,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'return requested', 'returned','refunded','rejected'],
-    default: 'pending'
-  },
   offer: {
     name: { type: String },
     type: { type: String, enum: ['product', 'category'] },

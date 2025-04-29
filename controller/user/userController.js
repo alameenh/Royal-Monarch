@@ -397,21 +397,64 @@ const getLogout = (req, res) => {
 
 const postLogin = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        console.log('=====================');
+        console.log('POST LOGIN FUNCTION CALLED');
+        console.log('=====================');
+        console.log('Request received at:', new Date().toISOString());
+        console.log('Request method:', req.method);
+        console.log('Request path:', req.path);
+        console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+        console.log('Raw request body:', req.body);
+        console.log('Parsed request body:', JSON.stringify(req.body, null, 2));
+        console.log('Request query:', JSON.stringify(req.query, null, 2));
+        console.log('=====================');
 
-  
-        if (!email || !password) {
+        // Validate request body structure
+        if (!req.body || typeof req.body !== 'object') {
+            console.log('Invalid request body structure:', {
+                bodyExists: !!req.body,
+                bodyType: typeof req.body,
+                rawBody: req.body
+            });
             return res.status(400).json({
                 success: false,
-                message: 'Email and password are required'
+                message: 'Invalid request format'
+            });
+        }
+
+        const { email, password } = req.body;
+        
+        console.log('Extracted credentials:', {
+            email: email ? '***@***' : 'undefined',
+            password: password ? '***' : 'undefined'
+        });
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            console.log('Invalid email format:', email);
+            return res.status(400).json({
+                success: false,
+                message: 'Please enter a valid email address'
+            });
+        }
+
+        // Validate password presence
+        if (!password) {
+            console.log('Password is required');
+            return res.status(400).json({
+                success: false,
+                message: 'Password is required'
             });
         }
 
         // Find user by email
+        console.log('Searching for user with email:', email);
         const user = await userModel.findOne({ email });
+        console.log('User found:', user ? 'Yes' : 'No');
 
-        // Check if user exists
         if (!user) {
+            console.log('User not found for email:', email);
             return res.status(401).json({
                 success: false,
                 message: 'Invalid email or password'
@@ -420,6 +463,7 @@ const postLogin = async (req, res) => {
 
         // Check user status
         if (user.status === 'Blocked') {
+            console.log('User is blocked:', email);
             return res.status(403).json({
                 success: false,
                 message: 'Your account has been blocked. Please contact support.'
@@ -427,7 +471,7 @@ const postLogin = async (req, res) => {
         }
 
         if (user.status === 'Pending') {
-            // Store email in session for OTP verification
+            console.log('User is pending verification:', email);
             req.session.email = email;
             return res.status(403).json({
                 success: false,
@@ -437,8 +481,12 @@ const postLogin = async (req, res) => {
         }
 
         // Verify password using bcrypt
+        console.log('Verifying password...');
         const isPasswordValid = await bcrypt.compare(password, user.password);
+        console.log('Password verification result:', isPasswordValid);
+
         if (!isPasswordValid) {
+            console.log('Invalid password for user:', email);
             return res.status(401).json({
                 success: false,
                 message: 'Invalid email or password'
@@ -446,7 +494,8 @@ const postLogin = async (req, res) => {
         }
 
         // Set session
-        req.session.userId =user._id;
+        console.log('Setting session for user:', email);
+        req.session.userId = user._id;
         req.session.email = user.email;
         req.session.isLoggedIn = true;
         req.session.user = {
@@ -455,6 +504,7 @@ const postLogin = async (req, res) => {
             email: user.email
         };
 
+        console.log('Login successful for user:', email);
         res.json({
             success: true,
             message: 'Login successful',
@@ -463,6 +513,7 @@ const postLogin = async (req, res) => {
 
     } catch (error) {
         console.error('Login Error:', error);
+        console.error('Error stack:', error.stack);
         res.status(500).json({
             success: false,
             message: 'An error occurred during login'

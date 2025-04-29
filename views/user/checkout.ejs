@@ -199,7 +199,10 @@
                         <!-- Place Order Button -->
                         <button id="placeOrderButton"
                                 class="w-full mt-6 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors">
-                            Place Order
+                            <span id="buttonText">Place Order</span>
+                            <span id="buttonSpinner" class="hidden">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -211,34 +214,34 @@
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
 let appliedCoupon = null;
+let rzpInstance = null;
 
 // Get the pre-calculated data from the server as a plain JSON string
 const cartItemsData = <%- JSON.stringify(cartItems.map(item => {
-    // Simple properties that are guaranteed to be available
+    // Ensure all required fields are present and properly formatted
     return {
         productId: item.productId._id,
         name: item.productId.name,
         brand: item.productId.brand,
         category: item.productId.category ? item.productId.category.name || "Category" : "Category",
-        images: item.productId.images,
-        quantity: item.quantity,
-        originalPrice: item.originalPrice,
+        images: item.productId.images.map(img => ({ path: img.path, filename: img.filename })),
+        quantity: Number(item.quantity),
+        originalPrice: Number(item.originalPrice),
         variantType: item.variantType,
         status: 'pending',
-        previousStatus: 'pending',
-        priceAfterOffer: item.discountedPrice,
-        offerDiscount: item.originalPrice - item.discountedPrice,
-        subtotalforproduct: item.totalPrice,
-        gstAmount: Math.round(item.totalPrice * 0.18),
-        shippingCost: Math.round(item.totalPrice * 0.02),
-        finalPrice: item.discountedPrice,
-        finalAmount: item.totalPrice,
+        priceAfterOffer: Number(item.discountedPrice),
+        offerDiscount: Number(item.originalPrice - item.discountedPrice),
+        subtotalforproduct: Number(item.totalPrice),
+        gstAmount: Number(Math.round(item.totalPrice * 0.18)),
+        shippingCost: Number(Math.round(item.totalPrice * 0.02)),
+        finalPrice: Number(item.discountedPrice),
+        finalAmount: Number(item.totalPrice),
         couponDiscount: 0,
         couponForProduct: null,
         offer: item.offer ? {
             name: item.offer.name || '',
             type: item.offer.type || 'product',
-            discount: item.offer.discount || 0
+            discount: Number(item.offer.discount || 0)
         } : null
     };
 })) %>;
@@ -369,95 +372,87 @@ function removeCoupon() {
     updatePaymentOptions();
 }
 
-async function placeOrder(event) {
-    event.preventDefault();
-    
-    // Check if address is selected
-    const selectedAddress = document.querySelector('input[name="selectedAddress"]:checked');
-    if (!selectedAddress) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Please select a delivery address'
-        });
-        return;
-    }
+// Add this function at the top of the script section
+function showError(message) {
+    Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: message,
+        confirmButtonText: 'OK'
+    });
+}
 
-    // Check if payment method is selected
-    const selectedPayment = document.querySelector('input[name="paymentMethod"]:checked');
-    if (!selectedPayment) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Please select a payment method'
-        });
-        return;
-    }
-    
-    // Get the current total amount from the UI
-    const currentTotal = parseFloat(document.getElementById('finalTotal').textContent);
-    
-    // Check wallet balance if wallet payment is selected
-    if (selectedPayment.value === 'wallet') {
-        const walletBalance = parseFloat('<%= walletBalance %>');
-        if (walletBalance < currentTotal) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Insufficient Balance',
-                text: 'Your wallet balance is insufficient for this purchase.'
-            });
+// Update the placeOrder function
+async function placeOrder() {
+    try {
+        // Validate address
+        const selectedAddress = document.querySelector('input[name="selectedAddress"]:checked');
+        if (!selectedAddress) {
+            showError('Please select a shipping address');
             return;
         }
-    }
 
-    // Deep clone the cart items to avoid reference issues
-    const processedItems = JSON.parse(JSON.stringify(cartItemsData));
+        // Validate payment method
+        const selectedPayment = document.querySelector('input[name="paymentMethod"]:checked');
+        if (!selectedPayment) {
+            showError('Please select a payment method');
+            return;
+        }
 
-    // If coupon is applied, update each item with the coupon discount
-    if (appliedCoupon) {
-        const couponDiscountAmount = parseFloat(document.getElementById('couponDiscountAmount').textContent || '0');
-        const subtotalValue = parseFloat('<%= subtotal %>');
+        const paymentMethod = selectedPayment.value;
         
-        processedItems.forEach(item => {
-            const proportion = item.subtotalforproduct / subtotalValue;
-            const itemCouponDiscount = couponDiscountAmount * proportion;
-            
-            item.couponForProduct = {
-                code: appliedCoupon.code,
-                discount: itemCouponDiscount,
-                type: 'PERCENTAGE'
-            };
-            item.couponDiscount = itemCouponDiscount;
-            
-            // Update final prices with coupon discount
-            const priceAfterCoupon = item.priceAfterOffer - (itemCouponDiscount / item.quantity);
-            item.finalPrice = priceAfterCoupon;
-            item.finalAmount = priceAfterCoupon * item.quantity;
-        });
-    }
+        // Validate wallet balance if using wallet
+        if (paymentMethod === 'wallet') {
+            const walletBalance = parseFloat('<%= walletBalance %>');
+            const totalAmount = parseFloat(document.getElementById('finalTotal').textContent);
+            if (walletBalance < totalAmount) {
+                showError('Insufficient wallet balance');
+                return;
+            }
+        }
 
-    const couponDiscountAmount = parseFloat(document.getElementById('couponDiscountAmount').textContent || '0');
-    const subtotalValue = parseFloat('<%= subtotal %>');
-    const originalSubtotalValue = parseFloat('<%= originalSubtotal %>') || subtotalValue;
-    const offerDiscountValue = parseFloat('<%= totalOfferDiscount %>') || 0;
+        // Validate total amount for online payment
+        if (paymentMethod === 'online') {
+            const totalAmount = parseFloat(document.getElementById('finalTotal').textContent);
+            if (totalAmount < 1) {
+                showError('Minimum order amount for online payment is ₹1');
+                return;
+            }
+        }
 
-    const formData = {
-        addressId: selectedAddress.value,
-        paymentMethod: selectedPayment.value,
-        paymentStatus: selectedPayment.value === 'cod' ? 'pending' : 'paid',
-        coupon: appliedCoupon,
-        totalAmount: currentTotal,
-        originalSubtotal: originalSubtotalValue,
-        totalOfferDiscount: offerDiscountValue,
-        totalCouponDiscount: couponDiscountAmount,
-        subtotal: subtotalValue,
-        gstAmount: parseFloat(document.getElementById('gstAmount').textContent),
-        shippingCost: parseFloat(document.getElementById('shippingCost').textContent),
-        items: processedItems
-    };
+        // Process cart items
+        const processedItems = JSON.parse(JSON.stringify(cartItemsData));
+        
+        // Validate processed items
+        if (!Array.isArray(processedItems) || processedItems.length === 0) {
+            throw new Error('Cart is empty');
+        }
 
-    try {
-        console.log('Sending order data:', formData);
+        // Prepare form data
+        const formData = {
+            addressId: selectedAddress.value,
+            paymentMethod: paymentMethod,
+            couponCode: appliedCoupon ? appliedCoupon.code : null,
+            items: processedItems,
+            totalAmount: Number(document.getElementById('finalTotal').textContent),
+            originalSubtotal: Number('<%= originalSubtotal %>'),
+            totalOfferDiscount: Number('<%= totalOfferDiscount %>'),
+            totalCouponDiscount: Number(document.getElementById('couponDiscountAmount').textContent || '0'),
+            subtotal: Number('<%= subtotal %>'),
+            gstAmount: Number(document.getElementById('gstAmount').textContent),
+            shippingCost: Number(document.getElementById('shippingCost').textContent)
+        };
+
+        // Log the request data
+        console.log('Sending order data:', JSON.stringify(formData, null, 2));
+
+        // Show loading state
+        const placeOrderBtn = document.getElementById('placeOrderButton');
+        placeOrderBtn.disabled = true;
+        placeOrderBtn.querySelector('#buttonText').textContent = 'Processing...';
+        placeOrderBtn.querySelector('#buttonSpinner').classList.remove('hidden');
+
+        // Send order data to server
         const response = await fetch('/order/create', {
             method: 'POST',
             headers: {
@@ -466,106 +461,100 @@ async function placeOrder(event) {
             body: JSON.stringify(formData)
         });
 
-        const data = await response.json();
+        // Log the response status
+        console.log('Response status:', response.status);
 
-        if (data.success) {
-            if (data.paymentMethod === 'cod' || data.paymentMethod === 'wallet') {
-                // Redirect to success page for COD and Wallet payments
-                window.location.href = data.redirect;
-            } else if (data.paymentMethod === 'online') {
-                // Initialize Razorpay payment
-                const options = {
-                    key: '<%= razorpayKey %>',
-                    amount: Math.round(currentTotal * 100),
-                    currency: data.razorpayOrder.currency,
-                    order_id: data.razorpayOrder.id,
-                    name: 'Royal Monarch',
-                    description: 'Order Payment',
-                    handler: async function (response) {
-                        try {
-                            // Verify payment
-                            const verifyResponse = await fetch('/order/verify-payment', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    razorpay_payment_id: response.razorpay_payment_id,
-                                    razorpay_order_id: response.razorpay_order_id,
-                                    razorpay_signature: response.razorpay_signature
-                                })
-                            });
+        const responseData = await response.json();
+        
+        // Log the response data
+        console.log('Response data:', responseData);
 
-                            const verifyData = await verifyResponse.json();
-                            
-                            if (verifyData.success) {
-                                window.location.href = verifyData.redirect;
-                            } else {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Payment Failed',
-                                    text: 'Payment verification failed. Please contact support.'
-                                });
-                            }
-                        } catch (error) {
-                            console.error('Payment verification error:', error);
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Payment Failed',
-                                text: 'Payment verification failed. Please try again.'
-                            });
-                        }
-                    },
-                    modal: {
-                        ondismiss: function() {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Payment Cancelled',
-                                text: 'Payment was cancelled. Please try again.'
-                            });
-                        }
-                    },
-                    prefill: {
-                        name: '<%= user.firstName %> <%= user.lastName %>',
-                        email: '<%= user.email %>',
-                        contact: '<%= user.phone %>'
-                    },
-                    theme: {
-                        color: '#000000'
-                    }
-                };
-
-                const rzp = new Razorpay(options);
-                rzp.open();
-                
-                // Handle payment failures
-                rzp.on('payment.failed', function (response) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Payment Failed',
-                        text: 'The payment failed. Please try again.'
-                    });
-                });
-            }
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.message || 'Failed to create order'
-            });
+        if (!response.ok) {
+            throw new Error(responseData.message || 'Error creating order');
         }
+
+        // Handle different payment methods
+        if (paymentMethod === 'online' && responseData.razorpayOrder) {
+            console.log('Initializing Razorpay with order:', responseData.razorpayOrder);
+
+            // Initialize Razorpay
+            const options = {
+                key: responseData.razorpayOrder.key,
+                amount: responseData.razorpayOrder.amount,
+                currency: responseData.razorpayOrder.currency,
+                name: responseData.razorpayOrder.name,
+                description: responseData.razorpayOrder.description,
+                order_id: responseData.razorpayOrder.id,
+                handler: function(response) {
+                    console.log('Payment successful:', response);
+                    // Handle successful payment
+                    window.location.href = `/order/success/${responseData.orderId}`;
+                },
+                modal: {
+                    ondismiss: function() {
+                        console.log('Payment modal dismissed');
+                        showError('Payment was cancelled. Please try again.');
+                        resetButtonState();
+                    }
+                },
+                prefill: responseData.razorpayOrder.prefill,
+                theme: responseData.razorpayOrder.theme
+            };
+
+            // Create new Razorpay instance
+            rzpInstance = new Razorpay(options);
+
+            // Add event listeners
+            rzpInstance.on('payment.failed', function(response) {
+                console.error('Payment failed:', response);
+                showError('Payment failed. Please try again.');
+                resetButtonState();
+            });
+
+            // Open the payment modal
+            rzpInstance.open();
+        } else {
+            // For other payment methods, redirect to success page
+            window.location.href = responseData.redirect;
+        }
+
     } catch (error) {
         console.error('Order creation error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to create order. Please try again.'
-        });
+        showError(error.message || 'Error creating order. Please try again.');
+        resetButtonState();
     }
 }
 
-// Add event listener to the place order button
-document.getElementById('placeOrderButton').addEventListener('click', placeOrder);
+// Add helper function to reset button state
+function resetButtonState() {
+    const placeOrderBtn = document.getElementById('placeOrderButton');
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.querySelector('#buttonText').textContent = 'Place Order';
+    placeOrderBtn.querySelector('#buttonSpinner').classList.add('hidden');
+}
+
+// Ensure the event listener is added after the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    const placeOrderButton = document.getElementById('placeOrderButton');
+    if (placeOrderButton) {
+        placeOrderButton.addEventListener('click', placeOrder);
+    } else {
+        console.error('Place Order button not found');
+    }
+    
+    // Initialize amounts
+    const originalSubtotal = parseFloat('<%= subtotal %>');
+    const offerDiscount = parseFloat('<%= totalOfferDiscount %>');
+    const amounts = calculateAmounts(originalSubtotal, offerDiscount, 0);
+    updateDisplayedAmounts(amounts);
+    updatePaymentOptions();
+
+    // Add this to ensure Razorpay script is loaded
+    if (typeof Razorpay === 'undefined') {
+        console.error('Razorpay script not loaded');
+        // You might want to show an error message to the user
+    }
+});
 
 // Update payment options when total changes
 function updatePaymentOptions() {
@@ -597,15 +586,7 @@ function updatePaymentOptions() {
         walletPaymentLabel.classList.remove('opacity-50');
     }
 }
-
-// Initialize amounts when page loads
-document.addEventListener('DOMContentLoaded', () => {
-    const originalSubtotal = parseFloat('<%= subtotal %>');
-    const offerDiscount = parseFloat('<%= totalOfferDiscount %>');
-    const amounts = calculateAmounts(originalSubtotal, offerDiscount, 0);
-    updateDisplayedAmounts(amounts);
-    updatePaymentOptions();
-});
 </script>
 
 <%- include('../partials/footer') %>
+

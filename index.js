@@ -39,6 +39,16 @@ app.use('/admin',adminRoutes);
 
 connectDb();
 
+// Add this before app.listen
+app.use((err, req, res, next) => {
+    console.error('Global error handler:', err);
+    console.error('Error stack:', err.stack);
+    res.status(500).json({
+        success: false,
+        message: 'An internal server error occurred'
+    });
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running on ${PORT}`);
 });

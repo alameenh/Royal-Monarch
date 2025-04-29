@@ -356,8 +356,8 @@ const updateOrderStatus = async (req, res) => {
         } else if (status === 'returned') {
             item.returnedDate = new Date();
             
-            // Decrement soldcount if an item is returned that was previously delivered
-            if (item.previousStatus === 'delivered') {
+            // Decrement soldcount if the item was delivered (check deliveredDate)
+            if (item.deliveredDate) {
                 try {
                     const product = await Product.findById(item.productId);
                     if (product) {
@@ -374,9 +374,6 @@ const updateOrderStatus = async (req, res) => {
             item.cancelledDate = new Date();
         }
         
-        // Save previous status for tracking status changes
-        item.previousStatus = item.status;
-
         await order.save();
 
         res.json({

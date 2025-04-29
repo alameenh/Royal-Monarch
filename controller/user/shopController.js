@@ -444,11 +444,10 @@ const createOrder = async (req, res) => {
                     originalPrice: item.originalPrice,
                     variantType: item.variantType,
                     status: 'pending',
-                    previousStatus: 'pending',
                     offer: item.offer,
                     offerDiscount: item.offerDiscount || 0,
                     priceAfterOffer: item.priceAfterOffer,
-                    couponForProduct: item.couponForProduct || null,
+                    couponForProduct: item.couponForProduct,
                     couponDiscount: item.couponDiscount || 0,
                     subtotalforproduct: item.subtotalforproduct,
                     finalPrice: item.finalPrice,
@@ -518,7 +517,6 @@ const createOrder = async (req, res) => {
                     originalPrice: originalPrice,
                     variantType: item.variantType,
                     status: 'pending',
-                    previousStatus: 'pending',
                     offer: applicableOffer ? {
                         name: applicableOffer.name,
                         type: applicableOffer.type,
@@ -526,13 +524,13 @@ const createOrder = async (req, res) => {
                     } : null,
                     offerDiscount: offerDiscount,
                     priceAfterOffer: priceAfterOffer,
+                    couponForProduct: null,
+                    couponDiscount: 0,
                     subtotalforproduct: subtotalAfterOffer,
                     finalPrice: priceAfterOffer,
                     finalAmount: subtotalAfterOffer,
                     gstAmount: itemGstAmount,
-                    shippingCost: itemShippingCost,
-                    couponForProduct: null,
-                    couponDiscount: 0
+                    shippingCost: itemShippingCost
                 };
 
                 orderItems.push(orderItem);

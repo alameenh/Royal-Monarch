@@ -70,7 +70,7 @@
             <!-- Sales Summary -->
             <div class="bg-zinc-800 rounded-lg p-6 mb-8">
                 <h2 class="text-xl font-semibold mb-4">Summary</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div class="bg-zinc-700 rounded-lg p-6">
                         <div class="text-sm text-gray-400">Total Revenue (Delivered Items)</div>
                         <div class="text-2xl font-bold">₹<%= totalRevenue.toFixed(2) %></div>
@@ -78,6 +78,10 @@
                     <div class="bg-zinc-700 rounded-lg p-6">
                         <div class="text-sm text-gray-400">Total Items Sold</div>
                         <div class="text-2xl font-bold"><%= pagination ? pagination.totalItems : orders.length %></div>
+                    </div>
+                    <div class="bg-zinc-700 rounded-lg p-6">
+                        <div class="text-sm text-gray-400">Total Discounts</div>
+                        <div class="text-2xl font-bold">₹<%= totalDiscounts.toFixed(2) %></div>
                     </div>
                     <div class="bg-zinc-700 rounded-lg p-6">
                         <div class="text-sm text-gray-400">Average Item Value</div>
@@ -97,7 +101,9 @@
                             <th class="py-3 px-4">Qty</th>
                             <th class="py-3 px-4">Customer</th>
                             <th class="py-3 px-4">Delivery Date</th>
-                            <th class="py-3 px-4">Amount</th>
+                            <th class="py-3 px-4">Original Price</th>
+                            <th class="py-3 px-4">Discount</th>
+                            <th class="py-3 px-4">Final Amount</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -115,12 +121,14 @@
                                     <td class="py-3 px-4">
                                         <%= item.deliveredDate ? new Date(item.deliveredDate).toLocaleDateString() : 'N/A' %>
                                     </td>
-                                    <td class="py-3 px-4">₹<%= item.amount.toFixed(2) %></td>
+                                    <td class="py-3 px-4">₹<%= item.originalPrice.toFixed(2) %></td>
+                                    <td class="py-3 px-4">₹<%= item.discount.toFixed(2) %></td>
+                                    <td class="py-3 px-4">₹<%= item.finalAmount.toFixed(2) %></td>
                                 </tr>
                             <% }); %>
                         <% } else { %>
                             <tr>
-                                <td colspan="7" class="py-8 text-center text-gray-400">
+                                <td colspan="9" class="py-8 text-center text-gray-400">
                                     No orders found for the selected period
                                 </td>
                             </tr>
@@ -130,6 +138,8 @@
                         <tr class="border-t border-gray-700">
                             <td colspan="6" class="py-3 px-4 text-right font-semibold">Total Revenue:</td>
                             <td class="py-3 px-4 font-semibold">₹<%= totalRevenue.toFixed(2) %></td>
+                            <td class="py-3 px-4 font-semibold">₹<%= totalDiscounts.toFixed(2) %></td>
+                            <td class="py-3 px-4 font-semibold">₹<%= (totalRevenue - totalDiscounts).toFixed(2) %></td>
                         </tr>
                     </tfoot>
                 </table>

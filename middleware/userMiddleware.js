@@ -2,8 +2,7 @@ import userModel from "../model/userModel.js"
 
 const checkSession = async (req, res, next) => {
     try {
-      
-        if (!req.session.email) {
+        if (!req.session.email || !req.session.userId) {
             req.session.alert = {
                 message: 'Please login to continue',
                 type: 'info'
@@ -11,11 +10,9 @@ const checkSession = async (req, res, next) => {
             return res.redirect('/');
         }
 
-  
         const user = await userModel.findOne({ email: req.session.email });
         
         if (!user) {
-          
             req.session.destroy();
             req.session.alert = {
                 message: 'Account not found',
@@ -34,7 +31,6 @@ const checkSession = async (req, res, next) => {
         }
 
         next();
-
     } catch (error) {
         console.error('Session Check Error:', error);
         req.session.alert = {
