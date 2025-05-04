@@ -1270,7 +1270,7 @@ const orderController = {
                             productId: item.productId ? {
                                 _id: item.productId._id,
                                 name: item.productId.name,
-                                images: item.productId.images,
+                                images: item.productId.images || [], // Ensure images array exists
                                 variants: item.productId.variants,
                                 brand: item.productId.brand,
                                 status: item.productId.status,
@@ -1306,24 +1306,24 @@ const orderController = {
                 });
             }
 
-                res.render('user/orders', {
-                    title: 'My Orders',
+            res.render('user/orders', {
+                title: 'My Orders',
                 orders: formattedOrders,
-                    currentPage: 'orders',
+                currentPage: 'orders',
+                totalOrders,
+                pagination: {
+                    currentPage: parseInt(page),
+                    totalPages,
                     totalOrders,
-                    pagination: {
-                        currentPage: parseInt(page),
-                        totalPages,
-                        totalOrders,
-                        hasNextPage: parseInt(page) < totalPages,
-                        hasPrevPage: parseInt(page) > 1
-                    },
-                    filters: {
-                        searchTerm,
-                        sortBy,
-                        order
-                    }
-                });
+                    hasNextPage: parseInt(page) < totalPages,
+                    hasPrevPage: parseInt(page) > 1
+                },
+                filters: {
+                    searchTerm,
+                    sortBy,
+                    order
+                }
+            });
         } catch (error) {
             console.error('Search Orders Error:', error);
             console.error('Error stack:', error.stack);
@@ -1335,10 +1335,10 @@ const orderController = {
                     error: process.env.NODE_ENV === 'development' ? error.message : undefined
                 });
             }
-                res.status(500).render('error', {
-                    message: 'Error searching orders'
-                });
-            }
+            res.status(500).render('error', {
+                message: 'Error searching orders'
+            });
+        }
     },
 
     cancelOrder: async (req, res) => {
