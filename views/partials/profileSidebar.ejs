@@ -6,7 +6,7 @@
     </button>
 
     <!-- Sidebar -->
-    <div id="sidebar" class="md:static fixed top-28 left-4 h-auto w-48 md:w-72 bg-white shadow-xl rounded-lg p-3 md:p-6 border border-gray-100 transform -translate-x-full md:translate-x-0 transition-all duration-300 ease-in-out z-[50] opacity-0 md:opacity-100">
+    <div id="sidebar" class="md:static fixed top-28 left-4 h-auto w-48 md:w-72 bg-white shadow-xl rounded-lg p-3 md:p-6 border border-gray-100 transform -translate-x-full md:translate-x-0 transition-all duration-300 ease-in-out z-[55] opacity-0 md:opacity-100 md:ml-8">
         <% // Set default for currentPage if it's not provided
            if (typeof currentPage === 'undefined') { 
                currentPage = ''; 
@@ -31,43 +31,43 @@
             <a href="/profile" 
                class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'profile' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
                 <i class="fas fa-user text-lg w-6"></i> 
-                <span class="ml-2 text-xs md:text-sm group-hover:translate-x-1 transition-transform duration-300">Profile</span>
+                <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Profile</span>
             </a>
             
             <a href="/orders" 
                class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'orders' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
                 <i class="fas fa-box text-lg w-6"></i>
-                <span class="ml-2 text-xs md:text-sm group-hover:translate-x-1 transition-transform duration-300">Orders</span>
+                <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Orders</span>
             </a>
             
             <a href="/cart" 
                class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'cart' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
                 <i class="fas fa-shopping-cart text-lg w-6"></i>
-                <span class="ml-2 text-xs md:text-sm group-hover:translate-x-1 transition-transform duration-300">Cart</span>
+                <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Cart</span>
             </a>
             
             <a href="/wishlist" 
                class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'wishlist' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
                 <i class="fas fa-heart text-lg w-6"></i>
-                <span class="ml-2 text-xs md:text-sm group-hover:translate-x-1 transition-transform duration-300">Wishlist</span>
+                <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Wishlist</span>
             </a>
             
             <a href="/address" 
                class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'address' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
                 <i class="fas fa-map-marker-alt text-lg w-6"></i>
-                <span class="ml-2 text-xs md:text-sm group-hover:translate-x-1 transition-transform duration-300">Address</span>
+                <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Address</span>
             </a>
             
             <a href="/wallet" 
                class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'wallet' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
                 <i class="fas fa-wallet text-lg w-6"></i>
-                <span class="ml-2 text-xs md:text-sm group-hover:translate-x-1 transition-transform duration-300">Wallet</span>
+                <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Wallet</span>
             </a>
             
             <a href="/change-password" 
                class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'changepassword' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
                 <i class="fas fa-key text-lg w-6"></i>
-                <span class="ml-2 text-xs md:text-sm group-hover:translate-x-1 transition-transform duration-300">Change Pass</span>
+                <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Change Password</span>
             </a>
 
             <!-- Simple divider -->
@@ -76,13 +76,13 @@
             <a href="/logout" 
                class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group text-red-600 hover:bg-red-100">
                 <i class="fas fa-sign-out-alt text-lg w-6"></i>
-                <span class="ml-2 text-xs md:text-sm group-hover:translate-x-1 transition-transform duration-300">Logout</span>
+                <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Logout</span>
             </a>
         </nav>
     </div>
 
     <!-- Mobile Menu Overlay -->
-    <div id="mobileMenuOverlay" class="hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[45]"></div>
+    <div id="mobileMenuOverlay" class="hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[50]"></div>
 </div>
 
 <script>
