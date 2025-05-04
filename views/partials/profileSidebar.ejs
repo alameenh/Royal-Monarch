@@ -1,47 +1,104 @@
-<div class="w-64 bg-white shadow-lg p-6">
-    <% // Set default for currentPage if it's not provided
-       if (typeof currentPage === 'undefined') { 
-           currentPage = ''; 
-       } 
-    %>
-    <% if (typeof user !== 'undefined' && user) { %>
-    <div class="flex items-center space-x-4">
-        <img src="<%= user.profileImage || '/images/default-avatar.png' %>" alt="Profile Picture" class="w-12 h-12 rounded-full shadow-md">
-        <div>
-            <h4 class="text-lg font-semibold text-gray-700"><%= user.firstname %> <%= user.lastname %></h4>
-            <p class="text-sm text-gray-500"><%= user.email %></p>
+<!-- Profile Sidebar -->
+<div class="relative">
+    <!-- Mobile Menu Button -->
+    <button id="mobileMenuButton" class="md:hidden fixed top-4 left-4 p-2 rounded-lg bg-[#8B4513] text-white shadow-lg z-50">
+        <i class="fas fa-bars text-xl"></i>
+    </button>
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="md:static fixed top-16 left-4 h-[calc(100vh-8rem)] w-72 bg-white shadow-xl rounded-lg p-6 border border-gray-100 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-40">
+        <% // Set default for currentPage if it's not provided
+           if (typeof currentPage === 'undefined') { 
+               currentPage = ''; 
+           } 
+        %>
+        <% if (typeof user !== 'undefined' && user) { %>
+        <div class="flex items-center space-x-4 mb-8">
+            <div class="relative">
+                <img src="<%= user.profileImage || '/images/default-avatar.png' %>" 
+                     alt="Profile Picture" 
+                     class="w-16 h-16 rounded-full shadow-lg border-2 border-[#8B4513] object-cover">
+                <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-[#8B4513] rounded-full border-2 border-white"></div>
+            </div>
+            <div>
+                <h4 class="text-lg font-serif font-semibold text-[#2c2c2c]"><%= user.firstname %> <%= user.lastname %></h4>
+                <p class="text-sm text-gray-600 font-serif"><%= user.email %></p>
+            </div>
         </div>
-    </div>
-    <% } %>
-    <div class="mt-6">
-        <nav class="space-y-4">
-            <a href="/profile" class="flex items-center px-4 py-2 rounded <%= currentPage === 'profile' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
-                <i class="fas fa-user mr-2"></i> Profile
+        <% } %>
+        
+        <nav class="space-y-2">
+            <a href="/profile" 
+               class="flex items-center px-4 py-3 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'profile' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
+                <i class="fas fa-user mr-3 text-lg"></i> 
+                <span class="group-hover:translate-x-1 transition-transform duration-300 text-sm">Profile</span>
             </a>
-            <a href="/orders" class="flex items-center px-4 py-2 rounded <%= currentPage === 'orders' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
-                <i class="fas fa-box mr-2"></i> Orders
+            
+            <a href="/orders" 
+               class="flex items-center px-4 py-3 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'orders' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
+                <i class="fas fa-box mr-3 text-lg"></i>
+                <span class="group-hover:translate-x-1 transition-transform duration-300 text-sm">Orders</span>
             </a>
-            <a href="/cart" class="flex items-center px-4 py-2 rounded <%= currentPage === 'cart' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
-                <i class="fas fa-shopping-cart mr-2"></i> Cart
+            
+            <a href="/cart" 
+               class="flex items-center px-4 py-3 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'cart' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
+                <i class="fas fa-shopping-cart mr-3 text-lg"></i>
+                <span class="group-hover:translate-x-1 transition-transform duration-300 text-sm">Cart</span>
             </a>
-            <a href="/wishlist" class="flex items-center px-4 py-2 rounded <%= currentPage === 'wishlist' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
-                <i class="fas fa-heart mr-2"></i> Wishlist
+            
+            <a href="/wishlist" 
+               class="flex items-center px-4 py-3 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'wishlist' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
+                <i class="fas fa-heart mr-3 text-lg"></i>
+                <span class="group-hover:translate-x-1 transition-transform duration-300 text-sm">Wishlist</span>
             </a>
-            <a href="/address" class="flex items-center px-4 py-2 rounded <%= currentPage === 'address' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
-                <i class="fas fa-map-marker-alt mr-2"></i> Address Management
+            
+            <a href="/address" 
+               class="flex items-center px-4 py-3 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'address' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
+                <i class="fas fa-map-marker-alt mr-3 text-lg"></i>
+                <span class="group-hover:translate-x-1 transition-transform duration-300 text-sm whitespace-nowrap">Address Management</span>
             </a>
-            <a href="/wallet" class="flex items-center px-4 py-2 rounded <%= currentPage === 'wallet' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
-                <i class="fas fa-wallet mr-2"></i> Wallet
+            
+            <a href="/wallet" 
+               class="flex items-center px-4 py-3 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'wallet' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
+                <i class="fas fa-wallet mr-3 text-lg"></i>
+                <span class="group-hover:translate-x-1 transition-transform duration-300 text-sm">Wallet</span>
             </a>
-            <!-- <a href="/coupons" class="flex items-center px-4 py-2 rounded <%= currentPage === 'coupons' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
-                <i class="fas fa-ticket-alt mr-2"></i> Coupons
-            </a> -->
-            <a href="/change-password" class="flex items-center px-4 py-2 rounded <%= currentPage === 'changepassword' ? 'bg-gray-200' : 'text-gray-700 hover:bg-gray-200' %>">
-                <i class="fas fa-key mr-2"></i> Change Password
+            
+            <a href="/change-password" 
+               class="flex items-center px-4 py-3 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'changepassword' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
+                <i class="fas fa-key mr-3 text-lg"></i>
+                <span class="group-hover:translate-x-1 transition-transform duration-300 text-sm">Change Password</span>
             </a>
-            <a href="/logout" class="flex items-center px-4 py-2 rounded text-red-600 hover:bg-red-100">
-                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+
+            <!-- Simple divider -->
+            <div class="border-t border-gray-200 my-4"></div>
+            
+            <a href="/logout" 
+               class="flex items-center px-4 py-3 rounded-lg transition-all duration-300 font-serif group text-red-600 hover:bg-red-100">
+                <i class="fas fa-sign-out-alt mr-3 text-lg"></i>
+                <span class="group-hover:translate-x-1 transition-transform duration-300 text-sm">Logout</span>
             </a>
         </nav>
     </div>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobileMenuOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 z-40"></div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mobileMenuButton = document.getElementById('mobileMenuButton');
+    const sidebar = document.getElementById('sidebar');
+    const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+
+    mobileMenuButton.addEventListener('click', function() {
+        sidebar.classList.toggle('-translate-x-full');
+        mobileMenuOverlay.classList.toggle('hidden');
+    });
+
+    mobileMenuOverlay.addEventListener('click', function() {
+        sidebar.classList.add('-translate-x-full');
+        mobileMenuOverlay.classList.add('hidden');
+    });
+});
+</script>

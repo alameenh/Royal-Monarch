@@ -9,7 +9,7 @@ import CartItem from '../../model/cartModel.js';
 import Coupon from '../../model/couponModel.js';
 import Order from '../../model/orderModel.js';
 import { v4 as uuidv4 } from 'uuid';
-import razorpay from '../../utils/razorpay.js';
+import razorpay, { verifyRazorpayConfig } from '../../utils/razorpay.js';
 
 const getShopPage = async (req, res) => {
     try {
@@ -371,7 +371,19 @@ const createOrder = async (req, res) => {
     try {
         console.log('Order creation started');
         const userId = req.session.userId;
-        const { addressId, paymentMethod, coupon, totalAmount, items: clientItems, originalSubtotal, totalOfferDiscount, totalCouponDiscount } = req.body;
+        const { 
+            addressId, 
+            paymentMethod, 
+            coupon, 
+            totalAmount, 
+            items: clientItems, 
+            originalSubtotal, 
+            totalOfferDiscount, 
+            totalCouponDiscount,
+            subtotal,
+            gstAmount,
+            shippingCost
+        } = req.body;
         
         console.log('Received data:', { 
             addressId, 
@@ -381,8 +393,19 @@ const createOrder = async (req, res) => {
             originalSubtotal,
             totalOfferDiscount,
             totalCouponDiscount,
+            subtotal,
+            gstAmount,
+            shippingCost,
             itemsCount: clientItems ? clientItems.length : 0
         });
+
+        // Validate required fields
+        if (!addressId || !paymentMethod || !totalAmount) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields'
+            });
+        }
 
         // Validate address
         const address = await Address.findOne({ _id: addressId, userId });
@@ -428,51 +451,40 @@ const createOrder = async (req, res) => {
             await product.save();
         }
 
-        // If we received processed items from the client, use them directly
+        // Process order items
         let orderItems = [];
         if (clientItems && clientItems.length > 0) {
             console.log('Using client-side processed items');
-            orderItems = clientItems.map(item => {
-                // Ensure all required fields are set correctly
-                return {
-                    productId: item.productId,
-                    name: item.name,
-                    brand: item.brand,
-                    category: item.category,
-                    images: item.images,
-                    quantity: item.quantity,
-                    originalPrice: item.originalPrice,
-                    variantType: item.variantType,
-                    status: 'pending',
-                    offer: item.offer,
-                    offerDiscount: item.offerDiscount || 0,
-                    priceAfterOffer: item.priceAfterOffer,
-                    couponForProduct: item.couponForProduct,
-                    couponDiscount: item.couponDiscount || 0,
-                    subtotalforproduct: item.subtotalforproduct,
-                    finalPrice: item.finalPrice,
-                    finalAmount: item.finalAmount,
-                    gstAmount: item.gstAmount,
-                    shippingCost: item.shippingCost
-                };
-            });
+            orderItems = clientItems.map(item => ({
+                productId: item.productId,
+                name: item.name,
+                brand: item.brand,
+                category: item.category,
+                images: item.images,
+                quantity: item.quantity,
+                originalPrice: item.originalPrice,
+                variantType: item.variantType,
+                status: 'pending',
+                offer: item.offer,
+                offerDiscount: item.offerDiscount || 0,
+                priceAfterOffer: item.priceAfterOffer,
+                couponForProduct: item.couponForProduct,
+                couponDiscount: item.couponDiscount || 0,
+                subtotalforproduct: item.subtotalforproduct,
+                finalPrice: item.finalPrice,
+                finalAmount: item.finalAmount,
+                gstAmount: item.gstAmount,
+                shippingCost: item.shippingCost
+            }));
         } else {
-            // Otherwise, calculate all values server-side
-            console.log('Calculating item details on server-side');
-            // Fetch active offers
+            // Calculate values server-side
             const activeOffers = await Offer.find({
                 isActive: true,
                 startDate: { $lte: new Date() },
                 endDate: { $gte: new Date() }
             });
 
-            let calculatedOriginalSubtotal = 0;
-            let calculatedTotalOfferDiscount = 0;
-
-            // Process each cart item
             for (const item of cartItems) {
-                if (!item.productId || item.productId.status !== 'Active') continue;
-
                 const variant = item.productId.variants.find(v => v.type === item.variantType);
                 const originalPrice = variant.price;
                 
@@ -495,24 +507,20 @@ const createOrder = async (req, res) => {
                 if (applicableOffer) {
                     offerDiscount = (originalPrice * applicableOffer.discount) / 100;
                     priceAfterOffer = originalPrice - offerDiscount;
-                    calculatedTotalOfferDiscount += offerDiscount * item.quantity;
                 }
 
-                // Calculate subtotal for this product after offer
-                const subtotalAfterOffer = priceAfterOffer * item.quantity;
-                calculatedOriginalSubtotal += originalPrice * item.quantity;
-
                 // Calculate GST and shipping for this item
-                const itemGstAmount = Math.round(subtotalAfterOffer * 0.18);
-                const itemShippingCost = Math.round(subtotalAfterOffer * 0.02);
+                const itemGstAmount = Math.round(priceAfterOffer * 0.18);
+                const itemShippingCost = Math.round(priceAfterOffer * 0.02);
+                const subtotalforproduct = priceAfterOffer + itemGstAmount;
+                const finalAmount = priceAfterOffer * item.quantity;
 
-                // Create order item with all required fields
-                const orderItem = {
+                orderItems.push({
                     productId: item.productId._id,
                     name: item.productId.name,
                     brand: item.productId.brand,
-                    category: item.productId.category,
-                    images: item.productId.images,
+                    category: item.productId.category ? item.productId.category.name : "Category",
+                    images: item.productId.images.map(img => ({ path: img.path, filename: img.filename })),
                     quantity: item.quantity,
                     originalPrice: originalPrice,
                     variantType: item.variantType,
@@ -526,104 +534,14 @@ const createOrder = async (req, res) => {
                     priceAfterOffer: priceAfterOffer,
                     couponForProduct: null,
                     couponDiscount: 0,
-                    subtotalforproduct: subtotalAfterOffer,
+                    subtotalforproduct: subtotalforproduct,
                     finalPrice: priceAfterOffer,
-                    finalAmount: subtotalAfterOffer,
+                    finalAmount: finalAmount,
                     gstAmount: itemGstAmount,
                     shippingCost: itemShippingCost
-                };
-
-                orderItems.push(orderItem);
-            }
-
-            // Use the calculated values if client didn't provide them
-            originalSubtotal = originalSubtotal || calculatedOriginalSubtotal;
-            totalOfferDiscount = totalOfferDiscount || calculatedTotalOfferDiscount;
-        }
-
-        // Calculate subtotal after offers
-        const subtotalAfterOffers = originalSubtotal - totalOfferDiscount;
-
-        // Apply coupon if provided
-        let couponDetails = null;
-        if (coupon) {
-            // Verify coupon is still valid
-            const validCoupon = await Coupon.findOne({
-                _id: coupon.id,
-                isActive: true,
-                startDate: { $lte: new Date() },
-                expiryDate: { $gte: new Date() },
-                minPurchase: { $lte: subtotalAfterOffers }
-            });
-
-            if (!validCoupon) {
-                throw new Error('Coupon is no longer valid');
-            }
-
-            couponDetails = {
-                code: validCoupon.code,
-                discount: totalCouponDiscount,
-                type: validCoupon.discountType
-            };
-
-            // If client-side coupon calculation hasn't been done
-            if (!clientItems || !clientItems.some(item => item.couponDiscount > 0)) {
-                // Calculate total coupon discount
-                let calculatedCouponDiscount;
-                if (validCoupon.discountType === 'PERCENTAGE') {
-                    calculatedCouponDiscount = (subtotalAfterOffers * validCoupon.discountValue) / 100;
-                    if (validCoupon.maxDiscount && calculatedCouponDiscount > validCoupon.maxDiscount) {
-                        calculatedCouponDiscount = validCoupon.maxDiscount;
-                    }
-                } else {
-                    // For fixed amount coupons
-                    calculatedCouponDiscount = validCoupon.discountValue;
-                }
-
-                // Calculate proportion of each product in the total
-                const totalSubtotalAfterOffers = orderItems.reduce((sum, item) => sum + item.subtotalforproduct, 0);
-                
-                // Distribute coupon discount across products
-                orderItems.forEach(item => {
-                    const proportion = item.subtotalforproduct / totalSubtotalAfterOffers;
-                    let couponDiscount;
-                    
-                    if (validCoupon.discountType === 'PERCENTAGE') {
-                        couponDiscount = (item.subtotalforproduct * validCoupon.discountValue) / 100;
-                        if (validCoupon.maxDiscount) {
-                            couponDiscount = Math.min(couponDiscount, validCoupon.maxDiscount * proportion);
-                        }
-                    } else {
-                        // For fixed amount, distribute evenly based on proportion
-                        couponDiscount = calculatedCouponDiscount * proportion;
-                    }
-
-                    item.couponForProduct = {
-                        code: validCoupon.code,
-                        discount: couponDiscount,
-                        type: validCoupon.discountType
-                    };
-                    item.couponDiscount = couponDiscount;
-                    item.finalPrice = item.priceAfterOffer - (couponDiscount / item.quantity);
-                    item.finalAmount = item.finalPrice * item.quantity;
                 });
-
-                // Use calculated value if client didn't provide it
-                totalCouponDiscount = totalCouponDiscount || calculatedCouponDiscount;
             }
-        } else {
-            // If no coupon, ensure final prices same as price after offer
-            orderItems.forEach(item => {
-                item.finalPrice = item.priceAfterOffer;
-                item.finalAmount = item.finalPrice * item.quantity;
-            });
         }
-
-        // Calculate final amounts and update order items if needed
-        const subtotalAfterCoupon = orderItems.reduce((sum, item) => sum + item.finalAmount, 0);
-        const gstAmount = Math.round(subtotalAfterCoupon * 0.18);
-        const shippingCost = subtotalAfterCoupon > 0 ? Math.round(subtotalAfterCoupon * 0.02) : 0;
-        const finalAmount = subtotalAfterCoupon + gstAmount + shippingCost;
 
         // Create order
         const newOrderId = uuidv4();
@@ -631,11 +549,11 @@ const createOrder = async (req, res) => {
             orderId: newOrderId,
             userId,
             items: orderItems,
-            totalAmount: finalAmount,
+            totalAmount,
             originalSubtotal,
             totalOfferDiscount,
             totalCouponDiscount,
-            subtotal: subtotalAfterOffers,
+            subtotal,
             gstAmount,
             shippingCost,
             paymentMethod,
@@ -651,14 +569,18 @@ const createOrder = async (req, res) => {
                 alternatePhone: address.alternatePhone
             },
             expectedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            coupon: couponDetails
+            coupon: coupon ? {
+                code: coupon.code,
+                discount: totalCouponDiscount,
+                type: coupon.type
+            } : null
         });
 
         await order.save();
         console.log('Order saved successfully:', order.orderId);
 
         // Update coupon usage after order is created
-        if (coupon && couponDetails) {
+        if (coupon && coupon.id) {
             await Coupon.findByIdAndUpdate(
                 coupon.id,
                 {
@@ -689,16 +611,18 @@ const createOrder = async (req, res) => {
         else if (paymentMethod === 'online') {
             try {
                 console.log('Creating Razorpay order');
-                verifyRazorpayConfig();
-
+                
+                // Verify Razorpay configuration before proceeding
+                await verifyRazorpayConfig();
+                
                 const options = {
-                    amount: Math.round(totalAmount * 100),
+                    amount: Math.round(totalAmount * 100), // Convert to paise
                     currency: "INR",
                     receipt: order.orderId,
                     notes: {
                         orderId: order.orderId,
                         userId: userId.toString(),
-                        subtotal: subtotalAfterOffers,
+                        subtotal: subtotal,
                         offerDiscount: totalOfferDiscount,
                         couponDiscount: totalCouponDiscount,
                         gst: gstAmount,
@@ -706,6 +630,12 @@ const createOrder = async (req, res) => {
                         finalAmount: totalAmount
                     }
                 };
+
+                // Log Razorpay configuration for debugging
+                console.log('Razorpay Configuration:', {
+                    key_id: process.env.RAZORPAY_KEY_ID,
+                    key_secret: process.env.RAZORPAY_KEY_SECRET ? '***' : 'missing'
+                });
 
                 const razorpayOrder = await razorpay.orders.create(options);
 
@@ -727,7 +657,8 @@ const createOrder = async (req, res) => {
                     razorpayOrder: {
                         id: razorpayOrder.id,
                         amount: Math.round(totalAmount * 100),
-                        currency: 'INR'
+                        currency: 'INR',
+                        key: process.env.RAZORPAY_KEY_ID
                     }
                 });
             } catch (razorpayError) {
@@ -739,7 +670,7 @@ const createOrder = async (req, res) => {
         else if (paymentMethod === 'wallet') {
             // Check wallet balance
             const wallet = await Wallet.findOne({ userId });
-            if (!wallet || wallet.balance < finalAmount) {
+            if (!wallet || wallet.balance < totalAmount) {
                 return res.status(400).json({
                     success: false,
                     message: 'Insufficient wallet balance'
@@ -747,11 +678,11 @@ const createOrder = async (req, res) => {
             }
 
             // Deduct amount from wallet
-            wallet.balance -= finalAmount;
+            wallet.balance -= totalAmount;
             wallet.transactions.push({
                 transactionId: uuidv4(),
                 type: 'DEBIT',
-                amount: finalAmount,
+                amount: totalAmount,
                 description: `Payment for order ${newOrderId}`,
                 date: new Date()
             });

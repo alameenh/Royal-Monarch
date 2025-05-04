@@ -106,7 +106,7 @@ router.post('/change-password', userMiddleware.checkSession, userController.post
 
 // Order routes
 router.get('/checkout', userMiddleware.checkSession, orderController.getCheckout);
-router.post('/order/create', userMiddleware.checkSession, orderController.createOrder);
+router.post('/order/create', userMiddleware.checkSession, shopController.createOrder);
 
 // Order management routes
 router.get('/orders', userMiddleware.checkSession, orderController.getOrders);
