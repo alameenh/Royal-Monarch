@@ -16,7 +16,7 @@
             font-family: 'Georgia', serif;
             background-color: #f8f5f0;
             color: #2c2c2c;
-            padding-top: 4rem; /* Reduced from previous value */
+            padding-top: 3.5rem;
         }
         
         /* Classic font styling */
@@ -55,13 +55,20 @@
         
         /* Navbar height */
         .nav-height {
-            height: 4rem; /* Reduced from 6rem */
+            height: 3.5rem;
         }
 
         /* Enhanced Navbar Animations */
         .nav-link {
             position: relative;
             transition: all 0.3s ease;
+            font-size: 0.75rem;
+        }
+
+        @media (min-width: 640px) {
+            .nav-link {
+                font-size: 0.875rem;
+            }
         }
 
         .nav-link::after {
@@ -82,6 +89,13 @@
         .nav-icon {
             transition: all 0.3s ease;
             transform-origin: center;
+            font-size: 0.875rem;
+        }
+
+        @media (min-width: 640px) {
+            .nav-icon {
+                font-size: 1rem;
+            }
         }
 
         .nav-icon:hover {
@@ -99,6 +113,17 @@
 
         .cart-badge {
             transition: all 0.3s ease;
+            font-size: 0.625rem;
+            height: 1rem;
+            width: 1rem;
+        }
+
+        @media (min-width: 640px) {
+            .cart-badge {
+                font-size: 0.75rem;
+                height: 1.25rem;
+                width: 1.25rem;
+            }
         }
 
         .cart-badge:hover {
@@ -108,13 +133,14 @@
         /* Navbar scroll effects */
         .navbar {
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 3.5rem;
         }
 
         .navbar-scrolled {
             margin: 0 auto;
             border-radius: 0.5rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            height: 3.5rem; /* Reduced from 4.5rem */
+            height: 3rem;
         }
 
         .navbar-scrolled .logo-container {
@@ -122,7 +148,7 @@
         }
 
         .navbar-scrolled .nav-link {
-            font-size: 0.9rem;
+            font-size: 0.75rem;
         }
 
         .navbar-scrolled .nav-icon {
@@ -133,36 +159,34 @@
 
 <body>
 
-<nav class="navbar fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-10 py-4 border-b border-gray-200 shadow-sm bg-white transition-all duration-300 w-full">
+<nav class="navbar fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-2 sm:px-4 md:px-6 py-2 border-b border-gray-200 shadow-sm bg-white transition-all duration-300 w-full">
     <!-- Left navigation links -->
-    <div class="flex items-center space-x-12 ml-4">
-        <a href="/home" class="nav-link text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic text-sm uppercase tracking-wider">Home</a>
-        <a href="/shop" class="nav-link text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic text-sm uppercase tracking-wider">Shop</a>
-        <!-- <a href="#" class="text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic text-base uppercase tracking-wider">Contact Us</a>
-        <a href="#" class="text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic text-base uppercase tracking-wider">About Us</a> -->
+    <div class="flex items-center space-x-2 sm:space-x-4 md:space-x-6">
+        <a href="/home" class="nav-link text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic uppercase tracking-wider">Home</a>
+        <a href="/shop" class="nav-link text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic uppercase tracking-wider">Shop</a>
     </div>
     
     <!-- Logo and brand name - centered with greater spacing -->
-    <div class="logo-container flex items-center space-x-3 absolute left-1/2 transform -translate-x-1/2">
-        <img alt="Royal Monarch logo" src="/images/Royal Monarch logo.png" class="h-10 transition-transform duration-300 hover:scale-105"/>
+    <div class="logo-container flex items-center space-x-1 sm:space-x-2 absolute left-1/2 transform -translate-x-1/2">
+        <img alt="Royal Monarch logo" src="/images/Royal Monarch logo.png" class="h-6 sm:h-8 md:h-10 transition-transform duration-300 hover:scale-105"/>
         <div class="flex flex-col items-start justify-center">
-            <span class="text-[#8B4513] text-xl font-serif tracking-wider transition-colors duration-300 hover:text-[#6B3610]">ROYAL MONARCH</span>
-            <span class="text-gray-600 text-xs tracking-wider uppercase transition-colors duration-300 hover:text-gray-800">Luxury Automobiles</span>
+            <span class="text-[#8B4513] text-sm sm:text-base md:text-lg font-serif tracking-wider transition-colors duration-300 hover:text-[#6B3610]">ROYAL MONARCH</span>
+            <span class="text-gray-600 text-[0.6rem] sm:text-xs tracking-wider uppercase transition-colors duration-300 hover:text-gray-800 hidden sm:block">Luxury Automobiles</span>
         </div>
     </div>
     
     <!-- Right icons with increased spacing -->
-    <div class="flex items-center space-x-10 mr-4">
+    <div class="flex items-center space-x-2 sm:space-x-4 md:space-x-6">
         <a href="/wishlist" class="nav-icon text-gray-800 hover:text-[#8B4513] transition-colors duration-300">
-            <i class="fas fa-heart text-lg"></i>
+            <i class="fas fa-heart"></i>
         </a>
         <a href="/profile" class="nav-icon text-gray-800 hover:text-[#8B4513] transition-colors duration-300">
-            <i class="fas fa-user text-lg"></i>
+            <i class="fas fa-user"></i>
         </a>
         <a href="/cart" class="nav-icon text-gray-800 hover:text-[#8B4513] transition-colors duration-300 relative">
-            <i class="fas fa-shopping-cart text-lg"></i>
+            <i class="fas fa-shopping-cart"></i>
             <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
-                <span class="cart-badge absolute -top-2 -right-2 bg-[#8B4513] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span class="cart-badge absolute -top-1 -right-1 bg-[#8B4513] text-white rounded-full flex items-center justify-center">
                     <%= cartCount %>
                 </span>
             <% } %>
@@ -184,7 +208,7 @@ document.addEventListener('cartUpdated', function() {
                     cartCountElement.textContent = data.count;
                 } else {
                     const countBadge = document.createElement('span');
-                    countBadge.className = 'cart-badge absolute -top-2 -right-2 bg-[#8B4513] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center';
+                    countBadge.className = 'cart-badge absolute -top-1 -right-1 bg-[#8B4513] text-white rounded-full flex items-center justify-center';
                     countBadge.textContent = data.count;
                     document.querySelector('.fa-shopping-cart').parentElement.appendChild(countBadge);
                 }
@@ -200,34 +224,30 @@ let lastScrollTop = 0;
 let lastScrollTime = Date.now();
 let scrollVelocity = 0;
 const navbar = document.querySelector('.navbar');
-const scrollThreshold = 50; // Minimum scroll amount to trigger animation
-const velocityThreshold = 0.5; // Minimum velocity to trigger animation
+const scrollThreshold = 50;
+const velocityThreshold = 0.5;
 
 window.addEventListener('scroll', function() {
     const currentScroll = window.scrollY;
     const currentTime = Date.now();
     const timeDiff = currentTime - lastScrollTime;
     
-    // Calculate scroll velocity (pixels per millisecond)
     scrollVelocity = Math.abs(currentScroll - lastScrollTop) / timeDiff;
     
-    // Update last scroll position and time
     lastScrollTop = currentScroll;
     lastScrollTime = currentTime;
     
-    // Only trigger animation if we've scrolled past threshold and have sufficient velocity
     if (currentScroll > scrollThreshold && scrollVelocity > velocityThreshold) {
         navbar.classList.add('navbar-scrolled');
-        navbar.classList.add('py-4');
-        navbar.classList.remove('py-6');
+        navbar.classList.add('py-2');
+        navbar.classList.remove('py-4');
         
-        // Adjust animation speed based on scroll velocity
         const animationSpeed = Math.min(0.4, 0.2 + (scrollVelocity * 0.1));
         navbar.style.transition = `all ${animationSpeed}s cubic-bezier(0.4, 0, 0.2, 1)`;
     } else if (currentScroll <= scrollThreshold) {
         navbar.classList.remove('navbar-scrolled');
-        navbar.classList.add('py-6');
-        navbar.classList.remove('py-4');
+        navbar.classList.add('py-4');
+        navbar.classList.remove('py-2');
         navbar.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
     }
 });
