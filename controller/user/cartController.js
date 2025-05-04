@@ -210,6 +210,10 @@ const cartController = {
                     priceAfterOffer = originalPrice - offerDiscount;
                 }
 
+                // Calculate GST and shipping for this item
+                const itemGstAmount = Math.round(priceAfterOffer * 0.18);
+                const itemShippingCost = Math.round(priceAfterOffer * 0.02);
+
                 // Calculate subtotal for this product after offer
                 const subtotalAfterOffer = priceAfterOffer * item.quantity;
 
@@ -220,6 +224,8 @@ const cartController = {
                     offer: applicableOffer,
                     offerDiscountforproduct: offerDiscount * item.quantity,
                     subtotalAfterOffer,
+                    gstAmount: itemGstAmount * item.quantity,
+                    shippingCost: itemShippingCost * item.quantity,
                     stock: variant ? variant.stock : 0
                 };
             }));
@@ -228,22 +234,20 @@ const cartController = {
             let totalSubtotalAfterOffers = 0;
             let originalSubtotal = 0;
             let totalOfferDiscount = 0;
+            let totalGstAmount = 0;
+            let totalShippingCost = 0;
             processedCartItems.forEach(item => {
                 if (item.productId && item.productId.status === 'Active') {
                     originalSubtotal += item.originalPrice * item.quantity;
                     totalOfferDiscount += item.offerDiscountforproduct;
                     totalSubtotalAfterOffers += item.subtotalAfterOffer;
+                    totalGstAmount += item.gstAmount;
+                    totalShippingCost += item.shippingCost;
                 }
             });
 
-            // Calculate GST (18% of subtotal after offers)
-            const gstAmount = Math.round(totalSubtotalAfterOffers * 0.18);
-
-            // Calculate shipping (5% of subtotal after offers)
-            const shippingCost = totalSubtotalAfterOffers > 0 ? Math.round(totalSubtotalAfterOffers * 0.02) : 0;
-
             // Calculate final total
-            const total = totalSubtotalAfterOffers + gstAmount + shippingCost;
+            const total = totalSubtotalAfterOffers + totalGstAmount + totalShippingCost;
 
             // Get cart count for the navbar
             const cartCount = await CartItem.countDocuments({ userId });
@@ -255,8 +259,8 @@ const cartController = {
                 originalSubtotal,
                 totalOfferDiscount,
                 subtotal: totalSubtotalAfterOffers,
-                gstAmount,
-                shippingCost,
+                gstAmount: totalGstAmount,
+                shippingCost: totalShippingCost,
                 total,
                 currentPage: 'cart',
                 cartCount

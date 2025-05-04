@@ -123,6 +123,12 @@
                                         class="w-full bg-gray-800 text-white py-2 rounded hover:bg-gray-700">
                                     Apply Coupon
                                 </button>
+                                <div id="removeCouponButton" class="hidden">
+                                    <button onclick="removeCoupon()" 
+                                            class="w-full mt-2 bg-red-600 text-white py-2 rounded hover:bg-red-700">
+                                        Remove Coupon
+                                    </button>
+                                </div>
                             <% } else { %>
                                 <p class="text-sm text-gray-600">No coupons available for this order</p>
                             <% } %>
@@ -149,20 +155,25 @@
                                 <span>-₹<span id="couponDiscountAmount">0.00</span></span>
                             </div>
 
-                            <div class="flex justify-between text-gray-600">
-                                <span>GST (18%)</span>
-                                <span>₹<span id="gstAmount"><%= gstAmount.toFixed(2) %></span></span>
+                            <div class="flex justify-between">
+                                <span>Subtotal After Offer</span>
+                                <span>₹<span id="subtotalAfterOffer"><%= subtotal.toFixed(2) %></span></span>
                             </div>
 
                             <div class="flex justify-between">
-                                <span>Shipping (2%)</span>
+                                <span>GST (18% of subtotal)</span>
+                                <span>₹<span id="gstAmount"><%= Math.round(subtotal * 0.18).toFixed(2) %></span></span>
+                            </div>
+
+                            <div class="flex justify-between">
+                                <span>Shipping (2% of subtotal)</span>
                                 <span>₹<span id="shippingCost"><%= shippingCost.toFixed(2) %></span></span>
                             </div>
 
                             <div class="border-t pt-3">
                                 <div class="flex justify-between font-bold">
                                     <span>Total</span>
-                                    <span>₹<span id="finalTotal"><%= total.toFixed(2) %></span></span>
+                                    <span>₹<span id="finalTotal"><%= (subtotal + Math.round(subtotal * 0.18) + shippingCost).toFixed(2) %></span></span>
                                 </div>
                             </div>
                         </div>
@@ -182,12 +193,12 @@
                                 <label class="flex items-center gap-2" id="walletPaymentLabel">
                                     <input type="radio" name="paymentMethod" value="wallet" 
                                            id="walletPayment" 
-                                           <%= walletBalance < total ? 'disabled' : '' %>>
+                                           <%= walletBalance < (subtotal + Math.round(subtotal * 0.18) + shippingCost) ? 'disabled' : '' %>>
                                     <div>
                                         <span>Wallet</span>
-                                        <p class="text-sm <%= walletBalance >= total ? 'text-green-600' : 'text-red-600' %>">
+                                        <p class="text-sm <%= walletBalance >= (subtotal + Math.round(subtotal * 0.18) + shippingCost) ? 'text-green-600' : 'text-red-600' %>">
                                             Balance: ₹<%= walletBalance.toFixed(2) %>
-                                            <% if (walletBalance < total) { %>
+                                            <% if (walletBalance < (subtotal + Math.round(subtotal * 0.18) + shippingCost)) { %>
                                                 (Insufficient balance)
                                             <% } %>
                                         </p>
@@ -216,9 +227,42 @@
 let appliedCoupon = null;
 let rzpInstance = null;
 
-// Get the pre-calculated data from the server as a plain JSON string
+// Function to calculate all amounts
+function calculateAmounts(subtotal, offerDiscount = 0, couponDiscount = 0) {
+    // Calculate subtotal after coupon (subtotal already includes offer discount)
+    const subtotalAfterCoupon = subtotal - couponDiscount;
+
+    // Calculate GST and shipping
+    const totalGstAmount = Math.round(subtotalAfterCoupon * 0.18);
+    const totalShippingCost = Math.round(subtotalAfterCoupon * 0.02);
+
+    // Calculate final total
+    const finalTotal = subtotalAfterCoupon + totalGstAmount + totalShippingCost;
+
+    return {
+        originalSubtotal: subtotal + offerDiscount, // Add back offer discount to get original subtotal
+        subtotalAfterOffers: subtotal,
+        subtotalAfterCoupon,
+        gstAmount: totalGstAmount,
+        shippingCost: totalShippingCost,
+        finalTotal
+    };
+}
+
+// Function to update displayed amounts
+function updateDisplayedAmounts(amounts) {
+    document.getElementById('subtotalAfterOffer').textContent = amounts.subtotalAfterCoupon.toFixed(2);
+    document.getElementById('gstAmount').textContent = amounts.gstAmount.toFixed(2);
+    document.getElementById('shippingCost').textContent = amounts.shippingCost.toFixed(2);
+    document.getElementById('finalTotal').textContent = amounts.finalTotal.toFixed(2);
+}
+
+// Update the cart items data to include correct calculations
 const cartItemsData = <%- JSON.stringify(cartItems.map(item => {
-    // Ensure all required fields are present and properly formatted
+    // Calculate price after offer
+    const priceAfterOffer = item.priceAfterOffer;
+    const offerDiscount = item.originalPrice - item.priceAfterOffer;
+    
     return {
         productId: item.productId._id,
         name: item.productId.name,
@@ -229,13 +273,11 @@ const cartItemsData = <%- JSON.stringify(cartItems.map(item => {
         originalPrice: Number(item.originalPrice),
         variantType: item.variantType,
         status: 'pending',
-        priceAfterOffer: Number(item.discountedPrice),
-        offerDiscount: Number(item.originalPrice - item.discountedPrice),
-        subtotalforproduct: Number(item.totalPrice),
-        gstAmount: Number(Math.round(item.totalPrice * 0.18)),
-        shippingCost: Number(Math.round(item.totalPrice * 0.02)),
-        finalPrice: Number(item.discountedPrice),
-        finalAmount: Number(item.totalPrice),
+        priceAfterOffer: Number(priceAfterOffer),
+        offerDiscount: Number(offerDiscount),
+        subtotalforproduct: Number(priceAfterOffer * item.quantity),
+        finalPrice: Number(priceAfterOffer),
+        finalAmount: Number(priceAfterOffer * item.quantity),
         couponDiscount: 0,
         couponForProduct: null,
         offer: item.offer ? {
@@ -245,38 +287,6 @@ const cartItemsData = <%- JSON.stringify(cartItems.map(item => {
         } : null
     };
 })) %>;
-
-// Function to calculate all amounts
-function calculateAmounts(subtotal, offerDiscount = 0, couponDiscount = 0) {
-    // Calculate subtotal after offers and coupons
-    const subtotalAfterOffers = subtotal - offerDiscount;
-    const subtotalAfterCoupon = subtotalAfterOffers - couponDiscount;
-
-    // Calculate GST (18% of subtotal after all discounts)
-    const gstAmount = Math.round(subtotalAfterCoupon * 0.18);
-
-    // Calculate shipping (2% of subtotal after all discounts)
-    const shippingCost = subtotalAfterCoupon > 0 ? Math.round(subtotalAfterCoupon * 0.02) : 0;
-
-    // Calculate final total
-    const finalTotal = subtotalAfterCoupon + gstAmount + shippingCost;
-
-    return {
-        originalSubtotal: subtotal,
-        subtotalAfterOffers,
-        subtotalAfterCoupon,
-        gstAmount,
-        shippingCost,
-        finalTotal
-    };
-}
-
-// Function to update displayed amounts
-function updateDisplayedAmounts(amounts) {
-    document.getElementById('gstAmount').textContent = amounts.gstAmount.toFixed(2);
-    document.getElementById('shippingCost').textContent = amounts.shippingCost.toFixed(2);
-    document.getElementById('finalTotal').textContent = amounts.finalTotal.toFixed(2);
-}
 
 async function applyCoupon() {
     try {
@@ -311,6 +321,9 @@ async function applyCoupon() {
             document.getElementById('couponDiscountAmount').textContent = 
                 data.discount.toFixed(2);
 
+            // Show remove coupon button
+            document.getElementById('removeCouponButton').classList.remove('hidden');
+
             // Calculate all amounts with the new coupon discount
             const amounts = calculateAmounts(subtotalValue, offerDiscountValue, data.discount);
             
@@ -344,10 +357,13 @@ async function applyCoupon() {
     }
 }
 
-// Function to remove coupon and recalculate amounts
+// Update the removeCoupon function
 function removeCoupon() {
     // Hide coupon discount row
     document.getElementById('couponDiscountRow').classList.add('hidden');
+    
+    // Hide remove coupon button
+    document.getElementById('removeCouponButton').classList.add('hidden');
     
     // Reset coupon discount
     document.getElementById('couponDiscountAmount').textContent = '0.00';
@@ -493,8 +509,15 @@ async function placeOrder() {
                 modal: {
                     ondismiss: function() {
                         console.log('Payment modal dismissed');
-                        showError('Payment was cancelled. Please try again.');
-                        resetButtonState();
+                        // Show payment cancelled notification
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Payment Cancelled',
+                            text: 'You have cancelled the payment. No order has been created.',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            resetButtonState();
+                        });
                     }
                 },
                 prefill: responseData.razorpayOrder.prefill,
@@ -507,8 +530,8 @@ async function placeOrder() {
             // Add event listeners
             rzpInstance.on('payment.failed', function(response) {
                 console.error('Payment failed:', response);
-                showError('Payment failed. Please try again.');
-                resetButtonState();
+                // Redirect to payment failed page
+                window.location.href = `/payment/failed/${responseData.orderId}`;
             });
 
             // Open the payment modal

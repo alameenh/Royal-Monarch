@@ -117,6 +117,7 @@ router.post('/order/:orderId/return/:itemId', userMiddleware.checkSession, order
 // Add this route
 router.get('/order/success/:orderId', userMiddleware.checkSession, orderController.getOrderSuccess);
 router.get('/order/:orderId/invoice/:itemId', userMiddleware.checkSession, orderController.generateInvoice);
+router.get('/payment/failed/:orderId', userMiddleware.checkSession, shopController.getPaymentFailed);
 
 router.post('/apply-coupon', userMiddleware.checkSession, orderController.applyCoupon);
 
