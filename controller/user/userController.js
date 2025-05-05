@@ -397,18 +397,6 @@ const getLogout = (req, res) => {
 
 const postLogin = async (req, res) => {
     try {
-        console.log('=====================');
-        console.log('POST LOGIN FUNCTION CALLED');
-        console.log('=====================');
-        console.log('Request received at:', new Date().toISOString());
-        console.log('Request method:', req.method);
-        console.log('Request path:', req.path);
-        console.log('Request headers:', JSON.stringify(req.headers, null, 2));
-        console.log('Raw request body:', req.body);
-        console.log('Parsed request body:', JSON.stringify(req.body, null, 2));
-        console.log('Request query:', JSON.stringify(req.query, null, 2));
-        console.log('=====================');
-
         // Validate request body structure
         if (!req.body || typeof req.body !== 'object') {
             console.log('Invalid request body structure:', {

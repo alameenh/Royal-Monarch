@@ -107,6 +107,9 @@ router.post('/change-password', userMiddleware.checkSession, userController.post
 // Order routes
 router.get('/checkout', userMiddleware.checkSession, orderController.getCheckout);
 router.post('/order/create', userMiddleware.checkSession, shopController.createOrder);
+router.post('/order/verify-payment', userMiddleware.checkSession, shopController.verifyPayment);
+router.get('/order/success/:orderId', userMiddleware.checkSession, orderController.getOrderSuccess);
+router.post('/order/:orderId/retry-payment', userMiddleware.checkSession, shopController.retryPayment);
 
 // Order management routes
 router.get('/orders', userMiddleware.checkSession, orderController.getOrders);
@@ -126,7 +129,7 @@ router.get('/wallet', userMiddleware.checkSession, walletController.getWallet);
 router.post('/wallet/create-order', userMiddleware.checkSession, walletController.createOrder);
 router.post('/wallet/verify-payment', userMiddleware.checkSession, walletController.verifyPayment);
 
-router.post('/order/verify-payment', orderController.verifyPayment);
+router.post('/order/verify-payment', userMiddleware.checkSession, shopController.verifyPayment);
 
 // Add retry payment route
 router.post('/order/:orderId/retry-payment', userMiddleware.checkSession, orderController.retryPayment);

@@ -361,7 +361,6 @@ async function applyCoupon() {
 function removeCoupon() {
     // Hide coupon discount row
     document.getElementById('couponDiscountRow').classList.add('hidden');
-    
     // Hide remove coupon button
     document.getElementById('removeCouponButton').classList.add('hidden');
     
@@ -444,11 +443,26 @@ async function placeOrder() {
             throw new Error('Cart is empty');
         }
 
+        // Get coupon data if applied
+        let couponData = null;
+        if (appliedCoupon) {
+            const couponSelect = document.getElementById('couponSelect');
+            const selectedOption = couponSelect.options[couponSelect.selectedIndex];
+            couponData = {
+                id: appliedCoupon.id,
+                code: appliedCoupon.code,
+                type: selectedOption.dataset.type,
+                value: parseFloat(selectedOption.dataset.value),
+                maxDiscount: selectedOption.dataset.max ? parseFloat(selectedOption.dataset.max) : null,
+                discount: appliedCoupon.discount
+            };
+        }
+
         // Prepare form data
         const formData = {
             addressId: selectedAddress.value,
             paymentMethod: paymentMethod,
-            couponCode: appliedCoupon ? appliedCoupon.code : null,
+            coupon: couponData,
             items: processedItems,
             totalAmount: Number(document.getElementById('finalTotal').textContent),
             originalSubtotal: Number('<%= originalSubtotal %>'),
@@ -474,6 +488,7 @@ async function placeOrder() {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify(formData)
         });
 
@@ -491,8 +506,6 @@ async function placeOrder() {
 
         // Handle different payment methods
         if (paymentMethod === 'online' && responseData.razorpayOrder) {
-            console.log('Initializing Razorpay with order:', responseData.razorpayOrder);
-
             // Initialize Razorpay
             const options = {
                 key: responseData.razorpayOrder.key,
@@ -501,23 +514,63 @@ async function placeOrder() {
                 name: responseData.razorpayOrder.name,
                 description: responseData.razorpayOrder.description,
                 order_id: responseData.razorpayOrder.id,
-                handler: function(response) {
-                    console.log('Payment successful:', response);
-                    // Handle successful payment
-                    window.location.href = `/order/success/${responseData.orderId}`;
+                handler: async function(response) {
+                    try {
+                        // Verify payment with server
+                        const verifyResponse = await fetch('/order/verify-payment', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify({
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_signature: response.razorpay_signature
+                            })
+                        });
+
+                        const verifyData = await verifyResponse.json();
+                        window.location.href = verifyData.redirect;
+                    } catch (error) {
+                        console.error('Payment verification error:', error);
+                        showError(error.message || 'Error verifying payment');
+                        resetButtonState();
+                    }
                 },
                 modal: {
-                    ondismiss: function() {
-                        console.log('Payment modal dismissed');
-                        // Show payment cancelled notification
-                        Swal.fire({
-                            icon: 'info',
-                            title: 'Payment Cancelled',
-                            text: 'You have cancelled the payment. No order has been created.',
-                            confirmButtonText: 'OK'
-                        }).then(() => {
+                    ondismiss: async function() {
+                        try {
+                            // When modal is dismissed, verify payment with empty signature
+                            const verifyResponse = await fetch('/order/verify-payment', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                credentials: 'include',
+                                body: JSON.stringify({
+                                    razorpay_order_id: responseData.razorpayOrder.id,
+                                    razorpay_payment_id: '',
+                                    razorpay_signature: ''
+                                })
+                            });
+
+                            const verifyData = await verifyResponse.json();
+                            
+                            // Show payment cancelled notification
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Payment Cancelled',
+                                text: 'Your order has been saved with pending payment status. You can retry the payment later.',
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                window.location.href = verifyData.redirect;
+                            });
+                        } catch (error) {
+                            console.error('Error handling modal dismissal:', error);
+                            showError('Error processing your request. Please try again.');
                             resetButtonState();
-                        });
+                        }
                     }
                 },
                 prefill: responseData.razorpayOrder.prefill,
@@ -528,10 +581,29 @@ async function placeOrder() {
             rzpInstance = new Razorpay(options);
 
             // Add event listeners
-            rzpInstance.on('payment.failed', function(response) {
-                console.error('Payment failed:', response);
-                // Redirect to payment failed page
-                window.location.href = `/payment/failed/${responseData.orderId}`;
+            rzpInstance.on('payment.failed', async function(response) {
+                try {
+                    // Verify payment with server even for failed payments
+                    const verifyResponse = await fetch('/order/verify-payment', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            razorpay_order_id: responseData.razorpayOrder.id,
+                            razorpay_payment_id: response.error.metadata.payment_id || '',
+                            razorpay_signature: ''
+                        })
+                    });
+
+                    const verifyData = await verifyResponse.json();
+                    window.location.href = verifyData.redirect;
+                } catch (error) {
+                    console.error('Payment failed error:', error);
+                    showError('Error processing failed payment. Please try again.');
+                    resetButtonState();
+                }
             });
 
             // Open the payment modal

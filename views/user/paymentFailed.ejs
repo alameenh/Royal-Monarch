@@ -23,9 +23,9 @@
             </div>
 
             <div class="mt-6 flex justify-center space-x-4">
-                <a href="/checkout" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Try Again
-                </a>
+                <button onclick="retryPayment()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Retry Payment
+                </button>
                 <a href="/orders" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     View Orders
                 </a>
@@ -33,5 +33,70 @@
         </div>
     </div>
 </div>
+
+<script>
+async function retryPayment() {
+    try {
+        const response = await fetch(`/order/${orderId}/retry-payment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            const options = {
+                key: data.razorpayKey,
+                amount: data.amount,
+                currency: data.currency,
+                order_id: data.order_id,
+                name: "Royal Monarch",
+                description: "Order Payment",
+                prefill: {
+                    name: data.customerName,
+                    email: data.customerEmail,
+                    contact: data.customerPhone
+                },
+                theme: {
+                    color: "#000000"
+                },
+                handler: async function(response) {
+                    try {
+                        const verifyResponse = await fetch('/order/verify-payment', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify({
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_signature: response.razorpay_signature
+                            })
+                        });
+
+                        const verifyData = await verifyResponse.json();
+                        window.location.href = verifyData.redirect;
+                    } catch (error) {
+                        console.error('Payment verification error:', error);
+                        alert('Error verifying payment. Please try again.');
+                    }
+                }
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.open();
+        } else {
+            alert('Failed to initialize payment. Please try again.');
+        }
+    } catch (error) {
+        console.error('Retry payment error:', error);
+        alert('Error processing payment. Please try again.');
+    }
+}
+</script>
 
 <%- include('../partials/footer') %> 

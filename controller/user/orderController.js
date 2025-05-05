@@ -10,6 +10,7 @@ import Coupon from '../../model/couponModel.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import Wallet from '../../model/walletModel.js';
+import mongoose from 'mongoose';
 
 // Initialize Razorpay with proper error handling
 const razorpay = new Razorpay({
@@ -1089,33 +1090,130 @@ const orderController = {
 
             // Verify signature
             if (expectedSignature === razorpay_signature) {
-                const order = await Order.findOne({
-                    'paymentDetails.razorpayOrderId': razorpay_order_id
-                });
-
-                if (!order) {
-                    throw new Error('Order not found');
+                // Get the Razorpay order details
+                const razorpayOrder = await razorpay.orders.fetch(razorpay_order_id);
+                if (!razorpayOrder) {
+                    throw new Error('Razorpay order not found');
                 }
 
-                // Update order status and payment details
-                order.paymentStatus = 'paid';
-                order.paymentDetails = {
-                    ...order.paymentDetails,
-                    razorpayPaymentId: razorpay_payment_id,
-                    razorpaySignature: razorpay_signature,
-                    status: 'paid',
-                    paidAt: new Date()
-                };
-                await order.save();
+                // Extract order data from Razorpay notes
+                const notes = razorpayOrder.notes;
+                const userId = notes.userId;
+                const addressId = notes.addressId;
+                const items = JSON.parse(notes.items);
+                const coupon = notes.coupon ? JSON.parse(notes.coupon) : null;
+                const totalAmount = razorpayOrder.amount / 100;
+                const subtotal = notes.subtotal;
+                const totalOfferDiscount = notes.offerDiscount;
+                const totalCouponDiscount = notes.couponDiscount;
+                const totalGstAmount = notes.gst;
+                const totalShippingCost = notes.shipping;
 
-                // Clear cart after successful payment
-                await CartItem.deleteMany({ userId: order.userId });
+                // Get address details
+                const address = await Address.findOne({ _id: addressId, userId });
+                if (!address) {
+                    throw new Error('Address not found');
+                }
 
-                return res.json({
-                    success: true,
-                    message: 'Payment verified successfully',
-                    redirect: `/order/success/${order.orderId}`
-                });
+                // Start a session for transaction
+                const session = await mongoose.startSession();
+                session.startTransaction();
+
+                try {
+                    // Create the order
+                    const newOrderId = uuidv4();
+                    const order = new Order({
+                        orderId: newOrderId,
+                        userId,
+                        items,
+                        totalAmount,
+                        originalSubtotal: subtotal + totalOfferDiscount + totalCouponDiscount,
+                        totalOfferDiscount,
+                        totalCouponDiscount,
+                        subtotal,
+                        gstAmount: totalGstAmount,
+                        shippingCost: totalShippingCost,
+                        paymentMethod: 'online',
+                        paymentStatus: 'paid',
+                        shippingAddress: {
+                            name: address.name,
+                            houseName: address.houseName,
+                            localityStreet: address.localityStreet,
+                            city: address.city,
+                            state: address.state,
+                            pincode: address.pincode,
+                            phone: address.phone,
+                            alternatePhone: address.alternatePhone
+                        },
+                        expectedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                        coupon: coupon ? {
+                            code: coupon.code,
+                            discount: totalCouponDiscount,
+                            type: coupon.type
+                        } : null,
+                        paymentDetails: {
+                            razorpayOrderId: razorpay_order_id,
+                            razorpayPaymentId: razorpay_payment_id,
+                            razorpaySignature: razorpay_signature,
+                            status: 'paid',
+                            paidAt: new Date()
+                        }
+                    });
+
+                    // Update product stock
+                    for (const item of items) {
+                        const product = await Product.findById(item.productId).session(session);
+                        if (!product) {
+                            throw new Error(`Product ${item.name} not found`);
+                        }
+
+                        const variant = product.variants.find(v => v.type === item.variantType);
+                        if (!variant) {
+                            throw new Error(`Variant ${item.variantType} not found for ${product.name}`);
+                        }
+
+                        if (variant.stock < item.quantity) {
+                            throw new Error(`Insufficient stock for ${product.name} (${item.variantType})`);
+                        }
+
+                        variant.stock -= item.quantity;
+                        await product.save({ session });
+                    }
+
+                    // Update coupon usage if applied
+                    if (coupon && coupon.id) {
+                        await Coupon.findByIdAndUpdate(
+                            coupon.id,
+                            {
+                                $push: {
+                                    usageHistory: {
+                                        userId: userId,
+                                        orderId: newOrderId,
+                                        usedAt: new Date()
+                                    }
+                                }
+                            },
+                            { session }
+                        );
+                    }
+
+                    // Save the order and clear cart
+                    await order.save({ session });
+                    await CartItem.deleteMany({ userId }).session(session);
+                    await session.commitTransaction();
+
+                    return res.json({
+                        success: true,
+                        message: 'Payment verified successfully',
+                        orderId: newOrderId,
+                        redirect: `/order/success/${newOrderId}`
+                    });
+                } catch (error) {
+                    await session.abortTransaction();
+                    throw error;
+                } finally {
+                    session.endSession();
+                }
             }
 
             throw new Error('Payment verification failed');
@@ -1201,10 +1299,7 @@ const orderController = {
 
     searchOrders: async (req, res) => {
         try {
-            console.log('Search Orders Request:', {
-                userId: req.session.userId,
-                query: req.query
-            });
+            
 
             const userId = req.session.userId;
             if (!userId) {
