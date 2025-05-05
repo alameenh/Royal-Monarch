@@ -11,20 +11,21 @@
                 <div class="bg-white rounded-xl shadow-sm p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-semibold">Shipping Address</h2>
-                        <a href="/address" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        <button onclick="openAddAddressModal()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
                             <i class="fas fa-plus mr-1"></i>Add New Address
-                        </a>
+                        </button>
                     </div>
 
                     <div class="space-y-4">
                         <% if (addresses && addresses.length > 0) { %>
-                            <% addresses.forEach(address => { %>
+                            <% addresses.forEach((address, index) => { %>
                                 <div class="border rounded-lg p-4 hover:border-black transition-colors cursor-pointer">
                                     <label class="flex items-start gap-4 cursor-pointer">
                                         <input type="radio" 
                                                name="selectedAddress" 
                                                value="<%= address._id %>"
                                                class="mt-1"
+                                               <%= index === 0 ? 'checked' : '' %>
                                                required>
                                         <div class="flex-grow">
                                             <div class="flex justify-between items-start">
@@ -227,6 +228,74 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Add Address Modal -->
+<div id="addAddressModal" class="fixed inset-0 bg-gray-100/50 backdrop-blur-sm hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4 transform transition-all shadow-xl">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold">Add New Address</h3>
+            <button onclick="closeAddAddressModal()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="addAddressForm" onsubmit="handleAddAddress(event)">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Full Name</label>
+                    <input type="text" name="name" required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">House Name/Number</label>
+                    <input type="text" name="houseName" required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Street/Locality</label>
+                    <input type="text" name="localityStreet" required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">City</label>
+                        <input type="text" name="city" required
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">State</label>
+                        <input type="text" name="state" required
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Pincode</label>
+                    <input type="text" name="pincode" required pattern="[0-9]{6}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Phone Number</label>
+                    <input type="tel" name="phone" required pattern="[0-9]{10}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Alternate Phone (Optional)</label>
+                    <input type="tel" name="alternatePhone" pattern="[0-9]{10}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="closeAddAddressModal()"
+                        class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800">
+                    Add Address
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -720,6 +789,12 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Razorpay script not loaded');
         // You might want to show an error message to the user
     }
+
+    // Select first address by default
+    const firstAddress = document.querySelector('input[name="selectedAddress"]');
+    if (firstAddress) {
+        firstAddress.checked = true;
+    }
 });
 
 // Update payment options when total changes
@@ -750,6 +825,66 @@ function updatePaymentOptions() {
     } else {
         walletPayment.disabled = false;
         walletPaymentLabel.classList.remove('opacity-50');
+    }
+}
+
+// Add Address Modal Functions
+function openAddAddressModal() {
+    document.getElementById('addAddressModal').classList.remove('hidden');
+    document.getElementById('addAddressModal').classList.add('flex');
+}
+
+function closeAddAddressModal() {
+    document.getElementById('addAddressModal').classList.add('hidden');
+    document.getElementById('addAddressModal').classList.remove('flex');
+    document.getElementById('addAddressForm').reset();
+}
+
+async function handleAddAddress(event) {
+    event.preventDefault();
+    
+    try {
+        const formData = new FormData(event.target);
+        const addressData = Object.fromEntries(formData.entries());
+        
+        const response = await fetch('/address/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(addressData)
+        });
+        
+        // Check if the response is a redirect
+        if (response.redirected) {
+            // Close modal and refresh the page
+            closeAddAddressModal();
+            window.location.reload();
+            return;
+        }
+
+        // Try to parse JSON response
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            if (data.success) {
+                closeAddAddressModal();
+                window.location.reload();
+            } else {
+                throw new Error(data.message || 'Failed to add address');
+            }
+        } else {
+            // If not JSON, assume success and reload
+            closeAddAddressModal();
+            window.location.reload();
+        }
+    } catch (error) {
+        console.error('Error adding address:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to add address. Please try again.'
+        });
     }
 }
 </script>
