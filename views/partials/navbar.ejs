@@ -11,64 +11,74 @@
     <link rel="stylesheet" href="https://raw.githubusercontent.com/rosshatokay/toasterjs/main/src/toaster.css" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* Add padding to body to prevent content from being hidden behind fixed navbar */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
         body {
             font-family: 'Georgia', serif;
             background-color: #f8f5f0;
             color: #2c2c2c;
-            padding-top: 3.5rem;
+            padding-top: 5rem;
         }
         
-        /* Classic font styling */
-        .font-classic {
-            font-family: 'Georgia', serif;
-            letter-spacing: 0.03em;
+        .navbar {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 245, 240, 0.95));
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(139, 69, 19, 0.1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 5rem;
+            animation: fadeIn 0.6s ease-out;
         }
-        
-        /* Classic elegant divider */
-        .elegant-divider {
-            position: relative;
-        }
-        
-        .elegant-divider::after {
+
+        .navbar::before {
             content: '';
             position: absolute;
-            bottom: -3px;
+            top: 0;
             left: 0;
-            width: 100%;
+            right: 0;
             height: 1px;
-            background: linear-gradient(to right, transparent, #8B4513, transparent);
-        }
-        
-        /* Classic elegant button */
-        .btn-classic {
-            background-color: transparent;
-            border: 1px solid #8B4513;
-            color: #8B4513;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-classic:hover {
-            background-color: #8B4513;
-            color: #fff;
-        }
-        
-        /* Navbar height */
-        .nav-height {
-            height: 3.5rem;
+            background: linear-gradient(to right, 
+                transparent, 
+                rgba(139, 69, 19, 0.2), 
+                transparent
+            );
         }
 
-        /* Enhanced Navbar Animations */
+        .navbar-scrolled {
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            height: 4.5rem;
+        }
+
         .nav-link {
             position: relative;
+            font-family: 'Georgia', serif;
+            font-size: 0.875rem;
+            letter-spacing: 0.05em;
+            color: #2c2c2c;
             transition: all 0.3s ease;
-            font-size: 0.75rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
         }
 
-        @media (min-width: 640px) {
-            .nav-link {
-                font-size: 0.875rem;
-            }
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(139, 69, 19, 0.1), transparent);
+            border-radius: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
         .nav-link::after {
@@ -76,117 +86,193 @@
             position: absolute;
             width: 0;
             height: 2px;
-            bottom: -4px;
-            left: 0;
-            background-color: #8B4513;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(to right, #8B4513, #A0522D);
             transition: width 0.3s ease;
         }
 
+        .nav-link:hover {
+            color: #8B4513;
+        }
+
+        .nav-link:hover::before {
+            opacity: 1;
+        }
+
         .nav-link:hover::after {
-            width: 100%;
+            width: 80%;
         }
 
         .nav-icon {
+            color: #2c2c2c;
             transition: all 0.3s ease;
-            transform-origin: center;
-            font-size: 0.875rem;
+            font-size: 1.125rem;
+            padding: 0.5rem;
+            border-radius: 50%;
+            position: relative;
         }
 
-        @media (min-width: 640px) {
-            .nav-icon {
-                font-size: 1rem;
-            }
+        .nav-icon::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(139, 69, 19, 0.1), transparent);
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
         .nav-icon:hover {
-            transform: scale(1.1);
             color: #8B4513;
+            transform: scale(1.1);
+        }
+
+        .nav-icon:hover::before {
+            opacity: 1;
         }
 
         .logo-container {
             transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .logo-container::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 2px;
+            background: linear-gradient(to right, #8B4513, #A0522D);
+            transition: width 0.3s ease;
         }
 
         .logo-container:hover {
             transform: scale(1.02);
         }
 
-        .cart-badge {
-            transition: all 0.3s ease;
-            font-size: 0.625rem;
-            height: 1rem;
-            width: 1rem;
+        .logo-container:hover::after {
+            width: 80%;
         }
 
-        @media (min-width: 640px) {
-            .cart-badge {
-                font-size: 0.75rem;
-                height: 1.25rem;
-                width: 1.25rem;
-            }
+        .brand-name {
+            font-family: 'Georgia', serif;
+            color: #8B4513;
+            letter-spacing: 0.1em;
+            position: relative;
+            background: linear-gradient(90deg, #8B4513, #A0522D, #8B4513);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 3s linear infinite;
+        }
+
+        .brand-tagline {
+            font-family: 'Georgia', serif;
+            color: #666;
+            letter-spacing: 0.05em;
+            position: relative;
+        }
+
+        .cart-badge {
+            background: linear-gradient(135deg, #8B4513, #A0522D);
+            color: white;
+            font-size: 0.75rem;
+            height: 1.25rem;
+            width: 1.25rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(139, 69, 19, 0.2);
         }
 
         .cart-badge:hover {
             transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(139, 69, 19, 0.3);
         }
 
-        /* Navbar scroll effects */
-        .navbar {
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            height: 3.5rem;
+        @media (max-width: 640px) {
+            .nav-link {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.8rem;
+            }
+            .nav-icon {
+                font-size: 1rem;
+                padding: 0.4rem;
+            }
+            .cart-badge {
+                font-size: 0.625rem;
+                height: 1rem;
+                width: 1rem;
+            }
+            .brand-name {
+                font-size: 0.875rem;
+            }
+            .brand-tagline {
+                font-size: 0.625rem;
+            }
         }
 
-        .navbar-scrolled {
-            margin: 0 auto;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            height: 3rem;
+        /* Add a subtle shine effect to the navbar */
+        .navbar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(
+                to right,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            transform: skewX(-25deg);
+            animation: shine 8s infinite;
         }
 
-        .navbar-scrolled .logo-container {
-            transform: scale(0.9);
-        }
-
-        .navbar-scrolled .nav-link {
-            font-size: 0.75rem;
-        }
-
-        .navbar-scrolled .nav-icon {
-            transform: scale(0.9);
+        @keyframes shine {
+            0% { left: -100%; }
+            20% { left: 100%; }
+            100% { left: 100%; }
         }
     </style>
 </head>
 
 <body>
 
-<nav class="navbar fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-2 sm:px-4 md:px-6 py-2 border-b border-gray-200 shadow-sm bg-white transition-all duration-300 w-full">
+<nav class="navbar fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 md:px-8 py-4">
     <!-- Left navigation links -->
-    <div class="flex items-center space-x-2 sm:space-x-4 md:space-x-6">
-        <a href="/home" class="nav-link text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic uppercase tracking-wider">Home</a>
-        <a href="/shop" class="nav-link text-gray-800 hover:text-[#8B4513] transition-colors duration-300 font-classic uppercase tracking-wider">Shop</a>
+    <div class="flex items-center space-x-4 sm:space-x-6 md:space-x-8">
+        <a href="/home" class="nav-link uppercase tracking-wider">Home</a>
+        <a href="/shop" class="nav-link uppercase tracking-wider">Shop</a>
     </div>
     
-    <!-- Logo and brand name - centered with greater spacing -->
-    <div class="logo-container flex items-center space-x-1 sm:space-x-2 absolute left-1/2 transform -translate-x-1/2">
-        <img alt="Royal Monarch logo" src="/images/Royal Monarch logo.png" class="h-6 sm:h-8 md:h-10 transition-transform duration-300 hover:scale-105"/>
+    <!-- Logo and brand name - centered -->
+    <div class="logo-container flex items-center space-x-2 sm:space-x-3 absolute left-1/2 transform -translate-x-1/2">
+        <img alt="Royal Monarch logo" src="/images/Royal Monarch logo.png" class="h-10 sm:h-12 md:h-14 transition-transform duration-300 hover:scale-105"/>
         <div class="flex flex-col items-start justify-center">
-            <span class="text-[#8B4513] text-sm sm:text-base md:text-lg font-serif tracking-wider transition-colors duration-300 hover:text-[#6B3610]">ROYAL MONARCH</span>
-            <span class="text-gray-600 text-[0.6rem] sm:text-xs tracking-wider uppercase transition-colors duration-300 hover:text-gray-800 hidden sm:block">Luxury Automobiles</span>
+            <span class="brand-name text-lg sm:text-xl md:text-2xl font-serif tracking-wider">ROYAL MONARCH</span>
+            <span class="brand-tagline text-xs sm:text-sm tracking-wider uppercase hidden sm:block">Luxury Automobiles</span>
         </div>
     </div>
     
-    <!-- Right icons with increased spacing -->
-    <div class="flex items-center space-x-2 sm:space-x-4 md:space-x-6">
-        <a href="/wishlist" class="nav-icon text-gray-800 hover:text-[#8B4513] transition-colors duration-300">
+    <!-- Right icons -->
+    <div class="flex items-center space-x-4 sm:space-x-6 md:space-x-8">
+        <a href="/wishlist" class="nav-icon">
             <i class="fas fa-heart"></i>
         </a>
-        <a href="/profile" class="nav-icon text-gray-800 hover:text-[#8B4513] transition-colors duration-300">
+        <a href="/profile" class="nav-icon">
             <i class="fas fa-user"></i>
         </a>
-        <a href="/cart" class="nav-icon text-gray-800 hover:text-[#8B4513] transition-colors duration-300 relative">
+        <a href="/cart" class="nav-icon relative">
             <i class="fas fa-shopping-cart"></i>
             <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
-                <span class="cart-badge absolute -top-1 -right-1 bg-[#8B4513] text-white rounded-full flex items-center justify-center">
+                <span class="cart-badge absolute -top-1 -right-1 rounded-full flex items-center justify-center">
                     <%= cartCount %>
                 </span>
             <% } %>
@@ -197,18 +283,16 @@
 <script>
 // Update cart count whenever cart is updated
 document.addEventListener('cartUpdated', function() {
-    // Fetch updated cart count
     fetch('/cart/count')
         .then(response => response.json())
         .then(data => {
-            // Update cart count display
             const cartCountElement = document.querySelector('.fa-shopping-cart').nextElementSibling;
             if (data.count > 0) {
                 if (cartCountElement) {
                     cartCountElement.textContent = data.count;
                 } else {
                     const countBadge = document.createElement('span');
-                    countBadge.className = 'cart-badge absolute -top-1 -right-1 bg-[#8B4513] text-white rounded-full flex items-center justify-center';
+                    countBadge.className = 'cart-badge absolute -top-1 -right-1 rounded-full flex items-center justify-center';
                     countBadge.textContent = data.count;
                     document.querySelector('.fa-shopping-cart').parentElement.appendChild(countBadge);
                 }
@@ -219,7 +303,7 @@ document.addEventListener('cartUpdated', function() {
         .catch(error => console.error('Error updating cart count:', error));
 });
 
-// Navbar scroll effects with velocity-based animation
+// Enhanced scroll effects with smooth transitions
 let lastScrollTop = 0;
 let lastScrollTime = Date.now();
 let scrollVelocity = 0;
@@ -239,21 +323,33 @@ window.addEventListener('scroll', function() {
     
     if (currentScroll > scrollThreshold && scrollVelocity > velocityThreshold) {
         navbar.classList.add('navbar-scrolled');
-        navbar.classList.add('py-2');
-        navbar.classList.remove('py-4');
-        
-        const animationSpeed = Math.min(0.4, 0.2 + (scrollVelocity * 0.1));
-        navbar.style.transition = `all ${animationSpeed}s cubic-bezier(0.4, 0, 0.2, 1)`;
+        navbar.style.transform = 'translateY(-2px)';
     } else if (currentScroll <= scrollThreshold) {
         navbar.classList.remove('navbar-scrolled');
-        navbar.classList.add('py-4');
-        navbar.classList.remove('py-2');
-        navbar.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+        navbar.style.transform = 'translateY(0)';
     }
 });
 
 // Add smooth transition for hover effects
 document.querySelectorAll('.nav-link, .nav-icon, .logo-container, .cart-badge').forEach(element => {
     element.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+});
+
+// Add intersection observer for fade-in effects
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.style.opacity = '1';
+            entry.target.style.transform = 'translateY(0)';
+        }
+    });
+}, {
+    threshold: 0.1
+});
+
+document.querySelectorAll('.nav-link, .nav-icon').forEach(element => {
+    element.style.opacity = '0';
+    element.style.transform = 'translateY(-10px)';
+    observer.observe(element);
 });
 </script>

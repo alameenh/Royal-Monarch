@@ -1,43 +1,43 @@
 <%- include('../partials/navbar') %>
 
 <div class="min-h-screen bg-gray-50">
-    <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-8 text-center">Checkout</h1>
+    <div class="container">
+        <h1 class="text-2xl font-bold mb-6 text-center">Checkout</h1>
 
-        <div class="flex flex-col lg:flex-row gap-8">
+        <div class="flex flex-col lg:flex-row gap-6">
             <!-- Left Column -->
-            <div class="lg:w-2/3 space-y-6">
+            <div class="lg:w-2/3 space-y-4">
                 <!-- Shipping Address Section -->
-                <div class="bg-white rounded-xl shadow-sm p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-semibold">Shipping Address</h2>
-                        <button onclick="openAddAddressModal()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                <div class="checkout-card">
+                    <div class="checkout-header">
+                        <h2 class="checkout-title">Shipping Address</h2>
+                        <button onclick="openAddAddressModal()" class="checkout-text text-blue-600 hover:text-blue-800 font-medium">
                             <i class="fas fa-plus mr-1"></i>Add New Address
                         </button>
                     </div>
 
-                    <div class="space-y-4">
+                    <div class="checkout-body space-y-3">
                         <% if (addresses && addresses.length > 0) { %>
                             <% addresses.forEach((address, index) => { %>
-                                <div class="border rounded-lg p-4 hover:border-black transition-colors cursor-pointer">
-                                    <label class="flex items-start gap-4 cursor-pointer">
+                                <div class="border rounded-lg p-3 hover:border-black transition-colors cursor-pointer">
+                                    <label class="flex items-start gap-3 cursor-pointer">
                                         <input type="radio" 
                                                name="selectedAddress" 
                                                value="<%= address._id %>"
-                                               class="mt-1"
+                                               class="checkout-radio"
                                                <%= index === 0 ? 'checked' : '' %>
                                                required>
                                         <div class="flex-grow">
                                             <div class="flex justify-between items-start">
-                                                <p class="font-semibold"><%= address.name %></p>
-                                                <span class="text-sm text-gray-500">
+                                                <p class="checkout-text font-medium"><%= address.name %></p>
+                                                <span class="checkout-text text-gray-500">
                                                     <%= address.phone %>
                                                     <% if (address.alternatePhone) { %>
                                                         | <%= address.alternatePhone %>
                                                     <% } %>
                                                 </span>
                                             </div>
-                                            <p class="text-gray-600 mt-1">
+                                            <p class="checkout-text text-gray-600 mt-1">
                                                 <%= address.houseName %>, 
                                                 <%= address.localityStreet %>, 
                                                 <%= address.city %>, 
@@ -48,47 +48,49 @@
                                 </div>
                             <% }); %>
                         <% } else { %>
-                            <div class="text-center py-8 bg-gray-50 rounded-lg">
-                                <i class="fas fa-map-marker-alt text-4xl text-gray-400 mb-3"></i>
-                                <p class="text-gray-600">No addresses found. Please add a delivery address.</p>
+                            <div class="text-center py-6 bg-gray-50 rounded-lg">
+                                <i class="fas fa-map-marker-alt text-3xl text-gray-400 mb-2"></i>
+                                <p class="checkout-text text-gray-600">No addresses found. Please add a delivery address.</p>
                             </div>
                         <% } %>
                     </div>
                 </div>
 
                 <!-- Order Items Section -->
-                <div class="bg-white rounded-xl shadow-sm p-6">
-                    <h2 class="text-xl font-semibold mb-4">Order Items</h2>
-                    <div class="space-y-6">
+                <div class="checkout-card">
+                    <div class="checkout-header">
+                        <h2 class="checkout-title">Order Items</h2>
+                    </div>
+                    <div class="checkout-body space-y-4">
                         <% cartItems.forEach((item, index) => { %>
-                            <div class="flex gap-4 pb-6 <%= index !== cartItems.length - 1 ? 'border-b' : '' %>">
-                                <div class="w-24 h-24 flex-shrink-0">
+                            <div class="flex gap-3 pb-4 <%= index !== cartItems.length - 1 ? 'border-b' : '' %>">
+                                <div class="w-20 h-20 flex-shrink-0">
                                     <img src="<%= item.productId.images[0].path %>" 
                                          alt="<%= item.productId.name %>"
-                                         class="w-full h-full object-cover rounded-lg">
+                                         class="checkout-image">
                                 </div>
                                 <div class="flex-grow">
                                     <div class="flex justify-between">
                                         <div>
-                                            <h3 class="font-semibold"><%= item.productId.name %></h3>
-                                            <p class="text-gray-600 text-sm">Brand: <%= item.productId.brand %></p>
-                                            <p class="text-gray-600 text-sm">Variant: <%= item.variantType %></p>
+                                            <h3 class="checkout-text font-medium"><%= item.productId.name %></h3>
+                                            <p class="checkout-text text-gray-600">Brand: <%= item.productId.brand %></p>
+                                            <p class="checkout-text text-gray-600">Variant: <%= item.variantType %></p>
                                         </div>
                                         <div class="text-right">
-                                            <p class="text-sm text-gray-500 line-through">
+                                            <p class="checkout-text text-gray-500 line-through">
                                                 ₹<%= item.originalPrice.toFixed(2) %>
                                             </p>
-                                            <p class="font-semibold">
+                                            <p class="checkout-price">
                                                 ₹<%= item.discountedPrice.toFixed(2) %>
                                             </p>
-                                            <p class="text-sm text-gray-600">
+                                            <p class="checkout-text text-gray-600">
                                                 Qty: <%= item.quantity %>
                                             </p>
                                         </div>
                                     </div>
                                     <% if (item.offer) { %>
-                                        <div class="mt-2">
-                                            <span class="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                                        <div class="mt-1">
+                                            <span class="checkout-badge bg-green-100 text-green-800">
                                                 <%= item.offer.discount %>% off - <%= item.offer.name %>
                                             </span>
                                         </div>
@@ -102,12 +104,14 @@
 
             <!-- Right Column - Order Summary -->
             <div class="lg:w-1/3">
-                <div class="bg-white rounded-xl shadow-sm p-6 sticky top-4">
+                <div class="checkout-summary">
                     <!-- Coupon Section -->
-                    <div class="mb-6 border-b pb-4">
-                        <h3 class="font-semibold mb-3">Apply Coupon</h3>
+                    <div class="checkout-summary-header">
+                        <h3 class="checkout-title">Apply Coupon</h3>
+                    </div>
+                    <div class="checkout-summary-body">
                         <% if (coupons && coupons.length > 0) { %>
-                            <select id="couponSelect" class="w-full p-2 border rounded-lg mb-2 focus:ring-2 focus:ring-black focus:border-black">
+                            <select id="couponSelect" class="checkout-select">
                                 <option value="">Select a coupon</option>
                                 <% coupons.forEach(coupon => { %>
                                     <option value="<%= coupon._id %>" 
@@ -124,107 +128,111 @@
                                     </option>
                                 <% }); %>
                             </select>
-                            <button onclick="applyCoupon()" 
-                                    class="w-full bg-black text-white py-2 rounded-lg hover:bg-gray-800 transition-colors">
+                            <button id="couponButton" 
+                                    class="checkout-button w-full bg-black text-white hover:bg-gray-800">
                                 Apply Coupon
                             </button>
                         <% } else { %>
-                            <p class="text-sm text-gray-600">No coupons available for this order</p>
+                            <p class="checkout-text text-gray-600">No coupons available for this order</p>
                         <% } %>
                     </div>
 
-                    <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
-                    <div class="space-y-3">
-                        <div class="flex justify-between text-gray-600">
-                            <span>Original Subtotal</span>
-                            <span>₹<%= originalSubtotal.toFixed(2) %></span>
-                        </div>
+                    <div class="checkout-divider"></div>
 
-                        <% if (totalOfferDiscount > 0) { %>
-                            <div class="flex justify-between text-green-600">
-                                <span>Offer Discount</span>
-                                <span>-₹<%= totalOfferDiscount.toFixed(2) %></span>
+                    <div class="checkout-summary-body">
+                        <h2 class="checkout-title mb-3">Order Summary</h2>
+                        <div class="space-y-2">
+                            <div class="checkout-summary-row text-gray-600">
+                                <span>Original Subtotal</span>
+                                <span>₹<%= originalSubtotal.toFixed(2) %></span>
                             </div>
-                        <% } %>
 
-                        <div class="flex justify-between">
-                            <span>Subtotal After Offer</span>
-                            <span>₹<span id="subtotalAfterOffer"><%= subtotal.toFixed(2) %></span></span>
-                        </div>
+                            <% if (totalOfferDiscount > 0) { %>
+                                <div class="checkout-summary-row text-green-600">
+                                    <span>Offer Discount</span>
+                                    <span>-₹<%= totalOfferDiscount.toFixed(2) %></span>
+                                </div>
+                            <% } %>
 
-                        <div id="couponDiscountRow" class="flex justify-between text-green-600 hidden">
-                            <span>Coupon Discount</span>
-                            <span>-₹<span id="couponDiscountAmount">0.00</span></span>
-                        </div>
+                            <div class="checkout-summary-row">
+                                <span>Subtotal After Offer</span>
+                                <span>₹<span id="subtotalAfterOffer"><%= subtotal.toFixed(2) %></span></span>
+                            </div>
 
-                        <div id="subtotalAfterCouponRow" class="flex justify-between hidden">
-                            <span>Subtotal After Coupon</span>
-                            <span>₹<span id="subtotalAfterCoupon">0.00</span></span>
-                        </div>
+                            <div id="couponDiscountRow" class="checkout-summary-row text-green-600 hidden">
+                                <span>Coupon Discount</span>
+                                <span>-₹<span id="couponDiscountAmount">0.00</span></span>
+                            </div>
 
-                        <div class="flex justify-between text-gray-600">
-                            <span>GST (18%)</span>
-                            <span>₹<span id="gstAmount"><%= Math.round(subtotal * 0.18).toFixed(2) %></span></span>
-                        </div>
+                            <div id="subtotalAfterCouponRow" class="checkout-summary-row hidden">
+                                <span>Subtotal After Coupon</span>
+                                <span>₹<span id="subtotalAfterCoupon">0.00</span></span>
+                            </div>
 
-                        <div class="flex justify-between text-gray-600">
-                            <span>Shipping (2%)</span>
-                            <span>₹<span id="shippingCost"><%= shippingCost.toFixed(2) %></span></span>
-                        </div>
+                            <div class="checkout-summary-row text-gray-600">
+                                <span>GST (18%)</span>
+                                <span>₹<span id="gstAmount"><%= Math.round(subtotal * 0.18).toFixed(2) %></span></span>
+                            </div>
 
-                        <div class="border-t pt-3 mt-3">
-                            <div class="flex justify-between font-bold text-lg">
+                            <div class="checkout-summary-row text-gray-600">
+                                <span>Shipping (2%)</span>
+                                <span>₹<span id="shippingCost"><%= shippingCost.toFixed(2) %></span></span>
+                            </div>
+
+                            <div class="checkout-divider"></div>
+
+                            <div class="checkout-summary-total flex justify-between">
                                 <span>Total</span>
                                 <span>₹<span id="finalTotal"><%= (subtotal + Math.round(subtotal * 0.18) + shippingCost).toFixed(2) %></span></span>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Payment Method Selection -->
-                    <div class="mt-6 border-t pt-6">
-                        <h3 class="font-semibold mb-4">Payment Method</h3>
-                        <div class="space-y-3">
-                            <label class="flex items-center gap-3 p-3 border rounded-lg hover:border-black transition-colors cursor-pointer" id="codPaymentLabel">
-                                <input type="radio" name="paymentMethod" value="cod" checked id="codPayment">
-                                <div>
-                                    <span class="font-medium">Cash on Delivery</span>
-                                    <p class="text-sm text-gray-600">Pay when you receive your order</p>
-                                </div>
-                            </label>
+                        <!-- Payment Method Selection -->
+                        <div class="mt-4">
+                            <h3 class="checkout-title mb-3">Payment Method</h3>
+                            <div class="space-y-2">
+                                <label class="checkout-payment-option" id="codPaymentLabel">
+                                    <input type="radio" name="paymentMethod" value="cod" checked id="codPayment">
+                                    <div>
+                                        <span class="checkout-payment-option-label">Cash on Delivery</span>
+                                        <p class="checkout-payment-option-description">Pay when you receive your order</p>
+                                    </div>
+                                </label>
 
-                            <label class="flex items-center gap-3 p-3 border rounded-lg hover:border-black transition-colors cursor-pointer">
-                                <input type="radio" name="paymentMethod" value="online">
-                                <div>
-                                    <span class="font-medium">Online Payment</span>
-                                    <p class="text-sm text-gray-600">Pay securely with Razorpay</p>
-                                </div>
-                            </label>
+                                <label class="checkout-payment-option">
+                                    <input type="radio" name="paymentMethod" value="online">
+                                    <div>
+                                        <span class="checkout-payment-option-label">Online Payment</span>
+                                        <p class="checkout-payment-option-description">Pay securely with Razorpay</p>
+                                    </div>
+                                </label>
 
-                            <label class="flex items-center gap-3 p-3 border rounded-lg hover:border-black transition-colors cursor-pointer" id="walletPaymentLabel">
-                                <input type="radio" name="paymentMethod" value="wallet" 
-                                       id="walletPayment" 
-                                       <%= walletBalance < (subtotal + Math.round(subtotal * 0.18) + shippingCost) ? 'disabled' : '' %>>
-                                <div>
-                                    <span class="font-medium">Wallet</span>
-                                    <p class="text-sm <%= walletBalance >= (subtotal + Math.round(subtotal * 0.18) + shippingCost) ? 'text-green-600' : 'text-red-600' %>">
-                                        Balance: ₹<%= walletBalance.toFixed(2) %>
-                                        <% if (walletBalance < (subtotal + Math.round(subtotal * 0.18) + shippingCost)) { %>
-                                            (Insufficient balance)
-                                        <% } %>
-                                    </p>
-                                </div>
-                            </label>
+                                <label class="checkout-payment-option" id="walletPaymentLabel">
+                                    <input type="radio" name="paymentMethod" value="wallet" 
+                                           id="walletPayment" 
+                                           <%= walletBalance < (subtotal + Math.round(subtotal * 0.18) + shippingCost) ? 'disabled' : '' %>>
+                                    <div>
+                                        <span class="checkout-payment-option-label">Wallet</span>
+                                        <p class="checkout-payment-option-description <%= walletBalance >= (subtotal + Math.round(subtotal * 0.18) + shippingCost) ? 'text-green-600' : 'text-red-600' %>">
+                                            Balance: ₹<%= walletBalance.toFixed(2) %>
+                                            <% if (walletBalance < (subtotal + Math.round(subtotal * 0.18) + shippingCost)) { %>
+                                                (Insufficient balance)
+                                            <% } %>
+                                        </p>
+                                    </div>
+                                </label>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Place Order Button -->
-                    <button id="placeOrderButton"
-                            class="w-full mt-6 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors">
-                        <span id="buttonText">Place Order</span>
-                        <span id="buttonSpinner" class="hidden">
-                            <i class="fas fa-spinner fa-spin"></i>
-                        </span>
-                    </button>
+                        <!-- Place Order Button -->
+                        <button id="placeOrderButton"
+                                class="checkout-button w-full mt-4 bg-black text-white hover:bg-gray-800">
+                            <span id="buttonText">Place Order</span>
+                            <span id="buttonSpinner" class="hidden">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -233,65 +241,57 @@
 
 <!-- Add Address Modal -->
 <div id="addAddressModal" class="fixed inset-0 bg-gray-100/50 backdrop-blur-sm hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4 transform transition-all shadow-xl">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-semibold">Add New Address</h3>
+    <div class="bg-white rounded-lg p-4 w-full max-w-md mx-4 transform transition-all shadow-xl">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="checkout-title">Add New Address</h3>
             <button onclick="closeAddAddressModal()" class="text-gray-500 hover:text-gray-700">
                 <i class="fas fa-times"></i>
             </button>
         </div>
         <form id="addAddressForm" onsubmit="handleAddAddress(event)">
-            <div class="space-y-4">
+            <div class="space-y-3">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Full Name</label>
-                    <input type="text" name="name" required
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                    <label class="checkout-label">Full Name</label>
+                    <input type="text" name="name" required class="checkout-input">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">House Name/Number</label>
-                    <input type="text" name="houseName" required
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                    <label class="checkout-label">House Name/Number</label>
+                    <input type="text" name="houseName" required class="checkout-input">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Street/Locality</label>
-                    <input type="text" name="localityStreet" required
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                    <label class="checkout-label">Street/Locality</label>
+                    <input type="text" name="localityStreet" required class="checkout-input">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">City</label>
-                        <input type="text" name="city" required
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                        <label class="checkout-label">City</label>
+                        <input type="text" name="city" required class="checkout-input">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">State</label>
-                        <input type="text" name="state" required
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                        <label class="checkout-label">State</label>
+                        <input type="text" name="state" required class="checkout-input">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Pincode</label>
-                    <input type="text" name="pincode" required pattern="[0-9]{6}"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                    <label class="checkout-label">Pincode</label>
+                    <input type="text" name="pincode" required pattern="[0-9]{6}" class="checkout-input">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Phone Number</label>
-                    <input type="tel" name="phone" required pattern="[0-9]{10}"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                    <label class="checkout-label">Phone Number</label>
+                    <input type="tel" name="phone" required pattern="[0-9]{10}" class="checkout-input">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Alternate Phone (Optional)</label>
-                    <input type="tel" name="alternatePhone" pattern="[0-9]{10}"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black">
+                    <label class="checkout-label">Alternate Phone (Optional)</label>
+                    <input type="tel" name="alternatePhone" pattern="[0-9]{10}" class="checkout-input">
                 </div>
             </div>
-            <div class="mt-6 flex justify-end space-x-3">
+            <div class="mt-4 flex justify-end space-x-2">
                 <button type="button" onclick="closeAddAddressModal()"
-                        class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                        class="checkout-button border border-gray-300 text-gray-700 hover:bg-gray-50">
                     Cancel
                 </button>
                 <button type="submit"
-                        class="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800">
+                        class="checkout-button bg-black text-white hover:bg-gray-800">
                     Add Address
                 </button>
             </div>
@@ -412,11 +412,93 @@ const cartItemsData = <%- JSON.stringify(cartItems.map(item => {
     };
 })) %>;
 
+// Add this to your DOMContentLoaded event listener
+document.addEventListener('DOMContentLoaded', () => {
+    // ... existing code ...
+
+    // Initialize coupon button
+    const couponButton = document.getElementById('couponButton');
+    if (couponButton) {
+        couponButton.addEventListener('click', handleCouponButton);
+    }
+});
+
+function handleCouponButton() {
+    const button = document.getElementById('couponButton');
+    if (!button) return;
+
+    if (button.textContent.trim() === 'Apply Coupon') {
+        applyCoupon();
+    } else {
+        removeCoupon();
+    }
+}
+
+function removeCoupon() {
+    try {
+        // Hide coupon discount row and subtotal after coupon row
+        document.getElementById('couponDiscountRow').classList.add('hidden');
+        document.getElementById('subtotalAfterCouponRow').classList.add('hidden');
+        
+        // Reset coupon discount
+        document.getElementById('couponDiscountAmount').textContent = '0.00';
+        
+        // Reset button state
+        const button = document.getElementById('couponButton');
+        if (button) {
+            button.textContent = 'Apply Coupon';
+            button.classList.remove('bg-red-600', 'hover:bg-red-700');
+            button.classList.add('bg-black', 'hover:bg-gray-800');
+            // Ensure the button is clickable
+            button.disabled = false;
+        }
+
+        // Enable coupon select
+        const select = document.getElementById('couponSelect');
+        if (select) {
+            select.disabled = false;
+            select.value = '';
+        }
+        
+        // Get original amounts
+        const originalSubtotal = parseFloat('<%= subtotal %>');
+        const offerDiscount = parseFloat('<%= totalOfferDiscount %>');
+        
+        // Calculate all amounts without coupon
+        const amounts = calculateAmounts(originalSubtotal, offerDiscount, 0);
+        
+        // Update displayed amounts
+        updateDisplayedAmounts(amounts);
+        
+        // Clear applied coupon
+        appliedCoupon = null;
+
+        // Update payment options based on new total
+        updatePaymentOptions();
+
+        // Show success message
+        Swal.fire({
+            icon: 'success',
+            title: 'Coupon Removed',
+            text: 'Coupon has been removed successfully!',
+            timer: 1500,
+            showConfirmButton: false
+        });
+    } catch (error) {
+        console.error('Error removing coupon:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to remove coupon. Please try again.'
+        });
+    }
+}
+
 async function applyCoupon() {
     try {
         const select = document.getElementById('couponSelect');
         const option = select.options[select.selectedIndex];
-        const applyButton = document.querySelector('button[onclick="applyCoupon()"]');
+        const button = document.getElementById('couponButton');
 
         if (!option.value) {
             throw new Error('Please select a coupon');
@@ -447,11 +529,14 @@ async function applyCoupon() {
             document.getElementById('couponDiscountAmount').textContent = 
                 data.discount.toFixed(2);
 
-            // Change button text and behavior
-            applyButton.textContent = 'Remove Coupon';
-            applyButton.classList.remove('bg-black', 'hover:bg-gray-800');
-            applyButton.classList.add('bg-red-600', 'hover:bg-red-700');
-            applyButton.onclick = removeCoupon;
+            // Change button text and appearance
+            if (button) {
+                button.textContent = 'Remove Coupon';
+                button.classList.remove('bg-black', 'hover:bg-gray-800');
+                button.classList.add('bg-red-600', 'hover:bg-red-700');
+                // Ensure the button is clickable
+                button.disabled = false;
+            }
 
             // Disable coupon select
             select.disabled = true;
@@ -487,54 +572,6 @@ async function applyCoupon() {
             text: error.message || 'Failed to apply coupon'
         });
     }
-}
-
-// Update the removeCoupon function to reset button state
-function removeCoupon() {
-    // Hide coupon discount row and subtotal after coupon row
-    document.getElementById('couponDiscountRow').classList.add('hidden');
-    document.getElementById('subtotalAfterCouponRow').classList.add('hidden');
-    
-    // Reset coupon discount
-    document.getElementById('couponDiscountAmount').textContent = '0.00';
-    
-    // Reset button state
-    const applyButton = document.querySelector('button[onclick="removeCoupon()"]');
-    applyButton.textContent = 'Apply Coupon';
-    applyButton.classList.remove('bg-red-600', 'hover:bg-red-700');
-    applyButton.classList.add('bg-black', 'hover:bg-gray-800');
-    applyButton.onclick = applyCoupon;
-
-    // Enable coupon select
-    const select = document.getElementById('couponSelect');
-    select.disabled = false;
-    select.value = '';
-    
-    // Get original amounts
-    const originalSubtotal = parseFloat('<%= subtotal %>');
-    const offerDiscount = parseFloat('<%= totalOfferDiscount %>');
-    
-    // Calculate all amounts without coupon
-    const amounts = calculateAmounts(originalSubtotal, offerDiscount, 0);
-    
-    // Update displayed amounts
-    updateDisplayedAmounts(amounts);
-    
-    // Clear applied coupon
-    appliedCoupon = null;
-
-    // Update payment options based on new total
-    updatePaymentOptions();
-}
-
-// Add this function at the top of the script section
-function showError(message) {
-    Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: message,
-        confirmButtonText: 'OK'
-    });
 }
 
 // Update the placeOrder function
@@ -890,4 +927,170 @@ async function handleAddAddress(event) {
 </script>
 
 <%- include('../partials/footer') %>
+
+<!-- Add custom styles for compact layout -->
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    .checkout-card {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+    }
+
+    .checkout-header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f3f4f6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .checkout-body {
+        padding: 1rem;
+    }
+
+    .checkout-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .checkout-text {
+        font-size: 0.875rem;
+        color: #4b5563;
+    }
+
+    .checkout-price {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .checkout-input {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .checkout-button {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+    }
+
+    .checkout-button:hover {
+        transform: translateY(-1px);
+    }
+
+    .checkout-image {
+        width: 4rem;
+        height: 4rem;
+        object-fit: cover;
+        border-radius: 0.5rem;
+    }
+
+    .checkout-divider {
+        height: 1px;
+        background-color: #f3f4f6;
+        margin: 0.75rem 0;
+    }
+
+    .checkout-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+    }
+
+    .checkout-radio {
+        width: 1rem;
+        height: 1rem;
+        margin-top: 0.25rem;
+    }
+
+    .checkout-label {
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+        color: #4b5563;
+    }
+
+    .checkout-select {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .checkout-summary {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 1rem;
+    }
+
+    .checkout-summary-header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .checkout-summary-body {
+        padding: 1rem;
+    }
+
+    .checkout-summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .checkout-summary-total {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #f3f4f6;
+    }
+
+    .checkout-payment-option {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .checkout-payment-option:hover {
+        border-color: #000;
+    }
+
+    .checkout-payment-option input[type="radio"] {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .checkout-payment-option-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .checkout-payment-option-description {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+</style>
 
