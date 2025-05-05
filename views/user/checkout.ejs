@@ -150,7 +150,7 @@
 
                             <div class="flex justify-between">
                                 <span>Subtotal After Offer</span>
-                                <span>₹<%= subtotal.toFixed(2) %></span>
+                                <span>₹<span id="subtotalAfterOffer"><%= subtotal.toFixed(2) %></span></span>
                             </div>
 
                             <!-- Coupon Discount Row (Hidden by default) -->
@@ -162,7 +162,7 @@
                             <!-- Subtotal After Coupon (Hidden by default) -->
                             <div id="subtotalAfterCouponRow" class="flex justify-between hidden">
                                 <span>Subtotal After Coupon</span>
-                                <span>₹<span id="subtotalAfterOffer"><%= subtotal.toFixed(2) %></span></span>
+                                <span>₹<span id="subtotalAfterCoupon">0.00</span></span>
                             </div>
 
                             <div class="flex justify-between">
@@ -237,10 +237,10 @@ function calculateAmounts(subtotal, offerDiscount = 0, couponDiscount = 0) {
     // Original subtotal is the sum of original product prices
     const originalSubtotal = subtotal;
     
-    // Calculate subtotal after offers
+    // Calculate subtotal after offers (this should remain constant)
     const subtotalAfterOffers = originalSubtotal - offerDiscount;
     
-    // Calculate subtotal after coupon
+    // Calculate subtotal after coupon by deducting coupon discount from subtotal after offers
     const subtotalAfterCoupon = subtotalAfterOffers - couponDiscount;
 
     // Calculate GST and shipping based on subtotal after coupon
@@ -262,10 +262,43 @@ function calculateAmounts(subtotal, offerDiscount = 0, couponDiscount = 0) {
 
 // Function to update displayed amounts
 function updateDisplayedAmounts(amounts) {
-    document.getElementById('subtotalAfterOffer').textContent = amounts.subtotalAfterCoupon.toFixed(2);
-    document.getElementById('gstAmount').textContent = amounts.gstAmount.toFixed(2);
-    document.getElementById('shippingCost').textContent = amounts.shippingCost.toFixed(2);
-    document.getElementById('finalTotal').textContent = amounts.finalTotal.toFixed(2);
+    // Keep subtotal after offer constant
+    const subtotalAfterOfferElement = document.getElementById('subtotalAfterOffer');
+    if (subtotalAfterOfferElement) {
+        subtotalAfterOfferElement.textContent = '<%= subtotal.toFixed(2) %>';
+    }
+
+    // Update subtotal after coupon by deducting coupon discount from subtotal after offer
+    const subtotalAfterCouponElement = document.getElementById('subtotalAfterCoupon');
+    if (subtotalAfterCouponElement) {
+        const subtotalAfterOffer = parseFloat('<%= subtotal %>');
+        const couponDiscount = parseFloat(document.getElementById('couponDiscountAmount').textContent || '0');
+        const subtotalAfterCoupon = subtotalAfterOffer - couponDiscount;
+        subtotalAfterCouponElement.textContent = subtotalAfterCoupon.toFixed(2);
+
+        // Calculate GST and shipping based on subtotal after coupon
+        const gstAmount = Math.round(subtotalAfterCoupon * 0.18); // 18% GST
+        const shippingCost = Math.round(subtotalAfterCoupon * 0.02); // 2% Shipping
+        const finalTotal = subtotalAfterCoupon + gstAmount + shippingCost;
+
+        // Update GST amount
+        const gstAmountElement = document.getElementById('gstAmount');
+        if (gstAmountElement) {
+            gstAmountElement.textContent = gstAmount.toFixed(2);
+        }
+
+        // Update shipping cost
+        const shippingCostElement = document.getElementById('shippingCost');
+        if (shippingCostElement) {
+            shippingCostElement.textContent = shippingCost.toFixed(2);
+        }
+
+        // Update final total
+        const finalTotalElement = document.getElementById('finalTotal');
+        if (finalTotalElement) {
+            finalTotalElement.textContent = finalTotal.toFixed(2);
+        }
+    }
 }
 
 // Update the cart items data to include correct calculations
@@ -377,7 +410,7 @@ async function applyCoupon() {
     }
 }
 
-// Update the removeCoupon function
+// Update the removeCoupon function to reset to original values
 function removeCoupon() {
     // Hide coupon discount row and subtotal after coupon row
     document.getElementById('couponDiscountRow').classList.add('hidden');

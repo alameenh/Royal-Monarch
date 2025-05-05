@@ -660,7 +660,7 @@ const orderController = {
             const userId = req.session.userId;
             const { couponId, subtotal, items } = req.body;
 
-            // Validate coupon
+            // Validate coupon with proper filters based on couponModel schema
             const coupon = await Coupon.findOne({
                 _id: couponId,
                 isActive: true,
@@ -688,20 +688,37 @@ const orderController = {
                 });
             }
 
-            // Calculate discount
+            // Calculate discount and final amounts
             let discount = 0;
+            let subtotalAfterCoupon = subtotal;
+
             if (coupon.discountType === 'PERCENTAGE') {
+                // For percentage discounts
                 discount = (subtotal * coupon.discountValue) / 100;
                 if (coupon.maxDiscount) {
                     discount = Math.min(discount, coupon.maxDiscount);
                 }
-            } else {
-                discount = coupon.discountValue;
+                subtotalAfterCoupon = subtotal - discount;
+            } else if (coupon.discountType === 'FIXED') {
+                // For fixed discounts, directly subtract from subtotal after offers
+                discount = Number(coupon.discountValue);
+                // Ensure discount doesn't exceed the subtotal after offers
+                discount = Math.min(discount, subtotal);
+                subtotalAfterCoupon = subtotal - discount;
             }
+
+            // Calculate GST and shipping on the final subtotal after coupon
+            const gstAmount = Math.round(subtotalAfterCoupon * 0.18);
+            const shippingCost = Math.round(subtotalAfterCoupon * 0.02);
+            const finalTotal = subtotalAfterCoupon + gstAmount + shippingCost;
 
             res.json({
                 success: true,
                 discount,
+                subtotalAfterCoupon,
+                gstAmount,
+                shippingCost,
+                finalTotal,
                 message: 'Coupon applied successfully'
             });
 
@@ -984,36 +1001,6 @@ const orderController = {
                 endDate: { $gte: new Date() }
             }).lean();
 
-            // Fetch active coupons
-            const currentDate = new Date();
-            console.log('Current system date:', currentDate);
-            
-            // First, let's check all coupons in the database
-            const allCoupons = await Coupon.find({}).lean();
-            console.log('All coupons in database:', allCoupons);
-
-            // Now fetch active coupons with a simpler query
-            const activeCoupons = await Coupon.find({
-                isActive: true
-            })
-            .select('code discountType discountValue maxDiscount minPurchase startDate endDate')
-            .lean();
-
-            console.log('Active coupons before date filtering:', activeCoupons);
-
-            // Filter coupons by date manually to debug
-            const validCoupons = activeCoupons.filter(coupon => {
-                const isValid = coupon.startDate <= currentDate && coupon.endDate >= currentDate;
-                console.log(`Coupon ${coupon.code}:`, {
-                    startDate: coupon.startDate,
-                    endDate: coupon.endDate,
-                    isValid
-                });
-                return isValid;
-            });
-
-            console.log('Final valid coupons:', validCoupons);
-
             // Process each cart item to include offer details
             const processedCartItems = await Promise.all(cartItems.map(async item => {
                 if (!item.productId || item.productId.status !== 'Active') {
@@ -1095,6 +1082,22 @@ const orderController = {
             // Calculate final total
             const total = totalSubtotalAfterOffers + totalGstAmount + totalShippingCost;
 
+            // Now fetch and filter coupons after we have the subtotal
+            const currentDate = new Date();
+            console.log('Current system date:', currentDate);
+            
+            // Fetch coupons with proper filters based on couponModel schema
+            const validCoupons = await Coupon.find({
+                isActive: true,
+                startDate: { $lte: currentDate },
+                expiryDate: { $gte: currentDate },
+                minPurchase: { $lte: totalSubtotalAfterOffers }
+            })
+            .select('code discountType discountValue maxDiscount minPurchase startDate expiryDate')
+            .lean();
+
+            console.log('Valid coupons:', validCoupons.map(c => c.code));
+
             // Get cart count for the navbar
             const cartCount = await CartItem.countDocuments({ userId });
 
@@ -1111,7 +1114,7 @@ const orderController = {
                 shippingCost: totalShippingCost,
                 totalAmount: total,
                 activeOffers,
-                coupons: activeCoupons,
+                coupons: validCoupons,
                 appliedCoupon: null
             });
 
