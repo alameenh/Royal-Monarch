@@ -134,12 +134,11 @@
                             <% } %>
                         </div>
 
-                        <!-- Order Summary Section -->
                         <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
                         <div class="space-y-3">
                             <div class="flex justify-between">
-                                <span>Subtotal</span>
-                                <span>₹<%= subtotal.toFixed(2) %></span>
+                                <span>Original Subtotal</span>
+                                <span>₹<%= originalSubtotal.toFixed(2) %></span>
                             </div>
 
                             <% if (totalOfferDiscount > 0) { %>
@@ -149,14 +148,20 @@
                                 </div>
                             <% } %>
 
+                            <div class="flex justify-between">
+                                <span>Subtotal After Offer</span>
+                                <span>₹<%= subtotal.toFixed(2) %></span>
+                            </div>
+
                             <!-- Coupon Discount Row (Hidden by default) -->
                             <div id="couponDiscountRow" class="flex justify-between text-green-600 hidden">
                                 <span>Coupon Discount</span>
                                 <span>-₹<span id="couponDiscountAmount">0.00</span></span>
                             </div>
 
-                            <div class="flex justify-between">
-                                <span>Subtotal After Offer</span>
+                            <!-- Subtotal After Coupon (Hidden by default) -->
+                            <div id="subtotalAfterCouponRow" class="flex justify-between hidden">
+                                <span>Subtotal After Coupon</span>
                                 <span>₹<span id="subtotalAfterOffer"><%= subtotal.toFixed(2) %></span></span>
                             </div>
 
@@ -229,19 +234,25 @@ let rzpInstance = null;
 
 // Function to calculate all amounts
 function calculateAmounts(subtotal, offerDiscount = 0, couponDiscount = 0) {
-    // Calculate subtotal after coupon (subtotal already includes offer discount)
-    const subtotalAfterCoupon = subtotal - couponDiscount;
+    // Original subtotal is the sum of original product prices
+    const originalSubtotal = subtotal;
+    
+    // Calculate subtotal after offers
+    const subtotalAfterOffers = originalSubtotal - offerDiscount;
+    
+    // Calculate subtotal after coupon
+    const subtotalAfterCoupon = subtotalAfterOffers - couponDiscount;
 
-    // Calculate GST and shipping
-    const totalGstAmount = Math.round(subtotalAfterCoupon * 0.18);
-    const totalShippingCost = Math.round(subtotalAfterCoupon * 0.02);
+    // Calculate GST and shipping based on subtotal after coupon
+    const totalGstAmount = Math.round(subtotalAfterCoupon * 0.18); // 18% GST
+    const totalShippingCost = Math.round(subtotalAfterCoupon * 0.02); // 2% Shipping
 
     // Calculate final total
     const finalTotal = subtotalAfterCoupon + totalGstAmount + totalShippingCost;
 
     return {
-        originalSubtotal: subtotal + offerDiscount, // Add back offer discount to get original subtotal
-        subtotalAfterOffers: subtotal,
+        originalSubtotal,
+        subtotalAfterOffers,
         subtotalAfterCoupon,
         gstAmount: totalGstAmount,
         shippingCost: totalShippingCost,
@@ -259,9 +270,15 @@ function updateDisplayedAmounts(amounts) {
 
 // Update the cart items data to include correct calculations
 const cartItemsData = <%- JSON.stringify(cartItems.map(item => {
-    // Calculate price after offer
+    // Get the original price from the product model
+    const variant = item.productId.variants.find(v => v.type === item.variantType);
+    const originalPrice = variant ? variant.price : 0;
     const priceAfterOffer = item.priceAfterOffer;
-    const offerDiscount = item.originalPrice - item.priceAfterOffer;
+    const offerDiscount = originalPrice - priceAfterOffer;
+    
+    // Calculate GST and shipping for this item
+    const itemGstAmount = Math.round(priceAfterOffer * 0.18);
+    const itemShippingCost = Math.round(priceAfterOffer * 0.02);
     
     return {
         productId: item.productId._id,
@@ -270,14 +287,16 @@ const cartItemsData = <%- JSON.stringify(cartItems.map(item => {
         category: item.productId.category ? item.productId.category.name || "Category" : "Category",
         images: item.productId.images.map(img => ({ path: img.path, filename: img.filename })),
         quantity: Number(item.quantity),
-        originalPrice: Number(item.originalPrice),
+        originalPrice: Number(originalPrice),
         variantType: item.variantType,
         status: 'pending',
         priceAfterOffer: Number(priceAfterOffer),
         offerDiscount: Number(offerDiscount),
-        subtotalforproduct: Number(priceAfterOffer * item.quantity),
+        subtotalforproduct: Number(originalPrice * item.quantity),
         finalPrice: Number(priceAfterOffer),
         finalAmount: Number(priceAfterOffer * item.quantity),
+        gstAmount: Number(itemGstAmount * item.quantity),
+        shippingCost: Number(itemShippingCost * item.quantity),
         couponDiscount: 0,
         couponForProduct: null,
         offer: item.offer ? {
@@ -316,8 +335,9 @@ async function applyCoupon() {
         const data = await response.json();
 
         if (data.success) {
-            // Show coupon discount
+            // Show coupon discount and subtotal after coupon
             document.getElementById('couponDiscountRow').classList.remove('hidden');
+            document.getElementById('subtotalAfterCouponRow').classList.remove('hidden');
             document.getElementById('couponDiscountAmount').textContent = 
                 data.discount.toFixed(2);
 
@@ -359,8 +379,9 @@ async function applyCoupon() {
 
 // Update the removeCoupon function
 function removeCoupon() {
-    // Hide coupon discount row
+    // Hide coupon discount row and subtotal after coupon row
     document.getElementById('couponDiscountRow').classList.add('hidden');
+    document.getElementById('subtotalAfterCouponRow').classList.add('hidden');
     // Hide remove coupon button
     document.getElementById('removeCouponButton').classList.add('hidden');
     
@@ -638,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Initialize amounts
-    const originalSubtotal = parseFloat('<%= subtotal %>');
+    const originalSubtotal = parseFloat('<%= originalSubtotal %>');
     const offerDiscount = parseFloat('<%= totalOfferDiscount %>');
     const amounts = calculateAmounts(originalSubtotal, offerDiscount, 0);
     updateDisplayedAmounts(amounts);

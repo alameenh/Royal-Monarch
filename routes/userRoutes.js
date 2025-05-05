@@ -106,10 +106,11 @@ router.post('/change-password', userMiddleware.checkSession, userController.post
 
 // Order routes
 router.get('/checkout', userMiddleware.checkSession, orderController.getCheckout);
-router.post('/order/create', userMiddleware.checkSession, shopController.createOrder);
-router.post('/order/verify-payment', userMiddleware.checkSession, shopController.verifyPayment);
+router.post('/order/create', userMiddleware.checkSession, orderController.createOrder);
+router.post('/order/verify-payment', userMiddleware.checkSession, orderController.verifyPayment);
 router.get('/order/success/:orderId', userMiddleware.checkSession, orderController.getOrderSuccess);
-router.post('/order/:orderId/retry-payment', userMiddleware.checkSession, shopController.retryPayment);
+router.post('/order/:orderId/retry-payment', userMiddleware.checkSession, orderController.retryPayment);
+router.get('/payment/failed/:orderId', userMiddleware.checkSession, orderController.getPaymentFailed);
 
 // Order management routes
 router.get('/orders', userMiddleware.checkSession, orderController.getOrders);
@@ -120,19 +121,12 @@ router.post('/order/:orderId/return/:itemId', userMiddleware.checkSession, order
 // Add this route
 router.get('/order/success/:orderId', userMiddleware.checkSession, orderController.getOrderSuccess);
 router.get('/order/:orderId/invoice/:itemId', userMiddleware.checkSession, orderController.generateInvoice);
-router.get('/payment/failed/:orderId', userMiddleware.checkSession, shopController.getPaymentFailed);
-
 router.post('/apply-coupon', userMiddleware.checkSession, orderController.applyCoupon);
 
 // Wallet routes
 router.get('/wallet', userMiddleware.checkSession, walletController.getWallet);
 router.post('/wallet/create-order', userMiddleware.checkSession, walletController.createOrder);
 router.post('/wallet/verify-payment', userMiddleware.checkSession, walletController.verifyPayment);
-
-router.post('/order/verify-payment', userMiddleware.checkSession, shopController.verifyPayment);
-
-// Add retry payment route
-router.post('/order/:orderId/retry-payment', userMiddleware.checkSession, orderController.retryPayment);
 
 // Update the route for fetching product images
 router.post('/api/products/images', userController.getProductImages);
