@@ -89,7 +89,7 @@ router.post('/address/update', userMiddleware.checkSession, addressController.up
 router.post('/address/delete', userMiddleware.checkSession, addressController.deleteAddress);
 
 // Wishlist routes
-router.post('/wishlist/toggle/:productId', userMiddleware.checkSession, userController.toggleWishlist);
+router.post('/wishlist/toggle/:productId', userMiddleware.checkSession, viewProductController.toggleWishlist);
 router.get('/wishlist', userMiddleware.checkSession, wishlistController.getWishlist);
 router.delete('/wishlist/remove/:productId', userMiddleware.checkSession, wishlistController.removeFromWishlist);
 

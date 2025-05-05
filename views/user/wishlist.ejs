@@ -1,5 +1,9 @@
 <%- include("../partials/navbar") %>
 
+<!-- Add SweetAlert2 CSS and JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+
 <div class="container mx-auto px-4 py-8">
     <div class="flex flex-col lg:flex-row gap-8">
         <!-- Sidebar -->
@@ -34,7 +38,7 @@
 
                                     <!-- Remove from Wishlist Button -->
                                     <button 
-                                        onclick="removeFromWishlist('<%= item._id %>')"
+                                        onclick="removeFromWishlist('<%= item._id %>', '<%= item.variantType %>')"
                                         class="absolute top-2 right-2 p-2 rounded-full bg-white shadow-md hover:bg-gray-100 transition-colors"
                                     >
                                         <i class="fas fa-heart text-red-500"></i>
@@ -52,21 +56,14 @@
                                     
                                     <!-- Variant Selection -->
                                     <div class="mt-2">
-                                        <label class="text-sm text-gray-600">Select Variant:</label>
-                                        <select class="w-full mt-1 p-2 border rounded text-sm" 
-                                                onchange='updateVariantPrice(this, <%- JSON.stringify(item.variants) %>)'
-                                                data-product-id="<%= item._id %>"
-                                                data-discount="<%= item.variants[0].discount %>">
-                                            <% item.variants.forEach((variant, index) => { %>
-                                                <option value="<%= index %>">
-                                                    <%= variant.type %> 
-                                                </option>
-                                            <% }); %>
-                                        </select>
+                                        <label class="text-sm text-gray-600">Selected Variant:</label>
+                                        <div class="mt-1 p-2 border rounded text-sm bg-gray-50">
+                                            <%= item.variantType %>
+                                        </div>
                                     </div>
 
                                     <!-- Price Display -->
-                                    <% const variant = item.variants[0]; %>
+                                    <% const variant = item.variants.find(v => v.type === item.variantType) || item.variants[0]; %>
                                     <% const discountedPrice = Math.round(variant.price * (1 - variant.discount/100)); %>
                                     <div class="flex items-center justify-between mt-3" id="price-<%= item._id %>">
                                         <div class="flex items-center gap-2">
@@ -84,7 +81,7 @@
 
                                     <!-- Add to Cart Button -->
                                     <button 
-                                        onclick="addToCart('<%= item._id %>', this.closest('.p-4').querySelector('select').value)"
+                                        onclick="addToCart('<%= item._id %>', '<%= item.variantType %>')"
                                         class="w-full mt-4 bg-black text-white py-2 rounded-lg hover:bg-gray-800 transition-colors"
                                     >
                                         Add to Cart
@@ -113,22 +110,48 @@
 <%- include("../partials/footer") %>
 
 <script>
-async function removeFromWishlist(productId) {
+async function removeFromWishlist(productId, variantType) {
     try {
-        const response = await fetch(`/wishlist/remove/${productId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+        // Show confirmation dialog
+        const result = await Swal.fire({
+            title: 'Remove from Wishlist?',
+            text: "Are you sure you want to remove this item from your wishlist?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, remove it!',
+            cancelButtonText: 'Cancel'
         });
 
-        const data = await response.json();
+        if (result.isConfirmed) {
+            const response = await fetch(`/wishlist/remove/${productId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    productId,
+                    variantType
+                })
+            });
 
-        if (data.success) {
-            // Refresh the page to update the wishlist
-            location.reload();
-        } else {
-            throw new Error(data.message);
+            const data = await response.json();
+
+            if (data.success) {
+                // Show success message
+                await Swal.fire({
+                    title: 'Removed!',
+                    text: 'Item has been removed from your wishlist.',
+                    icon: 'success',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+                // Refresh the page to update the wishlist
+                location.reload();
+            } else {
+                throw new Error(data.message);
+            }
         }
     } catch (error) {
         Swal.fire({
@@ -167,12 +190,8 @@ function updateVariantPrice(select, variants) {
 }
 
 // Update the addToCart function
-async function addToCart(productId, variantIndex) {
+async function addToCart(productId, variantType) {
     try {
-        const select = document.querySelector(`select[data-product-id="${productId}"]`);
-        const selectedOption = select.options[select.selectedIndex];
-        const variantType = selectedOption.text.split(' - ')[0]; // Get variant type from option text
-
         // Add to cart
         const cartResponse = await fetch('/cart/add', {
             method: 'POST',
@@ -180,8 +199,8 @@ async function addToCart(productId, variantIndex) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                productId,
-                variantType
+                productId: productId,
+                variantType: variantType
             })
         });
 
@@ -193,7 +212,11 @@ async function addToCart(productId, variantIndex) {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                body: JSON.stringify({
+                    productId: productId,
+                    variantType: variantType
+                })
             });
 
             const wishlistData = await wishlistResponse.json();

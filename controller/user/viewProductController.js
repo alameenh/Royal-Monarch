@@ -53,11 +53,23 @@ const viewProduct = async (req, res) => {
         });
 
         // Check if products are in the user's wishlist
+        let wishlistStatus = {};
         let isInWishlist = false;
         if (userId) {
-            const user = await User.findById(userId);
-            if (user && user.wishlist && user.wishlist.includes(productId)) {
-                isInWishlist = true;
+            const wishlist = await Wishlist.findOne({ userId });
+            if (wishlist) {
+                // Create a map of variant types that are in wishlist
+                wishlistStatus = wishlist.products.reduce((acc, item) => {
+                    if (item.productId.toString() === productId) {
+                        acc[item.variantType] = true;
+                    }
+                    return acc;
+                }, {});
+                
+                // Check if the first variant is in wishlist
+                if (product.variants.length > 0) {
+                    isInWishlist = wishlistStatus[product.variants[0].type] || false;
+                }
             }
         }
 
@@ -70,6 +82,7 @@ const viewProduct = async (req, res) => {
         // Mark which variants are in cart and add offer information
         product.variants = product.variants.map(variant => {
             const inCart = cartItems.some(item => item.variantType === variant.type);
+            const inWishlist = wishlistStatus[variant.type] || false;
             
             // Find applicable offer for this variant
             const productOffer = activeOffers.find(offer => 
@@ -89,6 +102,7 @@ const viewProduct = async (req, res) => {
             return { 
                 ...variant,
                 inCart,
+                inWishlist,
                 offerName,
                 discount: Math.max(variant.discount || 0, offerDiscount)
             };
@@ -261,12 +275,27 @@ const toggleWishlist = async (req, res) => {
     try {
         const productId = req.params.productId;
         const userId = req.session.userId;
+        const { variantType } = req.body;
         const WISHLIST_LIMIT = 10;  // Define the wishlist limit
         
         if (!userId) {
             return res.status(401).json({
                 success: false,
                 message: 'Please login to add items to wishlist'
+            });
+        }
+
+        if (!productId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Product ID is required'
+            });
+        }
+
+        if (!variantType) {
+            return res.status(400).json({
+                success: false,
+                message: 'Variant type is required'
             });
         }
         
@@ -277,7 +306,11 @@ const toggleWishlist = async (req, res) => {
         if (!wishlist) {
             wishlist = new Wishlist({
                 userId,
-                products: [productId]
+                products: [{
+                    productId: new mongoose.Types.ObjectId(productId),
+                    variantType,
+                    addedAt: new Date()
+                }]
             });
             await wishlist.save();
             return res.json({
@@ -287,8 +320,10 @@ const toggleWishlist = async (req, res) => {
             });
         }
         
-        // Check if product is already in wishlist
-        const productIndex = wishlist.products.indexOf(productId);
+        // Check if product with specific variant is already in wishlist
+        const productIndex = wishlist.products.findIndex(
+            item => item.productId && item.productId.toString() === productId && item.variantType === variantType
+        );
         
         if (productIndex > -1) {
             // Remove from wishlist
@@ -309,7 +344,11 @@ const toggleWishlist = async (req, res) => {
             }
             
             // Add to wishlist
-            wishlist.products.push(productId);
+            wishlist.products.push({
+                productId: new mongoose.Types.ObjectId(productId),
+                variantType,
+                addedAt: new Date()
+            });
             await wishlist.save();
             return res.json({
                 success: true,

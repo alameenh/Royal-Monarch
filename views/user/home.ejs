@@ -57,8 +57,9 @@
                                 </div>
                                 <button class="wishlist-toggle text-gray-600 hover:text-red-500 transition-colors" 
                                         data-product-id="<%= product._id %>"
-                                        data-in-wishlist="<%= product.inWishlist ? 'true' : 'false' %>">
-                                    <i class="<%= product.inWishlist ? 'fas fa-heart text-red-500' : 'far fa-heart' %>"></i>
+                                        data-variant-type="<%= product.variants[0].type %>"
+                                        data-in-wishlist="<%= product.variants[0].inWishlist ? 'true' : 'false' %>">
+                                    <i class="<%= product.variants[0].inWishlist ? 'fas fa-heart text-red-500' : 'far fa-heart' %>"></i>
                                 </button>
                             </div>
                         </div>
@@ -68,7 +69,7 @@
                             <select class="variant-select w-full p-1 text-xs border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300" data-product-id="<%= product._id %>">
                                 <% if (product.variants && product.variants.length > 0) { %>
                                     <% product.variants.forEach(variant => { %>
-                                        <option value="<%= variant.type %>" data-stock="<%= variant.stock %>" data-price="<%= variant.price %>">
+                                        <option value="<%= variant.type %>" data-stock="<%= variant.stock %>" data-price="<%= variant.price %>" data-in-wishlist="<%= variant.inWishlist ? 'true' : 'false' %>">
                                             <%= variant.type %> - ₹<%= variant.price %>
                                         </option>
                                     <% }) %>
@@ -235,8 +236,9 @@
                                 </div>
                                 <button class="wishlist-toggle text-gray-600 hover:text-red-500 transition-colors" 
                                         data-product-id="<%= product._id %>"
-                                        data-in-wishlist="<%= product.inWishlist ? 'true' : 'false' %>">
-                                    <i class="<%= product.inWishlist ? 'fas fa-heart text-red-500' : 'far fa-heart' %>"></i>
+                                        data-variant-type="<%= product.variants[0].type %>"
+                                        data-in-wishlist="<%= product.variants[0].inWishlist ? 'true' : 'false' %>">
+                                    <i class="<%= product.variants[0].inWishlist ? 'fas fa-heart text-red-500' : 'far fa-heart' %>"></i>
                                 </button>
                             </div>
                         </div>
@@ -246,7 +248,9 @@
                             <select class="variant-select w-full p-1 text-xs border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300" data-product-id="<%= product._id %>">
                                 <% if (product.variants && product.variants.length > 0) { %>
                                     <% product.variants.forEach(variant => { %>
-                                        <option value="<%= variant.type %>" data-stock="<%= variant.stock %>"><%= variant.type %></option>
+                                        <option value="<%= variant.type %>" data-stock="<%= variant.stock %>" data-price="<%= variant.price %>" data-in-wishlist="<%= variant.inWishlist ? 'true' : 'false' %>">
+                                            <%= variant.type %> - ₹<%= variant.price %>
+                                        </option>
                                     <% }) %>
                                 <% } else { %>
                                     <option value="default">No variants available</option>
@@ -763,48 +767,120 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.wishlist-toggle').forEach(button => {
         button.addEventListener('click', async function(e) {
             e.preventDefault();
+            e.stopPropagation(); // Prevent event bubbling
+            
             const productId = this.getAttribute('data-product-id');
-            const isInWishlist = this.getAttribute('data-in-wishlist') === 'true';
+            const variantSelect = document.querySelector(`.variant-select[data-product-id="${productId}"]`);
+            const variantType = this.getAttribute('data-variant-type');
+            const currentState = this.getAttribute('data-in-wishlist') === 'true';
             
             try {
                 const response = await fetch(`/wishlist/toggle/${productId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    body: JSON.stringify({
+                        productId,
+                        variantType
+                    })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Update button state
+                    // Immediately update the UI
                     const icon = this.querySelector('i');
-                    if (isInWishlist) {
-                        icon.classList.remove('fas', 'text-red-500');
-                        icon.classList.add('far');
-                        this.setAttribute('data-in-wishlist', 'false');
-                    } else {
+                    const newState = !currentState;
+                    
+                    if (newState) {
                         icon.classList.remove('far');
                         icon.classList.add('fas', 'text-red-500');
-                        this.setAttribute('data-in-wishlist', 'true');
+                    } else {
+                        icon.classList.remove('fas', 'text-red-500');
+                        icon.classList.add('far');
                     }
                     
+                    // Update button data attribute
+                    this.setAttribute('data-in-wishlist', newState.toString());
+                    
+                    // Update variant select option
+                    const option = variantSelect.options[variantSelect.selectedIndex];
+                    option.setAttribute('data-in-wishlist', newState.toString());
+                    
+                    // Update all variant options for this product
+                    Array.from(variantSelect.options).forEach(opt => {
+                        if (opt.value === variantType) {
+                            opt.setAttribute('data-in-wishlist', newState.toString());
+                        }
+                    });
+                    
                     // Show success message
-                    Swal.fire({
-                        icon: 'success',
-                        title: isInWishlist ? 'Removed from Wishlist' : 'Added to Wishlist',
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
                         showConfirmButton: false,
-                        timer: 1500
+                        timer: 2000,
+                        timerProgressBar: true
+                    });
+
+                    Toast.fire({
+                        icon: 'success',
+                        title: data.message
                     });
                 } else {
                     throw new Error(data.message);
                 }
             } catch (error) {
+                // Revert the UI state on error
+                const icon = this.querySelector('i');
+                if (currentState) {
+                    icon.classList.remove('far');
+                    icon.classList.add('fas', 'text-red-500');
+                } else {
+                    icon.classList.remove('fas', 'text-red-500');
+                    icon.classList.add('far');
+                }
+                this.setAttribute('data-in-wishlist', currentState.toString());
+                
                 Swal.fire({
                     icon: 'error',
                     title: 'Oops...',
-                    text: error.message || 'Failed to update wishlist'
+                    text: error.message || 'Failed to update wishlist',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
                 });
+            }
+        });
+    });
+
+    // Update variant select to handle wishlist status
+    document.querySelectorAll('.variant-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const productId = this.getAttribute('data-product-id');
+            const variantType = this.value;
+            const wishlistBtn = document.querySelector(`.wishlist-toggle[data-product-id="${productId}"]`);
+            
+            // Update wishlist button data attributes
+            wishlistBtn.setAttribute('data-variant-type', variantType);
+            
+            // Check if this variant is in wishlist
+            const option = this.options[this.selectedIndex];
+            const inWishlist = option.getAttribute('data-in-wishlist') === 'true';
+            
+            // Update wishlist button appearance
+            const icon = wishlistBtn.querySelector('i');
+            if (inWishlist) {
+                icon.classList.remove('far');
+                icon.classList.add('fas', 'text-red-500');
+                wishlistBtn.setAttribute('data-in-wishlist', 'true');
+            } else {
+                icon.classList.remove('fas', 'text-red-500');
+                icon.classList.add('far');
+                wishlistBtn.setAttribute('data-in-wishlist', 'false');
             }
         });
     });

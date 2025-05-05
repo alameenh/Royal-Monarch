@@ -150,19 +150,36 @@ const getOtpPage = async (req, res) => {
 
 const getHomePage = async (req, res) => {
     try {
-        if (!req.session.email) {
+        // Check if user is logged in via session
+        if (!req.session.userId) {
             return res.redirect('/');
         }
 
-        const user = await userModel.findOne({ email: req.session.email });
+        // Find user by ID
+        const user = await userModel.findById(req.session.userId);
         
-        if (!user || user.status !== 'Active') {
+        if (!user) {
+            // Clear invalid session
+            req.session.destroy();
+            return res.redirect('/');
+        }
+
+        if (user.status !== 'Active') {
+            // Clear session for non-active users
+            req.session.destroy();
             return res.redirect('/');
         }
 
         // Get user's wishlist
         const wishlist = await Wishlist.findOne({ userId: user._id });
-        const wishlistProductIds = wishlist ? wishlist.products.map(id => id.toString()) : [];
+        const wishlistMap = new Map();
+        
+        if (wishlist) {
+            wishlist.products.forEach(item => {
+                const key = `${item.productId.toString()}-${item.variantType}`;
+                wishlistMap.set(key, true);
+            });
+        }
 
         // Fetch home settings
         let homeSettings = await HomeSettings.findOne();
@@ -203,26 +220,38 @@ const getHomePage = async (req, res) => {
             .sort({ soldcount: -1 })
             .limit(5);
 
-        // Process products to include offer information
-        const processedNewArrivals = newArrivals.map(product => {
-            const productObj = product.toObject();
-            productObj.inWishlist = wishlistProductIds.includes(product._id.toString());
+        // Process products to include offer information and wishlist status
+        const processProduct = (product) => {
+            // Convert to plain object if it's a Mongoose document
+            const productObj = product.toObject ? product.toObject() : product;
+            
+            // Add wishlist status to each variant
+            if (productObj.variants) {
+                productObj.variants = productObj.variants.map(variant => {
+                    const inWishlist = wishlistMap.has(`${productObj._id.toString()}-${variant.type}`);
+                    return {
+                        ...variant,
+                        inWishlist
+                    };
+                });
+            }
+            
             // Get the base price from the first variant
-            const basePrice = product.variants && product.variants.length > 0 ? 
-                product.variants[0].price : 0;
+            const basePrice = productObj.variants && productObj.variants.length > 0 ? 
+                productObj.variants[0].price : 0;
             
             // Find product-specific offer
             const productOffer = activeOffers.find(offer => 
                 offer.type === 'product' && 
-                offer.productIds && offer.productIds.some(id => id.toString() === product._id.toString())
+                offer.productIds && offer.productIds.some(id => id.toString() === productObj._id.toString())
             );
 
-            // Find category offer - check both categoryId and categoryIds fields
+            // Find category offer
             const categoryOffer = activeOffers.find(offer => 
                 offer.type === 'category' && 
-                product.category && (
-                    (offer.categoryId && offer.categoryId.toString() === product.category._id.toString()) ||
-                    (offer.categoryIds && offer.categoryIds.some(id => id.toString() === product.category._id.toString()))
+                productObj.category && (
+                    (offer.categoryId && offer.categoryId.toString() === productObj.category._id.toString()) ||
+                    (offer.categoryIds && offer.categoryIds.some(id => id.toString() === productObj.category._id.toString()))
                 )
             );
 
@@ -241,51 +270,15 @@ const getHomePage = async (req, res) => {
                 productObj.originalPrice = basePrice;
                 productObj.discountedPrice = basePrice;
             }
-            return productObj;
-        });
-
-        // Process featured products similarly
-        const processedFeaturedProducts = featuredProducts.map(product => {
-            const productObj = product.toObject();
-            productObj.inWishlist = wishlistProductIds.includes(product._id.toString());
-            // Get the base price from the first variant
-            const basePrice = product.variants && product.variants.length > 0 ? 
-                product.variants[0].price : 0;
             
-            // Find product-specific offer
-            const productOffer = activeOffers.find(offer => 
-                offer.type === 'product' && 
-                offer.productIds && offer.productIds.some(id => id.toString() === product._id.toString())
-            );
-
-            // Find category offer - check both categoryId and categoryIds fields
-            const categoryOffer = activeOffers.find(offer => 
-                offer.type === 'category' && 
-                product.category && (
-                    (offer.categoryId && offer.categoryId.toString() === product.category._id.toString()) ||
-                    (offer.categoryIds && offer.categoryIds.some(id => id.toString() === product.category._id.toString()))
-                )
-            );
-
-            // Use product-specific offer if available, otherwise use category offer
-            const offer = productOffer || categoryOffer;
-
-            if (offer) {
-                const discountedPrice = basePrice - (basePrice * offer.discount / 100);
-                productObj.offer = {
-                    discount: offer.discount,
-                    type: offer.type
-                };
-                productObj.originalPrice = basePrice;
-                productObj.discountedPrice = Math.round(discountedPrice);
-            } else {
-                productObj.originalPrice = basePrice;
-                productObj.discountedPrice = basePrice;
-            }
             return productObj;
-        });
+        };
 
-        // Process handpicked products with offer information
+        // Process new arrivals and featured products
+        const processedNewArrivals = newArrivals.map(processProduct);
+        const processedFeaturedProducts = featuredProducts.map(processProduct);
+
+        // Process handpicked products
         let processedHandpickedProducts = [];
         const handpickedProducts = [
             homeSettings.handpickedProduct1,
@@ -294,84 +287,26 @@ const getHomePage = async (req, res) => {
         ].filter(product => product && product._id);
 
         if (handpickedProducts.length > 0) {
-            // Get product IDs from handpicked products
-            const handpickedProductIds = handpickedProducts.map(product => product._id);
-            
-            // Fetch full product details for handpicked products
             const handpickedProductsFull = await Product.find({ 
-                _id: { $in: handpickedProductIds },
+                _id: { $in: handpickedProducts.map(p => p._id) },
                 status: 'Active'
             })
             .populate('category')
             .select('_id name brand variants images category')
             .lean();
             
-            // Create a map for quick lookup
-            const handpickedProductsMap = new Map();
-            handpickedProductsFull.forEach(product => {
-                handpickedProductsMap.set(product._id.toString(), product);
-            });
-            
-            // Process each handpicked product
-            processedHandpickedProducts = handpickedProducts.map(handpickedProduct => {
-                const productId = handpickedProduct._id.toString();
-                const fullProduct = handpickedProductsMap.get(productId);
-                
-                if (!fullProduct) {
-                    return null;
-                }
-                
-                const productObj = {
-                    _id: handpickedProduct._id,
-                    name: handpickedProduct.name,
-                    imagePath: handpickedProduct.imagePath || (fullProduct.images && fullProduct.images.length > 0 ? fullProduct.images[0].path : ''),
-                    brand: fullProduct.brand || 'N/A',
-                    inWishlist: wishlistProductIds.includes(productId)
-                };
-                
-                // Get the base price from the first variant
-                const basePrice = fullProduct.variants && fullProduct.variants.length > 0 ? 
-                    fullProduct.variants[0].price : 0;
-                
-                // Find product-specific offer
-                const productOffer = activeOffers.find(offer => 
-                    offer.type === 'product' && 
-                    offer.productIds && offer.productIds.some(id => id.toString() === productId)
-                );
-
-                // Find category offer
-                const categoryOffer = activeOffers.find(offer => 
-                    offer.type === 'category' && 
-                    fullProduct.category && (
-                        (offer.categoryId && offer.categoryId.toString() === fullProduct.category._id.toString()) ||
-                        (offer.categoryIds && offer.categoryIds.some(id => id.toString() === fullProduct.category._id.toString()))
-                    )
-                );
-
-                // Use product-specific offer if available, otherwise use category offer
-                const offer = productOffer || categoryOffer;
-
-                if (offer) {
-                    const discountedPrice = basePrice - (basePrice * offer.discount / 100);
-                    productObj.offer = {
-                        discount: offer.discount,
-                        type: offer.type
-                    };
-                    productObj.originalPrice = basePrice;
-                    productObj.discountedPrice = Math.round(discountedPrice);
-                } else {
-                    productObj.originalPrice = basePrice;
-                    productObj.discountedPrice = basePrice;
-                }
-                return productObj;
-            }).filter(Boolean); // Remove any null values
+            processedHandpickedProducts = handpickedProductsFull.map(processProduct);
         }
 
         // Get cart count for navbar
         const cartCount = await CartItem.countDocuments({ userId: req.session.userId });
 
         res.render('user/home', {
-            user: req.session.user,
+            user: {
+                firstname: user.firstname,
+                lastname: user.lastname,
+                email: user.email
+            },
             homeSettings,
             categories,
             newArrivals: processedNewArrivals,
@@ -382,6 +317,8 @@ const getHomePage = async (req, res) => {
         
     } catch (error) {
         console.error('Home Page Error:', error);
+        // Clear session on error
+        req.session.destroy();
         res.redirect('/');
     }
 };
@@ -1015,32 +952,66 @@ export const updateProfile = async (req, res) => {
 export const toggleWishlist = async (req, res) => {
     try {
         const userId = req.session.userId;
-        const productId = req.params.productId;
+        const { productId, variantType } = req.body;
+
+        if (!userId || !productId || !variantType) {
+            return res.status(400).json({
+                success: false,
+                message: 'User ID, Product ID, and Variant Type are required'
+            });
+        }
 
         // Find user's wishlist
         let wishlist = await Wishlist.findOne({ userId });
 
+        // Check if product with specific variant is already in wishlist
+        const isInWishlist = wishlist && wishlist.products.some(
+            item => item.productId.toString() === productId && item.variantType === variantType
+        );
+
+        if (isInWishlist) {
+            // Remove from wishlist
+            wishlist.products = wishlist.products.filter(
+                item => !(item.productId.toString() === productId && item.variantType === variantType)
+            );
+            await wishlist.save();
+            return res.json({
+                success: true,
+                message: 'Removed from wishlist',
+                inWishlist: false
+            });
+        }
+
         // If wishlist doesn't exist, create one
         if (!wishlist) {
-            wishlist = new Wishlist({ userId, products: [] });
+            wishlist = new Wishlist({ 
+                userId, 
+                products: [{
+                    productId,
+                    variantType,
+                    addedAt: new Date()
+                }]
+            });
+            await wishlist.save();
+            return res.json({
+                success: true,
+                message: 'Added to wishlist',
+                inWishlist: true
+            });
         }
 
-        // Check if product is already in wishlist
-        const productIndex = wishlist.products.indexOf(productId);
-
-        if (productIndex === -1) {
-            // Add to wishlist
-            wishlist.products.push(productId);
-        } else {
-            // Remove from wishlist
-            wishlist.products.splice(productIndex, 1);
-        }
-
+        // Add to wishlist with timestamp
+        wishlist.products.push({
+            productId,
+            variantType,
+            addedAt: new Date()
+        });
         await wishlist.save();
-
-        res.json({
+        
+        return res.json({
             success: true,
-            message: productIndex === -1 ? 'Added to wishlist' : 'Removed from wishlist'
+            message: 'Added to wishlist',
+            inWishlist: true
         });
 
     } catch (error) {

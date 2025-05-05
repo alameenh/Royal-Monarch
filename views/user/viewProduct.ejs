@@ -124,7 +124,8 @@
                                         data-discount="<%= variant.discount %>"
                                         data-offer-name="<%= variant.offerName %>"
                                         data-specs='<%= JSON.stringify(variant.specifications || []) %>'
-                                        data-in-cart="<%= variant.inCart %>">
+                                        data-in-cart="<%= variant.inCart %>"
+                                        data-in-wishlist="<%= variant.inWishlist %>">
                                     <%= variant.type %> 
                                 </option>
                             <% }) %>
@@ -342,6 +343,17 @@ function updateVariantDetails() {
     const discount = parseInt(option.getAttribute('data-discount') || '0');
     const offerName = option.getAttribute('data-offer-name');
     const inCart = option.getAttribute('data-in-cart') === 'true';
+    const inWishlist = option.getAttribute('data-in-wishlist') === 'true';
+    
+    // Update wishlist button state
+    const wishlistBtn = document.getElementById('wishlistBtn').querySelector('i');
+    if (inWishlist) {
+        wishlistBtn.classList.remove('text-gray-400');
+        wishlistBtn.classList.add('text-red-500');
+    } else {
+        wishlistBtn.classList.remove('text-red-500');
+        wishlistBtn.classList.add('text-gray-400');
+    }
     
     // Calculate discounted price
     const discountedPrice = Math.round(price * (1 - discount/100));
@@ -610,11 +622,28 @@ async function buyNow(productId) {
 }
 
 function toggleWishlist(productId) {
+    const variantSelect = document.getElementById('variantSelect');
+    const selectedVariant = variantSelect.options[variantSelect.selectedIndex];
+    const variantType = selectedVariant.getAttribute('data-type');
+
+    if (!variantType) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Please select a variant first',
+            confirmButtonColor: '#3085d6'
+        });
+        return;
+    }
+
     fetch(`/wishlist/toggle/${productId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+            variantType
+        })
     })
     .then(response => response.json())
     .then(data => {
