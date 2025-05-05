@@ -55,9 +55,11 @@
                                         <span class="text-xs text-[#8B4513] font-serif ml-1"><%= product.offer.discount %>% OFF</span>
                                     <% } %>
                                 </div>
-                                <span class="text-gray-600 hover:text-[#8B4513] transition-colors">
-                                    <i class="fas fa-eye text-sm"></i>
-                                </span>
+                                <button class="wishlist-toggle text-gray-600 hover:text-red-500 transition-colors" 
+                                        data-product-id="<%= product._id %>"
+                                        data-in-wishlist="<%= product.inWishlist ? 'true' : 'false' %>">
+                                    <i class="<%= product.inWishlist ? 'fas fa-heart text-red-500' : 'far fa-heart' %>"></i>
+                                </button>
                             </div>
                         </div>
                     </a>
@@ -231,9 +233,11 @@
                                         <span class="text-xs text-[#8B4513] font-serif ml-1"><%= product.offer.discount %>% OFF</span>
                                     <% } %>
                                 </div>
-                                <span class="text-gray-600 hover:text-[#8B4513] transition-colors">
-                                    <i class="fas fa-eye text-sm"></i>
-                                </span>
+                                <button class="wishlist-toggle text-gray-600 hover:text-red-500 transition-colors" 
+                                        data-product-id="<%= product._id %>"
+                                        data-in-wishlist="<%= product.inWishlist ? 'true' : 'false' %>">
+                                    <i class="<%= product.inWishlist ? 'fas fa-heart text-red-500' : 'far fa-heart' %>"></i>
+                                </button>
                             </div>
                         </div>
                     </a>
@@ -750,6 +754,56 @@ document.addEventListener('DOMContentLoaded', function() {
                     icon: 'error',
                     title: 'Oops...',
                     text: error.message || 'Failed to add to cart'
+                });
+            }
+        });
+    });
+
+    // Add wishlist toggle functionality
+    document.querySelectorAll('.wishlist-toggle').forEach(button => {
+        button.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const productId = this.getAttribute('data-product-id');
+            const isInWishlist = this.getAttribute('data-in-wishlist') === 'true';
+            
+            try {
+                const response = await fetch(`/wishlist/toggle/${productId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update button state
+                    const icon = this.querySelector('i');
+                    if (isInWishlist) {
+                        icon.classList.remove('fas', 'text-red-500');
+                        icon.classList.add('far');
+                        this.setAttribute('data-in-wishlist', 'false');
+                    } else {
+                        icon.classList.remove('far');
+                        icon.classList.add('fas', 'text-red-500');
+                        this.setAttribute('data-in-wishlist', 'true');
+                    }
+                    
+                    // Show success message
+                    Swal.fire({
+                        icon: 'success',
+                        title: isInWishlist ? 'Removed from Wishlist' : 'Added to Wishlist',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: error.message || 'Failed to update wishlist'
                 });
             }
         });

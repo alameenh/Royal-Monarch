@@ -11,6 +11,7 @@ import HomeSettings from '../../model/homeSettingsModel.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import Wishlist from '../../model/wishlistModel.js';
 
 config();
 
@@ -159,6 +160,10 @@ const getHomePage = async (req, res) => {
             return res.redirect('/');
         }
 
+        // Get user's wishlist
+        const wishlist = await Wishlist.findOne({ userId: user._id });
+        const wishlistProductIds = wishlist ? wishlist.products.map(id => id.toString()) : [];
+
         // Fetch home settings
         let homeSettings = await HomeSettings.findOne();
         if (!homeSettings) {
@@ -200,6 +205,8 @@ const getHomePage = async (req, res) => {
 
         // Process products to include offer information
         const processedNewArrivals = newArrivals.map(product => {
+            const productObj = product.toObject();
+            productObj.inWishlist = wishlistProductIds.includes(product._id.toString());
             // Get the base price from the first variant
             const basePrice = product.variants && product.variants.length > 0 ? 
                 product.variants[0].price : 0;
@@ -224,26 +231,23 @@ const getHomePage = async (req, res) => {
 
             if (offer) {
                 const discountedPrice = basePrice - (basePrice * offer.discount / 100);
-                return {
-                    ...product.toObject(),
-                    offer: {
-                        discount: offer.discount,
-                        type: offer.type
-                    },
-                    originalPrice: basePrice,
-                    discountedPrice: Math.round(discountedPrice)
+                productObj.offer = {
+                    discount: offer.discount,
+                    type: offer.type
                 };
+                productObj.originalPrice = basePrice;
+                productObj.discountedPrice = Math.round(discountedPrice);
+            } else {
+                productObj.originalPrice = basePrice;
+                productObj.discountedPrice = basePrice;
             }
-
-            return {
-                ...product.toObject(),
-                originalPrice: basePrice,
-                discountedPrice: basePrice
-            };
+            return productObj;
         });
 
         // Process featured products similarly
         const processedFeaturedProducts = featuredProducts.map(product => {
+            const productObj = product.toObject();
+            productObj.inWishlist = wishlistProductIds.includes(product._id.toString());
             // Get the base price from the first variant
             const basePrice = product.variants && product.variants.length > 0 ? 
                 product.variants[0].price : 0;
@@ -268,22 +272,17 @@ const getHomePage = async (req, res) => {
 
             if (offer) {
                 const discountedPrice = basePrice - (basePrice * offer.discount / 100);
-                return {
-                    ...product.toObject(),
-                    offer: {
-                        discount: offer.discount,
-                        type: offer.type
-                    },
-                    originalPrice: basePrice,
-                    discountedPrice: Math.round(discountedPrice)
+                productObj.offer = {
+                    discount: offer.discount,
+                    type: offer.type
                 };
+                productObj.originalPrice = basePrice;
+                productObj.discountedPrice = Math.round(discountedPrice);
+            } else {
+                productObj.originalPrice = basePrice;
+                productObj.discountedPrice = basePrice;
             }
-
-            return {
-                ...product.toObject(),
-                originalPrice: basePrice,
-                discountedPrice: basePrice
-            };
+            return productObj;
         });
 
         // Process handpicked products with offer information
@@ -322,6 +321,14 @@ const getHomePage = async (req, res) => {
                     return null;
                 }
                 
+                const productObj = {
+                    _id: handpickedProduct._id,
+                    name: handpickedProduct.name,
+                    imagePath: handpickedProduct.imagePath || (fullProduct.images && fullProduct.images.length > 0 ? fullProduct.images[0].path : ''),
+                    brand: fullProduct.brand || 'N/A',
+                    inWishlist: wishlistProductIds.includes(productId)
+                };
+                
                 // Get the base price from the first variant
                 const basePrice = fullProduct.variants && fullProduct.variants.length > 0 ? 
                     fullProduct.variants[0].price : 0;
@@ -346,28 +353,17 @@ const getHomePage = async (req, res) => {
 
                 if (offer) {
                     const discountedPrice = basePrice - (basePrice * offer.discount / 100);
-                    return {
-                        _id: handpickedProduct._id,
-                        name: handpickedProduct.name,
-                        imagePath: handpickedProduct.imagePath || (fullProduct.images && fullProduct.images.length > 0 ? fullProduct.images[0].path : ''),
-                        brand: fullProduct.brand || 'N/A',
-                        offer: {
-                            discount: offer.discount,
-                            type: offer.type
-                        },
-                        originalPrice: basePrice,
-                        discountedPrice: Math.round(discountedPrice)
+                    productObj.offer = {
+                        discount: offer.discount,
+                        type: offer.type
                     };
+                    productObj.originalPrice = basePrice;
+                    productObj.discountedPrice = Math.round(discountedPrice);
+                } else {
+                    productObj.originalPrice = basePrice;
+                    productObj.discountedPrice = basePrice;
                 }
-
-                return {
-                    _id: handpickedProduct._id,
-                    name: handpickedProduct.name,
-                    imagePath: handpickedProduct.imagePath || (fullProduct.images && fullProduct.images.length > 0 ? fullProduct.images[0].path : ''),
-                    brand: fullProduct.brand || 'N/A',
-                    originalPrice: basePrice,
-                    discountedPrice: basePrice
-                };
+                return productObj;
             }).filter(Boolean); // Remove any null values
         }
 
@@ -1015,4 +1011,45 @@ export const updateProfile = async (req, res) => {
     }
 };
 
-export default { getLogin, getSignup, postSignup, postLogin, getOtpPage, verifyOtp, getHomePage, getLogout, getGoogle, getGoogleCallback, getForgotPassword, postForgotPassword, getResetPassword, postResetPassword, getChangePassword, postChangePassword, getProductImages };
+// Add this new function for wishlist toggle
+export const toggleWishlist = async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const productId = req.params.productId;
+
+        // Find user's wishlist
+        let wishlist = await Wishlist.findOne({ userId });
+
+        // If wishlist doesn't exist, create one
+        if (!wishlist) {
+            wishlist = new Wishlist({ userId, products: [] });
+        }
+
+        // Check if product is already in wishlist
+        const productIndex = wishlist.products.indexOf(productId);
+
+        if (productIndex === -1) {
+            // Add to wishlist
+            wishlist.products.push(productId);
+        } else {
+            // Remove from wishlist
+            wishlist.products.splice(productIndex, 1);
+        }
+
+        await wishlist.save();
+
+        res.json({
+            success: true,
+            message: productIndex === -1 ? 'Added to wishlist' : 'Removed from wishlist'
+        });
+
+    } catch (error) {
+        console.error('Wishlist Toggle Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating wishlist'
+        });
+    }
+};
+
+export default { getLogin, getSignup, postSignup, postLogin, getOtpPage, verifyOtp, getHomePage, getLogout, getGoogle, getGoogleCallback, getForgotPassword, postForgotPassword, getResetPassword, postResetPassword, getChangePassword, postChangePassword, getProductImages, toggleWishlist };
