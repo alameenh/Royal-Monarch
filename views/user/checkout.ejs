@@ -1,226 +1,229 @@
 <%- include('../partials/navbar') %>
 
-<div class="container mx-auto px-4 py-8">
-    <div class="flex flex-col lg:flex-row gap-8">
-        <!-- Sidebar -->
-        <div class="lg:w-1/4">
-            <%- include('../partials/profileSidebar') %>
-        </div>
+<div class="min-h-screen bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8 text-center">Checkout</h1>
 
-        <!-- Main Content -->
-        <div class="lg:w-3/4">
-            <h1 class="text-2xl font-bold mb-6">Checkout</h1>
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Left Column -->
+            <div class="lg:w-2/3 space-y-6">
+                <!-- Shipping Address Section -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">Shipping Address</h2>
+                        <a href="/address" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                            <i class="fas fa-plus mr-1"></i>Add New Address
+                        </a>
+                    </div>
 
-            <!-- Shipping Address Section -->
-            <div class="bg-white p-4 rounded-lg shadow-md mb-6">
-                <div class="flex justify-between items-center mb-3">
-                    <h2 class="text-xl font-semibold">Shipping Address</h2>
-                    <a href="/address" class="text-blue-600 hover:text-blue-800 text-sm">
-                        Add New Address
-                    </a>
-                </div>
-
-                <div class="space-y-3">
-                    <% if (addresses && addresses.length > 0) { %>
-                        <% addresses.forEach(address => { %>
-                            <div class="border rounded-lg p-3 hover:border-black transition-colors">
-                                <label class="flex items-start gap-3 cursor-pointer">
-                                    <input type="radio" 
-                                           name="selectedAddress" 
-                                           value="<%= address._id %>"
-                                           class="mt-1"
-                                           required>
-                                    <div class="text-sm">
-                                        <p class="font-semibold"><%= address.name %></p>
-                                        <p class="text-gray-600">
-                                            <%= address.houseName %>, 
-                                            <%= address.localityStreet %>, 
-                                            <%= address.city %>, 
-                                            <%= address.state %> - <%= address.pincode %>
-                                        </p>
-                                        <p class="text-gray-600">
-                                            Ph: <%= address.phone %>
-                                            <% if (address.alternatePhone) { %>
-                                                | Alt: <%= address.alternatePhone %>
-                                            <% } %>
-                                        </p>
-                                    </div>
-                                </label>
+                    <div class="space-y-4">
+                        <% if (addresses && addresses.length > 0) { %>
+                            <% addresses.forEach(address => { %>
+                                <div class="border rounded-lg p-4 hover:border-black transition-colors cursor-pointer">
+                                    <label class="flex items-start gap-4 cursor-pointer">
+                                        <input type="radio" 
+                                               name="selectedAddress" 
+                                               value="<%= address._id %>"
+                                               class="mt-1"
+                                               required>
+                                        <div class="flex-grow">
+                                            <div class="flex justify-between items-start">
+                                                <p class="font-semibold"><%= address.name %></p>
+                                                <span class="text-sm text-gray-500">
+                                                    <%= address.phone %>
+                                                    <% if (address.alternatePhone) { %>
+                                                        | <%= address.alternatePhone %>
+                                                    <% } %>
+                                                </span>
+                                            </div>
+                                            <p class="text-gray-600 mt-1">
+                                                <%= address.houseName %>, 
+                                                <%= address.localityStreet %>, 
+                                                <%= address.city %>, 
+                                                <%= address.state %> - <%= address.pincode %>
+                                            </p>
+                                        </div>
+                                    </label>
+                                </div>
+                            <% }); %>
+                        <% } else { %>
+                            <div class="text-center py-8 bg-gray-50 rounded-lg">
+                                <i class="fas fa-map-marker-alt text-4xl text-gray-400 mb-3"></i>
+                                <p class="text-gray-600">No addresses found. Please add a delivery address.</p>
                             </div>
-                        <% }); %>
-                    <% } else { %>
-                        <p class="text-center text-gray-600 text-sm py-2">
-                            No addresses found. Please add a delivery address.
-                        </p>
-                    <% } %>
+                        <% } %>
+                    </div>
                 </div>
-            </div>
 
-            <div class="flex flex-col md:flex-row gap-8">
-                <!-- Order Items -->
-                <div class="md:w-2/3">
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h2 class="text-xl font-semibold mb-4">Order Items</h2>
-                        <div class="space-y-4">
-                            <% cartItems.forEach((item, index) => { %>
-                                <div class="flex gap-4 border-b pb-4">
+                <!-- Order Items Section -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-xl font-semibold mb-4">Order Items</h2>
+                    <div class="space-y-6">
+                        <% cartItems.forEach((item, index) => { %>
+                            <div class="flex gap-4 pb-6 <%= index !== cartItems.length - 1 ? 'border-b' : '' %>">
+                                <div class="w-24 h-24 flex-shrink-0">
                                     <img src="<%= item.productId.images[0].path %>" 
                                          alt="<%= item.productId.name %>"
-                                         class="w-20 h-20 object-cover rounded">
-                                    <div class="flex-grow">
-                                        <h3 class="font-semibold"><%= item.productId.name %></h3>
-                                        <p class="text-gray-600">Brand: <%= item.productId.brand %></p>
-                                        <p class="text-gray-600">Variant: <%= item.variantType %></p>
-                                        <div class="mt-2">
+                                         class="w-full h-full object-cover rounded-lg">
+                                </div>
+                                <div class="flex-grow">
+                                    <div class="flex justify-between">
+                                        <div>
+                                            <h3 class="font-semibold"><%= item.productId.name %></h3>
+                                            <p class="text-gray-600 text-sm">Brand: <%= item.productId.brand %></p>
+                                            <p class="text-gray-600 text-sm">Variant: <%= item.variantType %></p>
+                                        </div>
+                                        <div class="text-right">
                                             <p class="text-sm text-gray-500 line-through">
                                                 ₹<%= item.originalPrice.toFixed(2) %>
                                             </p>
-                                            <% if (item.offer) { %>
-                                                <p class="text-sm text-green-600">
-                                                    <%= item.offer.discount %>% off - <%= item.offer.name %>
-                                                    (<%= item.offer.type === 'product' ? 'Product Offer' : 'Category Offer' %>)
-                                                </p>
-                                            <% } %>
                                             <p class="font-semibold">
-                                                ₹<%= item.discountedPrice.toFixed(2) %> x <%= item.quantity %>
+                                                ₹<%= item.discountedPrice.toFixed(2) %>
                                             </p>
-                                            <p class="text-sm font-semibold text-gray-800">
-                                                Total: ₹<%= item.totalPrice.toFixed(2) %>
+                                            <p class="text-sm text-gray-600">
+                                                Qty: <%= item.quantity %>
                                             </p>
                                         </div>
                                     </div>
+                                    <% if (item.offer) { %>
+                                        <div class="mt-2">
+                                            <span class="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                                                <%= item.offer.discount %>% off - <%= item.offer.name %>
+                                            </span>
+                                        </div>
+                                    <% } %>
                                 </div>
-                            <% }); %>
-                        </div>
+                            </div>
+                        <% }); %>
                     </div>
                 </div>
+            </div>
 
-                <!-- Order Summary -->
-                <div class="md:w-1/3">
-                    <div class="bg-white p-6 rounded-lg shadow-md sticky top-4">
-                        <!-- Coupon Section -->
-                        <div class="mb-6 border-b pb-4">
-                            <h3 class="font-semibold mb-2">Apply Coupon</h3>
-                            <% if (coupons && coupons.length > 0) { %>
-                                <select id="couponSelect" class="w-full p-2 border rounded mb-2">
-                                    <option value="">Select a coupon</option>
-                                    <% coupons.forEach(coupon => { %>
-                                        <option value="<%= coupon._id %>" 
-                                                data-type="<%= coupon.discountType %>"
-                                                data-value="<%= coupon.discountValue %>"
-                                                data-max="<%= coupon.maxDiscount %>">
-                                            <%= coupon.code %> - 
-                                            <%= coupon.discountType === 'PERCENTAGE' ? 
-                                                `${coupon.discountValue}% off` : 
-                                                `₹${coupon.discountValue} off` %>
-                                            <% if (coupon.maxDiscount) { %>
-                                                (Max: ₹<%= coupon.maxDiscount %>)
-                                            <% } %>
-                                        </option>
-                                    <% }); %>
-                                </select>
-                                <button onclick="applyCoupon()" 
-                                        class="w-full bg-gray-800 text-white py-2 rounded hover:bg-gray-700">
-                                    Apply Coupon
-                                </button>
-                                <div id="removeCouponButton" class="hidden">
-                                    <button onclick="removeCoupon()" 
-                                            class="w-full mt-2 bg-red-600 text-white py-2 rounded hover:bg-red-700">
-                                        Remove Coupon
-                                    </button>
-                                </div>
-                            <% } else { %>
-                                <p class="text-sm text-gray-600">No coupons available for this order</p>
-                            <% } %>
-                        </div>
-
-                        <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
-                        <div class="space-y-3">
-                            <div class="flex justify-between">
-                                <span>Original Subtotal</span>
-                                <span>₹<%= originalSubtotal.toFixed(2) %></span>
-                            </div>
-
-                            <% if (totalOfferDiscount > 0) { %>
-                                <div class="flex justify-between text-green-600">
-                                    <span>Offer Discount</span>
-                                    <span>-₹<%= totalOfferDiscount.toFixed(2) %></span>
-                                </div>
-                            <% } %>
-
-                            <div class="flex justify-between">
-                                <span>Subtotal After Offer</span>
-                                <span>₹<span id="subtotalAfterOffer"><%= subtotal.toFixed(2) %></span></span>
-                            </div>
-
-                            <!-- Coupon Discount Row (Hidden by default) -->
-                            <div id="couponDiscountRow" class="flex justify-between text-green-600 hidden">
-                                <span>Coupon Discount</span>
-                                <span>-₹<span id="couponDiscountAmount">0.00</span></span>
-                            </div>
-
-                            <!-- Subtotal After Coupon (Hidden by default) -->
-                            <div id="subtotalAfterCouponRow" class="flex justify-between hidden">
-                                <span>Subtotal After Coupon</span>
-                                <span>₹<span id="subtotalAfterCoupon">0.00</span></span>
-                            </div>
-
-                            <div class="flex justify-between">
-                                <span>GST (18% of subtotal)</span>
-                                <span>₹<span id="gstAmount"><%= Math.round(subtotal * 0.18).toFixed(2) %></span></span>
-                            </div>
-
-                            <div class="flex justify-between">
-                                <span>Shipping (2% of subtotal)</span>
-                                <span>₹<span id="shippingCost"><%= shippingCost.toFixed(2) %></span></span>
-                            </div>
-
-                            <div class="border-t pt-3">
-                                <div class="flex justify-between font-bold">
-                                    <span>Total</span>
-                                    <span>₹<span id="finalTotal"><%= (subtotal + Math.round(subtotal * 0.18) + shippingCost).toFixed(2) %></span></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Payment Method Selection -->
-                        <div class="mt-6">
-                            <h3 class="font-semibold mb-3">Payment Method</h3>
-                            <div class="space-y-2">
-                                <label class="flex items-center gap-2" id="codPaymentLabel">
-                                    <input type="radio" name="paymentMethod" value="cod" checked id="codPayment">
-                                    <span>Cash on Delivery</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input type="radio" name="paymentMethod" value="online">
-                                    <span>Online Payment</span>
-                                </label>
-                                <label class="flex items-center gap-2" id="walletPaymentLabel">
-                                    <input type="radio" name="paymentMethod" value="wallet" 
-                                           id="walletPayment" 
-                                           <%= walletBalance < (subtotal + Math.round(subtotal * 0.18) + shippingCost) ? 'disabled' : '' %>>
-                                    <div>
-                                        <span>Wallet</span>
-                                        <p class="text-sm <%= walletBalance >= (subtotal + Math.round(subtotal * 0.18) + shippingCost) ? 'text-green-600' : 'text-red-600' %>">
-                                            Balance: ₹<%= walletBalance.toFixed(2) %>
-                                            <% if (walletBalance < (subtotal + Math.round(subtotal * 0.18) + shippingCost)) { %>
-                                                (Insufficient balance)
-                                            <% } %>
-                                        </p>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Place Order Button -->
-                        <button id="placeOrderButton"
-                                class="w-full mt-6 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors">
-                            <span id="buttonText">Place Order</span>
-                            <span id="buttonSpinner" class="hidden">
-                                <i class="fas fa-spinner fa-spin"></i>
-                            </span>
-                        </button>
+            <!-- Right Column - Order Summary -->
+            <div class="lg:w-1/3">
+                <div class="bg-white rounded-xl shadow-sm p-6 sticky top-4">
+                    <!-- Coupon Section -->
+                    <div class="mb-6 border-b pb-4">
+                        <h3 class="font-semibold mb-3">Apply Coupon</h3>
+                        <% if (coupons && coupons.length > 0) { %>
+                            <select id="couponSelect" class="w-full p-2 border rounded-lg mb-2 focus:ring-2 focus:ring-black focus:border-black">
+                                <option value="">Select a coupon</option>
+                                <% coupons.forEach(coupon => { %>
+                                    <option value="<%= coupon._id %>" 
+                                            data-type="<%= coupon.discountType %>"
+                                            data-value="<%= coupon.discountValue %>"
+                                            data-max="<%= coupon.maxDiscount %>">
+                                        <%= coupon.code %> - 
+                                        <%= coupon.discountType === 'PERCENTAGE' ? 
+                                            `${coupon.discountValue}% off` : 
+                                            `₹${coupon.discountValue} off` %>
+                                        <% if (coupon.maxDiscount) { %>
+                                            (Max: ₹<%= coupon.maxDiscount %>)
+                                        <% } %>
+                                    </option>
+                                <% }); %>
+                            </select>
+                            <button onclick="applyCoupon()" 
+                                    class="w-full bg-black text-white py-2 rounded-lg hover:bg-gray-800 transition-colors">
+                                Apply Coupon
+                            </button>
+                        <% } else { %>
+                            <p class="text-sm text-gray-600">No coupons available for this order</p>
+                        <% } %>
                     </div>
+
+                    <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
+                    <div class="space-y-3">
+                        <div class="flex justify-between text-gray-600">
+                            <span>Original Subtotal</span>
+                            <span>₹<%= originalSubtotal.toFixed(2) %></span>
+                        </div>
+
+                        <% if (totalOfferDiscount > 0) { %>
+                            <div class="flex justify-between text-green-600">
+                                <span>Offer Discount</span>
+                                <span>-₹<%= totalOfferDiscount.toFixed(2) %></span>
+                            </div>
+                        <% } %>
+
+                        <div class="flex justify-between">
+                            <span>Subtotal After Offer</span>
+                            <span>₹<span id="subtotalAfterOffer"><%= subtotal.toFixed(2) %></span></span>
+                        </div>
+
+                        <div id="couponDiscountRow" class="flex justify-between text-green-600 hidden">
+                            <span>Coupon Discount</span>
+                            <span>-₹<span id="couponDiscountAmount">0.00</span></span>
+                        </div>
+
+                        <div id="subtotalAfterCouponRow" class="flex justify-between hidden">
+                            <span>Subtotal After Coupon</span>
+                            <span>₹<span id="subtotalAfterCoupon">0.00</span></span>
+                        </div>
+
+                        <div class="flex justify-between text-gray-600">
+                            <span>GST (18%)</span>
+                            <span>₹<span id="gstAmount"><%= Math.round(subtotal * 0.18).toFixed(2) %></span></span>
+                        </div>
+
+                        <div class="flex justify-between text-gray-600">
+                            <span>Shipping (2%)</span>
+                            <span>₹<span id="shippingCost"><%= shippingCost.toFixed(2) %></span></span>
+                        </div>
+
+                        <div class="border-t pt-3 mt-3">
+                            <div class="flex justify-between font-bold text-lg">
+                                <span>Total</span>
+                                <span>₹<span id="finalTotal"><%= (subtotal + Math.round(subtotal * 0.18) + shippingCost).toFixed(2) %></span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Method Selection -->
+                    <div class="mt-6 border-t pt-6">
+                        <h3 class="font-semibold mb-4">Payment Method</h3>
+                        <div class="space-y-3">
+                            <label class="flex items-center gap-3 p-3 border rounded-lg hover:border-black transition-colors cursor-pointer" id="codPaymentLabel">
+                                <input type="radio" name="paymentMethod" value="cod" checked id="codPayment">
+                                <div>
+                                    <span class="font-medium">Cash on Delivery</span>
+                                    <p class="text-sm text-gray-600">Pay when you receive your order</p>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center gap-3 p-3 border rounded-lg hover:border-black transition-colors cursor-pointer">
+                                <input type="radio" name="paymentMethod" value="online">
+                                <div>
+                                    <span class="font-medium">Online Payment</span>
+                                    <p class="text-sm text-gray-600">Pay securely with Razorpay</p>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center gap-3 p-3 border rounded-lg hover:border-black transition-colors cursor-pointer" id="walletPaymentLabel">
+                                <input type="radio" name="paymentMethod" value="wallet" 
+                                       id="walletPayment" 
+                                       <%= walletBalance < (subtotal + Math.round(subtotal * 0.18) + shippingCost) ? 'disabled' : '' %>>
+                                <div>
+                                    <span class="font-medium">Wallet</span>
+                                    <p class="text-sm <%= walletBalance >= (subtotal + Math.round(subtotal * 0.18) + shippingCost) ? 'text-green-600' : 'text-red-600' %>">
+                                        Balance: ₹<%= walletBalance.toFixed(2) %>
+                                        <% if (walletBalance < (subtotal + Math.round(subtotal * 0.18) + shippingCost)) { %>
+                                            (Insufficient balance)
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Place Order Button -->
+                    <button id="placeOrderButton"
+                            class="w-full mt-6 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors">
+                        <span id="buttonText">Place Order</span>
+                        <span id="buttonSpinner" class="hidden">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -344,6 +347,7 @@ async function applyCoupon() {
     try {
         const select = document.getElementById('couponSelect');
         const option = select.options[select.selectedIndex];
+        const applyButton = document.querySelector('button[onclick="applyCoupon()"]');
 
         if (!option.value) {
             throw new Error('Please select a coupon');
@@ -374,8 +378,14 @@ async function applyCoupon() {
             document.getElementById('couponDiscountAmount').textContent = 
                 data.discount.toFixed(2);
 
-            // Show remove coupon button
-            document.getElementById('removeCouponButton').classList.remove('hidden');
+            // Change button text and behavior
+            applyButton.textContent = 'Remove Coupon';
+            applyButton.classList.remove('bg-black', 'hover:bg-gray-800');
+            applyButton.classList.add('bg-red-600', 'hover:bg-red-700');
+            applyButton.onclick = removeCoupon;
+
+            // Disable coupon select
+            select.disabled = true;
 
             // Calculate all amounts with the new coupon discount
             const amounts = calculateAmounts(subtotalValue, offerDiscountValue, data.discount);
@@ -410,16 +420,26 @@ async function applyCoupon() {
     }
 }
 
-// Update the removeCoupon function to reset to original values
+// Update the removeCoupon function to reset button state
 function removeCoupon() {
     // Hide coupon discount row and subtotal after coupon row
     document.getElementById('couponDiscountRow').classList.add('hidden');
     document.getElementById('subtotalAfterCouponRow').classList.add('hidden');
-    // Hide remove coupon button
-    document.getElementById('removeCouponButton').classList.add('hidden');
     
     // Reset coupon discount
     document.getElementById('couponDiscountAmount').textContent = '0.00';
+    
+    // Reset button state
+    const applyButton = document.querySelector('button[onclick="removeCoupon()"]');
+    applyButton.textContent = 'Apply Coupon';
+    applyButton.classList.remove('bg-red-600', 'hover:bg-red-700');
+    applyButton.classList.add('bg-black', 'hover:bg-gray-800');
+    applyButton.onclick = applyCoupon;
+
+    // Enable coupon select
+    const select = document.getElementById('couponSelect');
+    select.disabled = false;
+    select.value = '';
     
     // Get original amounts
     const originalSubtotal = parseFloat('<%= subtotal %>');
@@ -433,9 +453,6 @@ function removeCoupon() {
     
     // Clear applied coupon
     appliedCoupon = null;
-    
-    // Reset coupon select
-    document.getElementById('couponSelect').value = '';
 
     // Update payment options based on new total
     updatePaymentOptions();
