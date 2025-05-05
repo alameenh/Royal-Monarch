@@ -573,7 +573,7 @@ const createOrder = async (req, res) => {
 
             // Handle payment based on method
             if (paymentMethod === 'cod') {
-                order.paymentStatus = 'unpaid';
+                order.paymentStatus = 'pending';
                 await order.save({ session });
                 await CartItem.deleteMany({ userId }).session(session);
                 await session.commitTransaction();
@@ -616,16 +616,19 @@ const createOrder = async (req, res) => {
                         throw new Error('Failed to create Razorpay order');
                     }
 
+                    // Update order with Razorpay details and set payment status to pending initially
+                    order.paymentStatus = 'pending';
                     order.paymentDetails = {
-                        razorpayOrderId: razorpayOrder.id
+                        razorpayOrderId: razorpayOrder.id,
+                        status: 'pending',
+                        createdAt: new Date()
                     };
                     await order.save({ session });
-                    await CartItem.deleteMany({ userId }).session(session);
                     await session.commitTransaction();
 
                     return res.json({
                         success: true,
-                        message: 'Order created',
+                        message: 'Payment initialized',
                         orderId: order.orderId,
                         paymentMethod,
                         razorpayOrder: {
@@ -666,7 +669,12 @@ const createOrder = async (req, res) => {
                 });
                 await wallet.save({ session });
 
+                // Set payment status to paid for wallet payments
                 order.paymentStatus = 'paid';
+                order.paymentDetails = {
+                    status: 'paid',
+                    createdAt: new Date()
+                };
                 await order.save({ session });
                 await CartItem.deleteMany({ userId }).session(session);
                 await session.commitTransaction();

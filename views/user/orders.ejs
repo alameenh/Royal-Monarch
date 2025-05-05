@@ -118,10 +118,10 @@ const createOrderCard = (order) => `
                     <p class="font-serif font-semibold text-xl text-[#8B4513] whitespace-nowrap">₹${order.totalAmount.toFixed(2)}</p>
                 </div>
 
-                <!-- Status and Payment Method -->
+                <!-- Payment Status and Payment Method -->
                 <div class="mt-2 flex items-center justify-between">
-                    <span class="text-sm px-3 py-1 rounded-full ${getStatusClass(order)} order-status font-serif">
-                        ${getStatusText(order)}
+                    <span class="text-sm px-3 py-1 rounded-full ${getPaymentStatusClass(order)} payment-status font-serif">
+                        ${order.paymentStatus.toUpperCase()}
                     </span>
                     <span class="text-sm text-gray-600 font-serif">
                         ${order.paymentMethod.toUpperCase()}
@@ -229,6 +229,11 @@ const getStatusClass = (order) => {
             return 'bg-yellow-100 text-yellow-800';
         case 'returned':
             return 'bg-gray-100 text-gray-800';
+        case 'refunded':
+            return 'bg-blue-100 text-blue-800';
+        case 'rejected':
+            return 'bg-red-100 text-red-800';
+        case 'pending':
         default:
             return 'bg-gray-100 text-gray-800';
     }
@@ -248,6 +253,11 @@ const getItemStatusClass = (item) => {
             return 'bg-yellow-100 text-yellow-800';
         case 'returned':
             return 'bg-gray-100 text-gray-800';
+        case 'refunded':
+            return 'bg-blue-100 text-blue-800';
+        case 'rejected':
+            return 'bg-red-100 text-red-800';
+        case 'pending':
         default:
             return 'bg-gray-100 text-gray-800';
     }
@@ -255,7 +265,40 @@ const getItemStatusClass = (item) => {
 
 const getStatusText = (order) => {
     const status = order.items[0]?.status || 'pending';
-    return status.charAt(0).toUpperCase() + status.slice(1);
+    switch (status) {
+        case 'delivered':
+            return 'Delivered';
+        case 'processing':
+            return 'Processing';
+        case 'shipped':
+            return 'Shipped';
+        case 'cancelled':
+            return 'Cancelled';
+        case 'return requested':
+            return 'Return Requested';
+        case 'returned':
+            return 'Returned';
+        case 'refunded':
+            return 'Refunded';
+        case 'rejected':
+            return 'Rejected';
+        case 'pending':
+        default:
+            return 'Pending';
+    }
+};
+
+const getPaymentStatusClass = (order) => {
+    switch (order.paymentStatus) {
+        case 'paid':
+            return 'bg-green-100 text-green-800';
+        case 'pending':
+            return 'bg-yellow-100 text-yellow-800';
+        case 'refunded':
+            return 'bg-blue-100 text-blue-800';
+        default:
+            return 'bg-gray-100 text-gray-800';
+    }
 };
 
 // Fetch orders with filters

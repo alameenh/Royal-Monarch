@@ -1097,17 +1097,18 @@ const orderController = {
                     throw new Error('Order not found');
                 }
 
-                // Update order status
+                // Update order status and payment details
                 order.paymentStatus = 'paid';
                 order.paymentDetails = {
                     ...order.paymentDetails,
                     razorpayPaymentId: razorpay_payment_id,
-                    razorpaySignature: razorpay_signature
+                    razorpaySignature: razorpay_signature,
+                    status: 'paid',
+                    paidAt: new Date()
                 };
                 await order.save();
 
-                // Not needed to call updateProductStock since stock is already updated at order creation
-                // Just clear cart after successful payment
+                // Clear cart after successful payment
                 await CartItem.deleteMany({ userId: order.userId });
 
                 return res.json({
