@@ -118,6 +118,7 @@ const createProductCard = (product) => `
                         `).join('')}
                     </select>
                     <button 
+                        type="button"
                         class="add-to-cart-btn w-full bg-white text-[#8B4513] py-1 text-xs uppercase border border-[#8B4513] hover:bg-[#8B4513] hover:text-white transition-all duration-300 font-serif rounded-lg group" 
                         data-product-id="${product._id}">
                         Add to Cart
@@ -270,10 +271,13 @@ const changePage = (page) => {
 fetchProducts();
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Delegate event listener for "Add to Cart" buttons that will be created dynamically
+    // Delegate event listener for "Add to Cart" buttons
     document.getElementById('productsGrid').addEventListener('click', async function(event) {
         if (event.target.classList.contains('add-to-cart-btn') || 
             (event.target.parentElement && event.target.parentElement.classList.contains('add-to-cart-btn'))) {
+            
+            event.preventDefault();
+            event.stopPropagation();
             
             const button = event.target.classList.contains('add-to-cart-btn') ? 
                 event.target : event.target.parentElement;
@@ -283,7 +287,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const variantType = variantSelect.value;
             const stock = variantSelect.options[variantSelect.selectedIndex].getAttribute('data-stock');
             
-            // Check if product is in stock
             if (parseInt(stock) <= 0) {
                 Swal.fire({
                     icon: 'error',
@@ -308,8 +311,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Trigger cart updated event
-                    document.dispatchEvent(new CustomEvent('cartUpdated'));
+                    // Update cart count in navbar
+                    if (window.updateCartCount) {
+                        window.updateCartCount(data.cartCount);
+                    }
                     
                     Swal.fire({
                         icon: 'success',
@@ -326,6 +331,69 @@ document.addEventListener('DOMContentLoaded', function() {
                     icon: 'error',
                     title: 'Oops...',
                     text: error.message || 'Failed to add to cart'
+                });
+            }
+        }
+    });
+
+    // Delegate event listener for wishlist buttons
+    document.getElementById('productsGrid').addEventListener('click', async function(event) {
+        if (event.target.classList.contains('wishlist-btn') || 
+            (event.target.parentElement && event.target.parentElement.classList.contains('wishlist-btn'))) {
+            
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const button = event.target.classList.contains('wishlist-btn') ? 
+                event.target : event.target.parentElement;
+            
+            const productId = button.getAttribute('data-product-id');
+            const variantSelect = document.querySelector(`.variant-select[data-product-id="${productId}"]`);
+            const variantType = variantSelect.value;
+            
+            try {
+                const response = await fetch('/wishlist/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        productId,
+                        variantType
+                    })
+                });
+                
+                // Check if the response is JSON
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Update wishlist count in navbar
+                        if (window.updateWishlistCount) {
+                            window.updateWishlistCount(data.wishlistCount);
+                        }
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Added to Wishlist!',
+                            text: `${variantType} added to wishlist successfully`,
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } else {
+                    // If not JSON, redirect to login page
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: error.message || 'Failed to add to wishlist'
                 });
             }
         }

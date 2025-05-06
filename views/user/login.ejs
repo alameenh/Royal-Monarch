@@ -92,79 +92,51 @@
             loginButton.disabled = false;
         }
 
-        loginForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const email = document.getElementById('email').value;
+        let isProcessing = false; // Flag to prevent multiple submissions
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-
-            console.log('Form submitted with:', { email, password: password ? '***' : 'undefined' });
-
-            // Validate all fields
-            const emailError = validateEmail(email);
-            const passwordError = validatePassword(password);
-
-            // Show errors if any
-            document.getElementById('emailError').textContent = emailError;
-            document.getElementById('emailError').classList.toggle('hidden', !emailError);
-            document.getElementById('passwordError').textContent = passwordError;
-            document.getElementById('passwordError').classList.toggle('hidden', !passwordError);
-
-            // If there are validation errors, stop form submission
-            if (emailError || passwordError) {
-                console.log('Validation errors:', { emailError, passwordError });
-                return;
-            }
-
+            
             try {
                 showLoading();
-                console.log('Sending login request...');
-                const loginData = {
-                    email: email.trim(),
-                    password: password
-                };
-                console.log('Login data being sent:', { 
-                    email: loginData.email, 
-                    password: loginData.password ? '***' : 'undefined' 
-                });
-                
-                const response = await axios.post('/login', loginData, {
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                console.log('Login response:', response.data);
+                const response = await axios.post('/login', { email, password });
 
                 if (response.data.success) {
                     await Swal.fire({
                         icon: 'success',
                         title: 'Success!',
-                        text: response.data.message,
+                        text: 'Login successful',
                         timer: 1500,
                         showConfirmButton: false
                     });
-                    window.location.href = response.data.redirect;
-                } else {
-                    throw new Error(response.data.message || 'Login failed');
+                    window.location.href = response.data.redirect || '/home';
                 }
             } catch (error) {
-                const message = error.response?.data?.message || error.message || 'An error occurred';
+                const errorMessage = error.response?.data?.message || 'An error occurred during login';
                 const redirect = error.response?.data?.redirect;
-
-                if (redirect) {
-                    await Swal.fire({
-                        icon: 'info',
-                        title: 'Verification Required',
-                        text: message,
-                        confirmButtonText: 'Verify Now'
-                    });
-                    window.location.href = redirect;
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: message
-                    });
-                }
+                
+                // Close any existing alerts
+                Swal.close();
+                
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Login Failed',
+                    text: errorMessage,
+                    confirmButtonColor: '#000'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        if (errorMessage.toLowerCase().includes('not found') || 
+                            errorMessage.toLowerCase().includes('not registered') ||
+                            errorMessage.toLowerCase().includes('verify your email')) {
+                            window.location.href = '/signup';
+                        } else if (redirect) {
+                            window.location.href = redirect;
+                        }
+                    }
+                });
             } finally {
                 hideLoading();
             }

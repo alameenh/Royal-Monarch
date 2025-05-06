@@ -12,125 +12,88 @@ import walletController from '../controller/user/walletController.js';
 
 const router = express.Router();
 
-const logRoute = (req, res, next) => {
-    console.log('=====================');
-    console.log('ROUTE MIDDLEWARE CALLED');
-    console.log('=====================');
-    console.log('Route:', req.method, req.path);
-    console.log('Time:', new Date().toISOString());
-    console.log('Headers:', JSON.stringify(req.headers, null, 2));
-    console.log('Body:', JSON.stringify(req.body, null, 2));
-    console.log('Query:', JSON.stringify(req.query, null, 2));
-    console.log('=====================');
-    next();
-};
-
-const logRequest = (req, res, next) => {
-    console.log('Route hit:', req.method, req.path);
-    console.log('Request body:', req.body);
-    console.log('Request headers:', req.headers);
-    next();
-};
-
+// Public routes (no authentication required)
 router.get('/', userMiddleware.isLogin, userController.getLogin);
-
 router.get('/signup', userMiddleware.isLogin, userController.getSignup);
-
 router.post('/signup', userController.postSignup);
-
-router.post('/login', logRoute, userController.postLogin);
-
-router.get('/logout', userMiddleware.checkSession, userController.getLogout);
-
+router.post('/login', userController.postLogin);
 router.get('/auth/google', userController.getGoogle);
-
 router.get('/auth/google/callback', userController.getGoogleCallback);
-
-router.get('/home', userMiddleware.checkSession, userController.getHomePage);
-
-router.get('/otpPage', userMiddleware.checkSession, userController.getOtpPage);
-
-router.post('/verifyOtp', userController.verifyOtp);
-
-router.get('/shop', userMiddleware.checkSession, shopController.getShopPage);
-
-router.get('/shop/products', userMiddleware.checkSession, shopController.getProducts);
-
-router.get('/shop/category/:categoryId', userMiddleware.checkSession, shopController.getShopPage);
-
-router.get('/product/view/:productId', userMiddleware.checkSession, viewProductController.viewProduct);
-
-router.get('/category/:categoryId/products', userMiddleware.checkSession, viewProductController.getProductsByCategory);
-
-router.get('/products/search', userMiddleware.checkSession, viewProductController.searchProducts);
-
-router.get('/api/products', userMiddleware.checkSession, shopController.getProducts);
-
-router.get('/api/categories', userMiddleware.checkSession, shopController.getCategories);
-
+router.get('/otpPage', userMiddleware.isLogin, userController.getOtpPage);
+router.post('/verifyOtp', userMiddleware.isLogin, userController.verifyOtp);
+router.post('/resendOtp', userMiddleware.isLogin, userController.resendOTP);
 router.get('/forgot-password', userController.getForgotPassword);
-
 router.post('/forgot-password', userController.postForgotPassword);
-
 router.get('/reset-password', userController.getResetPassword);
-
 router.post('/reset-password', userController.postResetPassword);
 
+// Protected routes (authentication required)
+router.use(userMiddleware.checkSession);
+router.use(userMiddleware.getCounts);
+
+// User routes
+router.get('/logout', userController.getLogout);
+router.get('/home', userController.getHomePage);
+router.get('/change-password', userController.getChangePassword);
+router.post('/change-password', userController.postChangePassword);
+
+// Shop routes
+router.get('/shop', shopController.getShopPage);
+router.get('/shop/products', shopController.getProducts);
+router.get('/shop/category/:categoryId', shopController.getShopPage);
+router.get('/product/view/:productId', viewProductController.viewProduct);
+router.get('/category/:categoryId/products', viewProductController.getProductsByCategory);
+router.get('/products/search', viewProductController.searchProducts);
+router.get('/api/products', shopController.getProducts);
+router.get('/api/categories', shopController.getCategories);
+
 // Profile routes
-router.get('/profile', userMiddleware.checkSession, getProfile);
-router.get('/profile/edit', userMiddleware.checkSession, getEditProfile);
-router.post('/profile/update', userMiddleware.checkSession, upload.single('profileImage'), updateProfile);
+router.get('/profile', getProfile);
+router.get('/profile/edit', getEditProfile);
+router.post('/profile/update', upload.single('profileImage'), updateProfile);
 
 // Address routes
-router.get('/address', userMiddleware.checkSession, addressController.getAddressPage);
-router.post('/address/add', userMiddleware.checkSession, addressController.addAddress);
-router.get('/address/:id', userMiddleware.checkSession, addressController.getAddressById);
-router.post('/address/update', userMiddleware.checkSession, addressController.updateAddress);
-router.post('/address/delete', userMiddleware.checkSession, addressController.deleteAddress);
+router.get('/address', addressController.getAddressPage);
+router.post('/address/add', addressController.addAddress);
+router.get('/address/:id', addressController.getAddressById);
+router.post('/address/update', addressController.updateAddress);
+router.post('/address/delete', addressController.deleteAddress);
 
 // Wishlist routes
-router.post('/wishlist/toggle/:productId', userMiddleware.checkSession, viewProductController.toggleWishlist);
-router.get('/wishlist', userMiddleware.checkSession, wishlistController.getWishlist);
-router.delete('/wishlist/remove/:productId', userMiddleware.checkSession, wishlistController.removeFromWishlist);
+router.get('/wishlist', wishlistController.getWishlist);
+router.post('/wishlist/add', wishlistController.addToWishlist);
+router.post('/wishlist/remove', wishlistController.removeFromWishlist);
+router.get('/wishlist/count', wishlistController.getWishlistCount);
 
 // Cart routes
-router.get('/cart', userMiddleware.checkSession, cartController.getCart);
-router.post('/cart/add', userMiddleware.checkSession, cartController.addToCart);
-router.post('/cart/remove', userMiddleware.checkSession, cartController.removeFromCart);
-router.post('/cart/update-quantity', userMiddleware.checkSession, cartController.updateQuantity);
-router.get('/cart/count', userMiddleware.checkSession, cartController.getCartCount);
-
-// Add these routes
-router.get('/change-password', userMiddleware.checkSession, userController.getChangePassword);
-router.post('/change-password', userMiddleware.checkSession, userController.postChangePassword);
+router.get('/cart', cartController.getCart);
+router.post('/cart/add', cartController.addToCart);
+router.post('/cart/remove', cartController.removeFromCart);
+router.post('/cart/update-quantity', cartController.updateQuantity);
+router.get('/cart/count', cartController.getCartCount);
+router.get('/cart/check', cartController.isInCart);
 
 // Order routes
-router.get('/checkout', userMiddleware.checkSession, orderController.getCheckout);
-router.post('/order/create', userMiddleware.checkSession, orderController.createOrder);
-router.post('/order/verify-payment', userMiddleware.checkSession, orderController.verifyPayment);
-router.get('/order/success/:orderId', userMiddleware.checkSession, orderController.getOrderSuccess);
-router.post('/order/:orderId/retry-payment', userMiddleware.checkSession, orderController.retryPayment);
-router.get('/payment/failed/:orderId', userMiddleware.checkSession, orderController.getPaymentFailed);
-
-// Order management routes
-router.get('/orders', userMiddleware.checkSession, orderController.getOrders);
-router.post('/order/:orderId/cancel/:itemId', userMiddleware.checkSession, orderController.cancelOrderItem);
-router.post('/order/:orderId/cancel', userMiddleware.checkSession, orderController.cancelOrder);
-router.post('/order/:orderId/return/:itemId', userMiddleware.checkSession, orderController.requestReturn);
-
-// Add this route
-router.get('/order/success/:orderId', userMiddleware.checkSession, orderController.getOrderSuccess);
-router.get('/order/:orderId/invoice/:itemId', userMiddleware.checkSession, orderController.generateInvoice);
-router.post('/apply-coupon', userMiddleware.checkSession, orderController.applyCoupon);
+router.get('/checkout', orderController.getCheckout);
+router.post('/order/create', orderController.createOrder);
+router.post('/order/verify-payment', orderController.verifyPayment);
+router.get('/order/success/:orderId', orderController.getOrderSuccess);
+router.post('/order/:orderId/retry-payment', orderController.retryPayment);
+router.get('/payment/failed/:orderId', orderController.getPaymentFailed);
+router.get('/orders', orderController.getOrders);
+router.post('/order/:orderId/cancel/:itemId', orderController.cancelOrderItem);
+router.post('/order/:orderId/cancel', orderController.cancelOrder);
+router.post('/order/:orderId/return/:itemId', orderController.requestReturn);
+router.get('/order/:orderId/invoice/:itemId', orderController.generateInvoice);
+router.post('/apply-coupon', orderController.applyCoupon);
+router.get('/orders/search', orderController.searchOrders);
 
 // Wallet routes
-router.get('/wallet', userMiddleware.checkSession, walletController.getWallet);
-router.post('/wallet/create-order', userMiddleware.checkSession, walletController.createOrder);
-router.post('/wallet/verify-payment', userMiddleware.checkSession, walletController.verifyPayment);
+router.get('/wallet', walletController.getWallet);
+router.post('/wallet/create-order', walletController.createOrder);
+router.post('/wallet/verify-payment', walletController.verifyPayment);
 
-// Update the route for fetching product images
+// Product images route
 router.post('/api/products/images', userController.getProductImages);
-
-router.get('/orders/search', userMiddleware.checkSession, orderController.searchOrders);
 
 export default router;

@@ -678,16 +678,51 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize carousels
     initHandpickedCarousels();
 
+    // Function to check cart status and update button state
+    async function checkCartStatus(productId, variantType, button) {
+        try {
+            const response = await fetch(`/cart/check?productId=${productId}&variantType=${variantType}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                updateCartButtonState(button, data.inCart);
+            }
+        } catch (error) {
+            console.error('Error checking cart status:', error);
+        }
+    }
+
+    // Function to update button state
+    function updateCartButtonState(button, inCart) {
+        if (inCart) {
+            button.innerHTML = 'Remove from Cart <span class="inline-block transform group-hover:translate-x-1 transition-transform duration-300 ml-1">→</span>';
+            button.setAttribute('data-action', 'remove');
+        } else {
+            button.innerHTML = 'Add to Cart <span class="inline-block transform group-hover:translate-x-1 transition-transform duration-300 ml-1">→</span>';
+            button.setAttribute('data-action', 'add');
+        }
+    }
+
     // Add event listeners to all "Add to Cart" buttons
     document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+        const productId = button.getAttribute('data-product-id');
+        const variantSelect = document.querySelector(`.variant-select[data-product-id="${productId}"]`);
+        
+        // Check initial cart status
+        checkCartStatus(productId, variantSelect.value, button);
+        
+        // Update button state when variant changes
+        variantSelect.addEventListener('change', () => {
+            checkCartStatus(productId, variantSelect.value, button);
+        });
+        
         button.addEventListener('click', async function() {
-            const productId = this.getAttribute('data-product-id');
-            const variantSelect = document.querySelector(`.variant-select[data-product-id="${productId}"]`);
+            const action = this.getAttribute('data-action') || 'add';
             const variantType = variantSelect.value;
             const stock = variantSelect.options[variantSelect.selectedIndex].getAttribute('data-stock');
             
-            // Check if product is in stock
-            if (parseInt(stock) <= 0) {
+            // Check if product is in stock (only for add action)
+            if (action === 'add' && parseInt(stock) <= 0) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Out of Stock',
@@ -697,7 +732,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             try {
-                const response = await fetch('/cart/add', {
+                // Show loading state
+                Swal.fire({
+                    title: action === 'add' ? 'Adding to Cart...' : 'Removing from Cart...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                const response = await fetch(action === 'add' ? '/cart/add' : '/cart/remove', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -711,13 +755,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Trigger cart updated event
-                    document.dispatchEvent(new CustomEvent('cartUpdated'));
-                    
-                    Swal.fire({
+                    // Close loading state
+                    Swal.close();
+
+                    // Update cart count in navbar using the global function
+                    if (typeof window.updateCartCount === 'function' && data.cartCount !== undefined) {
+                        window.updateCartCount(data.cartCount);
+                    }
+
+                    // Update button state
+                    updateCartButtonState(this, action === 'add');
+
+                    // Show success message
+                    await Swal.fire({
                         icon: 'success',
-                        title: 'Added to Cart!',
-                        text: `${variantType} added to cart successfully`,
+                        title: action === 'add' ? 'Added to Cart!' : 'Removed from Cart!',
+                        text: action === 'add' ? 
+                            `${variantType} added to cart successfully` : 
+                            `${variantType} removed from cart successfully`,
                         showConfirmButton: false,
                         timer: 1500
                     });
@@ -725,10 +780,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     throw new Error(data.message);
                 }
             } catch (error) {
-                Swal.fire({
+                // Close loading state
+                Swal.close();
+
+                // Show error message
+                await Swal.fire({
                     icon: 'error',
                     title: 'Oops...',
-                    text: error.message || 'Failed to add to cart'
+                    text: error.message || `Failed to ${action} from cart`
                 });
             }
         });
@@ -746,10 +805,23 @@ document.addEventListener('DOMContentLoaded', function() {
             const currentState = this.getAttribute('data-in-wishlist') === 'true';
             
             try {
-                const response = await fetch(`/wishlist/toggle/${productId}`, {
+                // Show loading state
+                Swal.fire({
+                    title: currentState ? 'Removing from wishlist...' : 'Adding to wishlist...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Determine the endpoint based on current state
+                const endpoint = currentState ? '/wishlist/remove' : '/wishlist/add';
+                
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
                     body: JSON.stringify({
                         productId,
@@ -757,52 +829,75 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                 });
                 
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Immediately update the UI
-                    const icon = this.querySelector('i');
-                    const newState = !currentState;
+                // Check if the response is JSON
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
                     
-                    if (newState) {
-                        icon.classList.remove('far');
-                        icon.classList.add('fas', 'text-red-500');
-                    } else {
-                        icon.classList.remove('fas', 'text-red-500');
-                        icon.classList.add('far');
-                    }
-                    
-                    // Update button data attribute
-                    this.setAttribute('data-in-wishlist', newState.toString());
-                    
-                    // Update variant select option
-                    const option = variantSelect.options[variantSelect.selectedIndex];
-                    option.setAttribute('data-in-wishlist', newState.toString());
-                    
-                    // Update all variant options for this product
-                    Array.from(variantSelect.options).forEach(opt => {
-                        if (opt.value === variantType) {
-                            opt.setAttribute('data-in-wishlist', newState.toString());
+                    if (data.success) {
+                        // Close loading state
+                        Swal.close();
+
+                        // Immediately update the UI
+                        const icon = this.querySelector('i');
+                        const newState = !currentState;
+                        
+                        if (newState) {
+                            icon.classList.remove('far');
+                            icon.classList.add('fas', 'text-red-500');
+                        } else {
+                            icon.classList.remove('fas', 'text-red-500');
+                            icon.classList.add('far');
                         }
-                    });
-                    
-                    // Show success message
-                    const Toast = Swal.mixin({
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 2000,
-                        timerProgressBar: true
+                        
+                        // Update button data attribute
+                        this.setAttribute('data-in-wishlist', newState.toString());
+                        
+                        // Update variant select option
+                        const option = variantSelect.options[variantSelect.selectedIndex];
+                        option.setAttribute('data-in-wishlist', newState.toString());
+                        
+                        // Update all variant options for this product
+                        Array.from(variantSelect.options).forEach(opt => {
+                            if (opt.value === variantType) {
+                                opt.setAttribute('data-in-wishlist', newState.toString());
+                            }
+                        });
+                        
+                        // Update wishlist count in navbar if available
+                        if (window.updateWishlistCount && data.wishlistCount) {
+                            window.updateWishlistCount(data.wishlistCount);
+                        }
+                        
+                        // Show success message
+                        await Swal.fire({
+                            icon: 'success',
+                            title: data.message,
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } else {
+                    // If not JSON, show login prompt
+                    const result = await Swal.fire({
+                        icon: 'warning',
+                        title: 'Login Required',
+                        text: 'Please login to manage your wishlist',
+                        showCancelButton: true,
+                        confirmButtonText: 'Login',
+                        cancelButtonText: 'Cancel'
                     });
 
-                    Toast.fire({
-                        icon: 'success',
-                        title: data.message
-                    });
-                } else {
-                    throw new Error(data.message);
+                    if (result.isConfirmed) {
+                        window.location.href = '/';
+                    }
                 }
             } catch (error) {
+                // Close any open dialogs
+                Swal.close();
+
                 // Revert the UI state on error
                 const icon = this.querySelector('i');
                 if (currentState) {
@@ -814,15 +909,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 this.setAttribute('data-in-wishlist', currentState.toString());
                 
-                Swal.fire({
+                // Show error message
+                await Swal.fire({
                     icon: 'error',
-                    title: 'Oops...',
-                    text: error.message || 'Failed to update wishlist',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true
+                    title: 'Error',
+                    text: error.message || 'Failed to update wishlist'
                 });
             }
         });

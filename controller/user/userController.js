@@ -23,30 +23,70 @@ const getLogin = (req, res) => {
 }
 
 const getSignup = (req, res) => {
-    if (req.session.isAuth) {
-        return res.redirect('/home');
+    try {
+        // Check if user is already logged in
+        if (req.session.isLoggedIn) {
+            return res.redirect('/home');
+        }
+        // Render signup page with any necessary data
+        res.render('user/signup', {
+            title: 'Sign Up',
+            error: null
+        });
+    } catch (error) {
+        console.error('Error rendering signup page:', error);
+        res.status(500).render('error', {
+            message: 'Error loading signup page'
+        });
     }
-    res.render('user/signup.ejs');
-}
+};
 
 const postSignup = async (req, res) => {
     try {
         const { firstName, lastName, email, password } = req.body;
 
-        console.log("email in post signup",req.body.email);
-        if (!firstName || !lastName || !email || !password) {
-            return res.status(400).json({ success: false, message: 'All fields are required' });
+        // Trim and validate input data
+        const trimmedFirstName = firstName?.trim();
+        const trimmedLastName = lastName?.trim();
+        const trimmedEmail = email?.trim();
+
+        // Validate required fields
+        if (!trimmedFirstName || !trimmedLastName || !trimmedEmail || !password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'All fields are required' 
+            });
+        }
+
+        // Validate name lengths
+        if (trimmedFirstName.length < 2 || trimmedLastName.length < 2) {
+            return res.status(400).json({
+                success: false,
+                message: 'First and last names must be at least 2 characters long'
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmedEmail)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please enter a valid email address'
+            });
         }
 
         // Check if user already exists
-        let existingUser = await userModel.findOne({ email });
-        if (existingUser && existingUser.status == 'Pending') {
-            await userModel.deleteOne({ email });
+        let existingUser = await userModel.findOne({ email: trimmedEmail });
+        if (existingUser && existingUser.status === 'Pending') {
+            await userModel.deleteOne({ email: trimmedEmail });
             existingUser = null;
         }
 
         if (existingUser) {
-            return res.status(400).json({ success: false, message: 'Email already registered' });
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email already registered' 
+            });
         }
 
         // Hash password
@@ -58,14 +98,15 @@ const postSignup = async (req, res) => {
 
         // Create new user
         const newUser = new userModel({
-            firstname: firstName,
-            lastname: lastName,
-            email,
+            firstname: trimmedFirstName,
+            lastname: trimmedLastName,
+            email: trimmedEmail,
             password: hashedPassword,
             status: 'Pending',
             otp: {
                 otpValue,
                 otpExpiresAt: new Date(Date.now() + 2 * 60 * 1000),
+                otpAttempts: 0
             },
         });
 
@@ -85,20 +126,29 @@ const postSignup = async (req, res) => {
 
         const mailOptions = {
             from: process.env.EMAIL_USER,
-            to: email,
+            to: trimmedEmail,
             subject: 'Your OTP Code',
             text: `Your OTP code is ${otpValue}`,
+            html: `
+                <h2>Welcome to Royal Monarch!</h2>
+                <p>Your OTP code is: <strong>${otpValue}</strong></p>
+                <p>This OTP will expire in 2 minutes.</p>
+                <p>If you didn't request this, please ignore this email.</p>
+            `
         };
 
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                console.error('Error sending email:', error);
-                return res.status(500).json({ success: false, message: 'Error sending OTP email' });
-            }
-            req.session.email = email; // Store email in session for OTP verification
-            res.json({ success: true, message: 'Signup successful, OTP sent to email' });
+        await transporter.sendMail(mailOptions);
+
+        // Set session data for OTP verification
+        req.session.email = trimmedEmail;
+        req.session.otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000);
+
+        res.json({ 
+            success: true, 
+            message: 'Signup successful, OTP sent to email',
+            redirect: '/otpPage'
         });
-        console.log("Email sent")
+
     } catch (error) {
         console.error('Signup Error:', error);
         return res.status(500).json({
@@ -141,11 +191,27 @@ const verifyOtp = async (req, res) => {
 };
 
 const getOtpPage = async (req, res) => {
-    const user = await userModel.findOne({ email: req.session.email });
-    if (!user) {
-        return res.redirect('/signup');
+    try {
+        if (!req.session.email) {
+            return res.redirect('/signup');
+        }
+
+        const user = await userModel.findOne({ email: req.session.email });
+        if (!user) {
+            req.session.destroy();
+            return res.redirect('/signup');
+        }
+
+        res.render('user/otp', { 
+            otpExpiresAt: user.otp.otpExpiresAt.toISOString(),
+            email: req.session.email
+        });
+    } catch (error) {
+        console.error('OTP Page Error:', error);
+        res.status(500).render('error', {
+            message: 'Error loading OTP page'
+        });
     }
-        res.render('user/otp.ejs', { otpExpiresAt: user.otp.otpExpiresAt.toISOString() });
 };
 
 const getHomePage = async (req, res) => {
@@ -330,30 +396,11 @@ const getLogout = (req, res) => {
 
 const postLogin = async (req, res) => {
     try {
-        // Validate request body structure
-        if (!req.body || typeof req.body !== 'object') {
-            console.log('Invalid request body structure:', {
-                bodyExists: !!req.body,
-                bodyType: typeof req.body,
-                rawBody: req.body
-            });
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid request format'
-            });
-        }
-
         const { email, password } = req.body;
         
-        console.log('Extracted credentials:', {
-            email: email ? '***@***' : 'undefined',
-            password: password ? '***' : 'undefined'
-        });
-
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            console.log('Invalid email format:', email);
             return res.status(400).json({
                 success: false,
                 message: 'Please enter a valid email address'
@@ -362,7 +409,6 @@ const postLogin = async (req, res) => {
 
         // Validate password presence
         if (!password) {
-            console.log('Password is required');
             return res.status(400).json({
                 success: false,
                 message: 'Password is required'
@@ -370,21 +416,17 @@ const postLogin = async (req, res) => {
         }
 
         // Find user by email
-        console.log('Searching for user with email:', email);
         const user = await userModel.findOne({ email });
-        console.log('User found:', user ? 'Yes' : 'No');
 
         if (!user) {
-            console.log('User not found for email:', email);
             return res.status(401).json({
                 success: false,
-                message: 'Invalid email or password'
+                message: 'Email not registered. Please sign up first.'
             });
         }
 
         // Check user status
         if (user.status === 'Blocked') {
-            console.log('User is blocked:', email);
             return res.status(403).json({
                 success: false,
                 message: 'Your account has been blocked. Please contact support.'
@@ -392,7 +434,6 @@ const postLogin = async (req, res) => {
         }
 
         if (user.status === 'Pending') {
-            console.log('User is pending verification:', email);
             req.session.email = email;
             return res.status(403).json({
                 success: false,
@@ -402,20 +443,16 @@ const postLogin = async (req, res) => {
         }
 
         // Verify password using bcrypt
-        console.log('Verifying password...');
         const isPasswordValid = await bcrypt.compare(password, user.password);
-        console.log('Password verification result:', isPasswordValid);
 
         if (!isPasswordValid) {
-            console.log('Invalid password for user:', email);
             return res.status(401).json({
                 success: false,
-                message: 'Invalid email or password'
+                message: 'Invalid password'
             });
         }
 
         // Set session
-        console.log('Setting session for user:', email);
         req.session.userId = user._id;
         req.session.email = user.email;
         req.session.isLoggedIn = true;
@@ -425,7 +462,6 @@ const postLogin = async (req, res) => {
             email: user.email
         };
 
-        console.log('Login successful for user:', email);
         res.json({
             success: true,
             message: 'Login successful',
@@ -434,7 +470,6 @@ const postLogin = async (req, res) => {
 
     } catch (error) {
         console.error('Login Error:', error);
-        console.error('Error stack:', error.stack);
         res.status(500).json({
             success: false,
             message: 'An error occurred during login'
@@ -1023,4 +1058,92 @@ export const toggleWishlist = async (req, res) => {
     }
 };
 
-export default { getLogin, getSignup, postSignup, postLogin, getOtpPage, verifyOtp, getHomePage, getLogout, getGoogle, getGoogleCallback, getForgotPassword, postForgotPassword, getResetPassword, postResetPassword, getChangePassword, postChangePassword, getProductImages, toggleWishlist };
+const resendOTP = async (req, res) => {
+    try {
+        const email = req.session.email;
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Session expired. Please sign up again.'
+            });
+        }
+
+        const user = await userModel.findOne({ email });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found. Please sign up again.'
+            });
+        }
+
+        // Check if enough time has passed since last OTP (2 minutes)
+        const lastOTPTime = user.otp?.otpExpiresAt || new Date(0);
+        const timeSinceLastOTP = Date.now() - lastOTPTime.getTime();
+        const twoMinutes = 2 * 60 * 1000;
+
+        if (timeSinceLastOTP < twoMinutes) {
+            const remainingTime = Math.ceil((twoMinutes - timeSinceLastOTP) / 1000);
+            return res.status(400).json({
+                success: false,
+                message: `Please wait ${remainingTime} seconds before requesting a new OTP`
+            });
+        }
+
+        // Generate new OTP
+        const otpValue = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Update user with new OTP
+        user.otp = {
+            otpValue,
+            otpExpiresAt: new Date(Date.now() + twoMinutes),
+            otpAttempts: 0
+        };
+
+        await user.save();
+
+        // Send new OTP email
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+            tls: {
+                rejectUnauthorized: false,
+            },
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Your New OTP Code',
+            text: `Your new OTP code is ${otpValue}`,
+            html: `
+                <h2>New OTP Code</h2>
+                <p>Your new OTP code is: <strong>${otpValue}</strong></p>
+                <p>This OTP will expire in 2 minutes.</p>
+                <p>If you didn't request this, please ignore this email.</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        // Update session with new expiry time
+        req.session.otpExpiresAt = user.otp.otpExpiresAt;
+
+        res.json({
+            success: true,
+            message: 'New OTP sent successfully',
+            otpExpiresAt: user.otp.otpExpiresAt.toISOString()
+        });
+
+    } catch (error) {
+        console.error('Resend OTP Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error sending new OTP'
+        });
+    }
+};
+
+export default { getLogin, getSignup, postSignup, postLogin, getOtpPage, verifyOtp, getHomePage, getLogout, getGoogle, getGoogleCallback, getForgotPassword, postForgotPassword, getResetPassword, postResetPassword, getChangePassword, postChangePassword, getProductImages, toggleWishlist, resendOTP };

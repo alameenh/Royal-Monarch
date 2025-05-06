@@ -137,74 +137,66 @@
             document.getElementById('confirmPasswordError').classList.toggle('hidden', !error);
         });
 
-        signupForm.addEventListener('submit', async function (e) {
+        document.getElementById('signupForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Show loading state
+            Swal.fire({
+                title: 'Processing...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
 
             try {
-                const firstName = document.getElementById('firstName').value;
-                const lastName = document.getElementById('lastName').value;
-                const email = document.getElementById('email').value;
-                const password = document.getElementById('password').value;
-                const confirmPassword = document.getElementById('confirmPassword').value;
-
-                // Validate all fields
-                const firstNameError = validateFirstName(firstName);
-                const lastNameError = validateLastName(lastName);
-                const emailError = validateEmail(email);
-                const passwordError = validatePassword(password);
-                const confirmPasswordError = validateConfirmPassword(password, confirmPassword);
-
-                // Show all errors
-                document.getElementById('firstNameError').textContent = firstNameError;
-                document.getElementById('firstNameError').classList.toggle('hidden', !firstNameError);
-                document.getElementById('lastNameError').textContent = lastNameError;
-                document.getElementById('lastNameError').classList.toggle('hidden', !lastNameError);
-                document.getElementById('emailError').textContent = emailError;
-                document.getElementById('emailError').classList.toggle('hidden', !emailError);
-                document.getElementById('passwordError').textContent = passwordError;
-                document.getElementById('passwordError').classList.toggle('hidden', !passwordError);
-                document.getElementById('confirmPasswordError').textContent = confirmPasswordError;
-                document.getElementById('confirmPasswordError').classList.toggle('hidden', !confirmPasswordError);
-
-                // If there are any validation errors, stop form submission
-                if (firstNameError || lastNameError || emailError || passwordError || confirmPasswordError) {
-                    return;
-                }
-
-                const formData = { firstName, lastName, email, password, confirmPassword };
-
-                const loadingAlert = Swal.fire({
-                    title: 'Creating your account...',
-                    allowOutsideClick: false,
-                    showConfirmButton: false,
-                    willOpen: () => {
-                        Swal.showLoading();
-                    }
+                const response = await fetch('/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        firstName,
+                        lastName,
+                        email,
+                        password,
+                        confirmPassword
+                    })
                 });
 
-                signupButton.disabled = true;
-                const response = await axios.post('/signup', formData);
-                loadingAlert.close();
+                const data = await response.json();
 
-                if (response.data.success) {
+                if (data.success) {
                     await Swal.fire({
                         icon: 'success',
                         title: 'Success!',
-                        text: 'Signup successful. Please verify your email.',
-                        timer: 2000,
-                        showConfirmButton: false
+                        text: data.message,
+                        confirmButtonColor: '#000'
                     });
-                    window.location.href = '/otpPage';
+                    
+                    // Redirect to OTP page
+                    window.location.href = data.redirect || '/otpPage';
+                } else {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Oops...',
+                        text: data.message,
+                        confirmButtonColor: '#000'
+                    });
                 }
             } catch (error) {
                 await Swal.fire({
                     icon: 'error',
-                    title: 'Error',
-                    text: error.response?.data?.message || 'An error occurred during signup',
-                    confirmButtonColor: '#3085d6'
+                    title: 'Oops...',
+                    text: 'An error occurred. Please try again.',
+                    confirmButtonColor: '#000'
                 });
-            } finally {
-                signupButton.disabled = false;
             }
         });
     </script>

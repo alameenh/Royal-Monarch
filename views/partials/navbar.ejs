@@ -265,8 +265,13 @@
     
     <!-- Right icons -->
     <div class="flex-1 flex items-center justify-end space-x-4 sm:space-x-6 md:space-x-8">
-        <a href="/wishlist" class="nav-icon">
+        <a href="/wishlist" class="nav-icon relative">
             <i class="fas fa-heart"></i>
+            <% if (typeof wishlistCount !== 'undefined' && wishlistCount > 0) { %>
+                <span class="cart-badge absolute -top-1 -right-1 rounded-full flex items-center justify-center">
+                    <%= wishlistCount %>
+                </span>
+            <% } %>
         </a>
         <a href="/profile" class="nav-icon">
             <i class="fas fa-user"></i>
@@ -283,27 +288,43 @@
 </nav>
 
 <script>
-// Update cart count whenever cart is updated
-document.addEventListener('cartUpdated', function() {
-    fetch('/cart/count')
-        .then(response => response.json())
-        .then(data => {
-            const cartCountElement = document.querySelector('.fa-shopping-cart').nextElementSibling;
-            if (data.count > 0) {
-                if (cartCountElement) {
-                    cartCountElement.textContent = data.count;
-                } else {
-                    const countBadge = document.createElement('span');
-                    countBadge.className = 'cart-badge absolute -top-1 -right-1 rounded-full flex items-center justify-center';
-                    countBadge.textContent = data.count;
-                    document.querySelector('.fa-shopping-cart').parentElement.appendChild(countBadge);
-                }
-            } else if (cartCountElement) {
-                cartCountElement.remove();
-            }
-        })
-        .catch(error => console.error('Error updating cart count:', error));
-});
+// Function to update cart count badge
+function updateCartCount(count) {
+    const cartIcon = document.querySelector('.fa-shopping-cart').parentElement;
+    let cartBadge = cartIcon.querySelector('.cart-badge');
+    
+    if (count > 0) {
+        if (!cartBadge) {
+            cartBadge = document.createElement('span');
+            cartBadge.className = 'cart-badge absolute -top-1 -right-1 rounded-full flex items-center justify-center';
+            cartIcon.appendChild(cartBadge);
+        }
+        cartBadge.textContent = count;
+    } else if (cartBadge) {
+        cartBadge.remove();
+    }
+}
+
+// Function to update wishlist count badge
+function updateWishlistCount(count) {
+    const wishlistIcon = document.querySelector('.fa-heart').parentElement;
+    let wishlistBadge = wishlistIcon.querySelector('.cart-badge');
+    
+    if (count > 0) {
+        if (!wishlistBadge) {
+            wishlistBadge = document.createElement('span');
+            wishlistBadge.className = 'cart-badge absolute -top-1 -right-1 rounded-full flex items-center justify-center';
+            wishlistIcon.appendChild(wishlistBadge);
+        }
+        wishlistBadge.textContent = count;
+    } else if (wishlistBadge) {
+        wishlistBadge.remove();
+    }
+}
+
+// Make these functions globally available
+window.updateCartCount = updateCartCount;
+window.updateWishlistCount = updateWishlistCount;
 
 // Enhanced scroll effects with smooth transitions
 let lastScrollTop = 0;

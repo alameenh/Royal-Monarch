@@ -1,59 +1,89 @@
 import userModel from "../model/userModel.js"
+import CartItem from "../model/cartModel.js"
+import Wishlist from "../model/wishlistModel.js"
 
 const checkSession = async (req, res, next) => {
     try {
-        if (!req.session.email || !req.session.userId) {
-            req.session.alert = {
-                message: 'Please login to continue',
-                type: 'info'
-            };
+        if (!req.session.isLoggedIn) {
+            // Check if it's an API request
+            if (req.path.startsWith('/api/') || req.xhr) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Authentication required'
+                });
+            }
             return res.redirect('/');
         }
-
-        const user = await userModel.findOne({ email: req.session.email });
-        
-        if (!user) {
-            req.session.destroy();
-            req.session.alert = {
-                message: 'Account not found',
-                type: 'error'
-            };
-            return res.redirect('/');
-        }
-
-        if (user.status === 'Blocked') {
-            req.session.destroy();
-            // req.session.alert = {
-            //     message: 'Your account has been blocked',
-            //     type: 'error'
-            // };
-            return res.redirect('/');
-        }
-
         next();
     } catch (error) {
-        console.error('Session Check Error:', error);
-        req.session.alert = {
-            message: 'Session error occurred',
-            type: 'error'
-        };
-        return res.redirect('/');
+        console.error('Middleware Error:', error);
+        if (req.path.startsWith('/api/') || req.xhr) {
+            return res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
+        res.status(500).render('error', {
+            message: 'Internal server error'
+        });
     }
 }
 
-const isLogin = async (req, res, next) => {
+const isLogin = (req, res, next) => {
     try {
-        if (req.session.email) {
+        if (req.session.isLoggedIn) {
+            // Check if it's an API request
+            if (req.path.startsWith('/api/') || req.xhr) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Already logged in'
+                });
+            }
             return res.redirect('/home');
         }
         next();
     } catch (error) {
-        console.error('Login Check Error:', error);
-        next();
+        console.error('Middleware Error:', error);
+        if (req.path.startsWith('/api/') || req.xhr) {
+            return res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
+        res.status(500).render('error', {
+            message: 'Internal server error'
+        });
     }
 }
 
+const getCounts = async (req, res, next) => {
+    try {
+        if (req.session.userId) {
+            // Get cart count
+            const cartCount = await CartItem.countDocuments({ userId: req.session.userId });
+            
+            // Get wishlist count
+            const wishlist = await Wishlist.findOne({ userId: req.session.userId });
+            const wishlistCount = wishlist ? wishlist.products.length : 0;
+            
+            // Add counts to res.locals for use in templates
+            res.locals.cartCount = cartCount;
+            res.locals.wishlistCount = wishlistCount;
+        } else {
+            res.locals.cartCount = 0;
+            res.locals.wishlistCount = 0;
+        }
+        next();
+    } catch (error) {
+        console.error('Error getting counts:', error);
+        res.locals.cartCount = 0;
+        res.locals.wishlistCount = 0;
+        next();
+    }
+};
+
 export default { 
     isLogin, 
-    checkSession 
+    checkSession,
+    getCounts
 }

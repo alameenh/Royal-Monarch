@@ -48,8 +48,8 @@ const cartController = {
             }
 
             // Check total number of items in cart
-            const cartCount = await CartItem.countDocuments({ userId });
-            if (cartCount >= 10) {
+            const totalItems = await CartItem.countDocuments({ userId });
+            if (totalItems >= 10) {
                 return res.status(400).json({
                     success: false,
                     message: 'Cart is full (maximum 10 items)'
@@ -67,9 +67,11 @@ const cartController = {
                 if (existingItem.quantity < 4) {
                     existingItem.quantity += 1;
                     await existingItem.save();
+                    const updatedCount = await CartItem.countDocuments({ userId });
                     return res.json({
                         success: true,
-                        message: 'Item quantity updated in cart'
+                        message: 'Item quantity updated in cart',
+                        cartCount: updatedCount
                     });
                 } else {
                     return res.status(400).json({
@@ -89,14 +91,16 @@ const cartController = {
 
             await cartItem.save();
 
+            const updatedCount = await CartItem.countDocuments({ userId });
+
             res.json({
                 success: true,
-                message: 'Item added to cart'
+                message: 'Item added to cart',
+                cartCount: updatedCount
             });
 
         } catch (error) {
             console.error('Add to Cart Error:', error);
-            // Check if error is due to duplicate key (trying to add same variant)
             if (error.code === 11000) {
                 return res.status(400).json({
                     success: false,
@@ -128,9 +132,12 @@ const cartController = {
                 });
             }
 
+            const updatedCount = await CartItem.countDocuments({ userId });
+
             res.json({
                 success: true,
-                message: 'Item removed from cart'
+                message: 'Item removed from cart',
+                cartCount: updatedCount
             });
 
         } catch (error) {
@@ -144,20 +151,11 @@ const cartController = {
 
     getCartCount: async (req, res) => {
         try {
-            const userId = req.session.userId;
-            if (!userId) {
-                return res.json({ count: 0 });
-            }
-            
-            const count = await CartItem.countDocuments({ userId });
+            const count = await CartItem.countDocuments({ userId: req.session.userId });
             res.json({ count });
         } catch (error) {
-            console.error('Get Cart Count Error:', error);
-            res.status(500).json({ 
-                success: false, 
-                message: 'Failed to get cart count',
-                count: 0
-            });
+            console.error('Error getting cart count:', error);
+            res.status(500).json({ count: 0 });
         }
     },
 
@@ -316,9 +314,12 @@ const cartController = {
             cartItem.quantity = quantity;
             await cartItem.save();
 
+            const updatedCount = await CartItem.countDocuments({ userId });
+
             res.json({
                 success: true,
-                message: 'Quantity updated successfully'
+                message: 'Quantity updated successfully',
+                cartCount: updatedCount
             });
 
         } catch (error) {
@@ -326,6 +327,32 @@ const cartController = {
             res.status(500).json({
                 success: false,
                 message: 'Failed to update quantity'
+            });
+        }
+    },
+
+    isInCart: async (req, res) => {
+        try {
+            const { productId, variantType } = req.query;
+            const userId = req.session.userId;
+
+            const cartItem = await CartItem.findOne({
+                userId,
+                productId,
+                variantType
+            });
+
+            res.json({
+                success: true,
+                inCart: !!cartItem,
+                quantity: cartItem ? cartItem.quantity : 0
+            });
+
+        } catch (error) {
+            console.error('Check Cart Status Error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to check cart status'
             });
         }
     }

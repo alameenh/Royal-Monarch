@@ -26,19 +26,20 @@
                                 <!-- Product Card -->
                                 <div class="relative">
                                     <!-- Product Image -->
-                                    <a href="/product/view/<%= item._id %>">
+                                    <a href="/product/view/<%= item.productId._id %>">
                                         <div class="aspect-w-1 aspect-h-1 overflow-hidden">
                                             <img 
-                                                src="<%= item.images[0].path %>" 
-                                                alt="<%= item.name %>" 
+                                                src="<%= item.productId.images && item.productId.images.length > 0 ? item.productId.images[0].path : '/images/placeholder.jpg' %>" 
+                                                alt="<%= item.productId.name %>"
                                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                onerror="this.src='/images/placeholder.jpg'"
                                             >
                                         </div>
                                     </a>
 
                                     <!-- Remove from Wishlist Button -->
                                     <button 
-                                        onclick="removeFromWishlist('<%= item._id %>', '<%= item.variantType %>')"
+                                        onclick="removeFromWishlist('<%= item.productId._id %>', '<%= item.variantType %>')"
                                         class="absolute top-2 right-2 p-2 rounded-full bg-white shadow-md hover:bg-gray-100 transition-colors"
                                     >
                                         <i class="fas fa-heart text-red-500"></i>
@@ -48,11 +49,11 @@
                                 <!-- Product Details -->
                                 <div class="p-4 space-y-2">
                                     <h3 class="font-semibold text-lg truncate">
-                                        <a href="/product/view/<%= item._id %>" class="hover:text-blue-600">
-                                            <%= item.name %>
+                                        <a href="/product/view/<%= item.productId._id %>" class="hover:text-blue-600">
+                                            <%= item.productId.name %>
                                         </a>
                                     </h3>
-                                    <p class="text-gray-600"><%= item.brand %></p>
+                                    <p class="text-gray-600"><%= item.productId.brand %></p>
                                     
                                     <!-- Variant Selection -->
                                     <div class="mt-2">
@@ -63,25 +64,29 @@
                                     </div>
 
                                     <!-- Price Display -->
-                                    <% const variant = item.variants.find(v => v.type === item.variantType) || item.variants[0]; %>
-                                    <% const discountedPrice = Math.round(variant.price * (1 - variant.discount/100)); %>
-                                    <div class="flex items-center justify-between mt-3" id="price-<%= item._id %>">
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-lg font-bold text-gray-900">₹<%= discountedPrice %></span>
-                                            <% if (variant.discount > 0) { %>
-                                                <span class="text-sm text-gray-500 line-through">₹<%= variant.price %></span>
-                                            <% } %>
-                                        </div>
-                                        <% if (variant.discount > 0) { %>
-                                            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-medium">
-                                                <%= variant.discount %>% OFF
-                                            </span>
+                                    <% if (item.productId && item.productId.variants && item.productId.variants.length > 0) { %>
+                                        <% const variant = item.productId.variants.find(v => v.type === item.variantType) || item.productId.variants[0]; %>
+                                        <% if (variant) { %>
+                                            <% const discountedPrice = Math.round(variant.price * (1 - variant.discount/100)); %>
+                                            <div class="flex items-center justify-between mt-3" id="price-<%= item.productId._id %>">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-lg font-bold text-gray-900">₹<%= discountedPrice %></span>
+                                                    <% if (variant.discount > 0) { %>
+                                                        <span class="text-sm text-gray-500 line-through">₹<%= variant.price %></span>
+                                                    <% } %>
+                                                </div>
+                                                <% if (variant.discount > 0) { %>
+                                                    <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-medium">
+                                                        <%= variant.discount %>% OFF
+                                                    </span>
+                                                <% } %>
+                                            </div>
                                         <% } %>
-                                    </div>
+                                    <% } %>
 
                                     <!-- Add to Cart Button -->
                                     <button 
-                                        onclick="addToCart('<%= item._id %>', '<%= item.variantType %>')"
+                                        onclick="addToCart('<%= item.productId._id %>', '<%= item.variantType %>')"
                                         class="w-full mt-4 bg-black text-white py-2 rounded-lg hover:bg-gray-800 transition-colors"
                                     >
                                         Add to Cart
@@ -125,8 +130,8 @@ async function removeFromWishlist(productId, variantType) {
         });
 
         if (result.isConfirmed) {
-            const response = await fetch(`/wishlist/remove/${productId}`, {
-                method: 'DELETE',
+            const response = await fetch('/wishlist/remove', {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
@@ -162,6 +167,86 @@ async function removeFromWishlist(productId, variantType) {
     }
 }
 
+async function addToCart(productId, variantType) {
+    try {
+        // Show loading state
+        Swal.fire({
+            title: 'Adding to Cart...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Add to cart
+        const cartResponse = await fetch('/cart/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                productId: productId,
+                variantType: variantType
+            })
+        });
+
+        const cartData = await cartResponse.json();
+
+        if (cartData.success) {
+            // If successfully added to cart, remove from wishlist
+            const wishlistResponse = await fetch('/wishlist/remove', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    productId: productId,
+                    variantType: variantType
+                })
+            });
+
+            const wishlistData = await wishlistResponse.json();
+
+            if (wishlistData.success) {
+                // Close loading state
+                Swal.close();
+
+                // Update cart count in navbar if available
+                if (typeof window.updateCartCount === 'function' && cartData.cartCount !== undefined) {
+                    window.updateCartCount(cartData.cartCount);
+                }
+
+                // Show success message
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Added to Cart!',
+                    text: 'Item has been moved to your cart',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+
+                // Refresh the page to update the wishlist
+                location.reload();
+            } else {
+                throw new Error(wishlistData.message);
+            }
+        } else {
+            throw new Error(cartData.message);
+        }
+    } catch (error) {
+        // Close loading state
+        Swal.close();
+
+        // Show error message
+        await Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to process request'
+        });
+    }
+}
+
+// Function to handle variant selection
 function updateVariantPrice(select, variants) {
     const selectedVariant = variants[select.value];
     const productId = select.dataset.productId;
@@ -189,61 +274,16 @@ function updateVariantPrice(select, variants) {
     priceContainer.className = 'flex items-center justify-between mt-3';
 }
 
-// Update the addToCart function
-async function addToCart(productId, variantType) {
-    try {
-        // Add to cart
-        const cartResponse = await fetch('/cart/add', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                productId: productId,
-                variantType: variantType
-            })
-        });
-
-        const cartData = await cartResponse.json();
-
-        if (cartData.success) {
-            // If successfully added to cart, remove from wishlist
-            const wishlistResponse = await fetch(`/wishlist/remove/${productId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    productId: productId,
-                    variantType: variantType
-                })
-            });
-
-            const wishlistData = await wishlistResponse.json();
-
-            if (wishlistData.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Added to Cart!',
-                    text: 'Item removed from wishlist',
-                    showConfirmButton: false,
-                    timer: 1500
-                }).then(() => {
-                    // Refresh the page to update the wishlist
-                    location.reload();
-                });
-            } else {
-                throw new Error(wishlistData.message);
-            }
-        } else {
-            throw new Error(cartData.message);
-        }
-    } catch (error) {
+// Show error message if there's an error in the URL
+window.addEventListener('load', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    if (error) {
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: error.message || 'Failed to process request'
+            text: decodeURIComponent(error)
         });
     }
-}
+});
 </script>

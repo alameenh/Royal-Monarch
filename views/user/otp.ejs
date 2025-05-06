@@ -17,7 +17,10 @@
         <p id="timer" class="text-center text-gray-700 mt-4"></p>
         <p class="text-center text-gray-700 mt-4">Didn't receive the OTP?</p>
         <div class="text-center mt-2">
-            <a href="#" class="text-blue-600">Resend OTP</a>
+            <button id="resendOtpBtn" class="text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed">
+                Resend OTP
+            </button>
+            <span id="resendTimer" class="text-gray-500 ml-2"></span>
         </div>
     </div>
 </div>
@@ -35,31 +38,69 @@
         });
     });
 
-    const otpExpiresAt = new Date('<%= otpExpiresAt %>'); // Ensure this is passed from the server
+    const otpExpiresAt = new Date('<%= otpExpiresAt %>');
     const timerElement = document.getElementById('timer');
+    const resendButton = document.getElementById('resendOtpBtn');
+    const resendTimerElement = document.getElementById('resendTimer');
+    let resendTimerInterval;
+    let canResend = false;
 
     function updateTimer() {
         const now = new Date();
         const timeLeft = otpExpiresAt - now;
+        
         if (timeLeft <= 0) {
             // Handle OTP expiration
             Swal.fire({
                 icon: 'error',
                 title: 'Oops...',
-                text: 'OTP expired. Redirecting to signup page.',
+                text: 'OTP expired. Please request a new one.',
+                confirmButtonColor: '#000'
             }).then(() => {
-                window.location.href = '/signup';
+                enableResend();
             });
             return;
         }
+        
         const minutes = Math.floor(timeLeft / 60000);
         const seconds = Math.floor((timeLeft % 60000) / 1000);
         timerElement.textContent = `Time left: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
     }
 
+    function startResendTimer() {
+        const twoMinutes = 2 * 60 * 1000;
+        const endTime = Date.now() + twoMinutes;
+        
+        resendButton.disabled = true;
+        canResend = false;
+        
+        clearInterval(resendTimerInterval);
+        resendTimerInterval = setInterval(() => {
+            const timeLeft = endTime - Date.now();
+            
+            if (timeLeft <= 0) {
+                clearInterval(resendTimerInterval);
+                enableResend();
+                return;
+            }
+            
+            const seconds = Math.ceil(timeLeft / 1000);
+            resendTimerElement.textContent = `(${seconds}s)`;
+        }, 1000);
+    }
+
+    function enableResend() {
+        resendButton.disabled = false;
+        canResend = true;
+        resendTimerElement.textContent = '';
+    }
+
+    // Start initial timers
     setInterval(updateTimer, 1000);
     updateTimer();
+    startResendTimer();
 
+    // Handle OTP submission
     document.getElementById('submitOtp').addEventListener('click', async function() {
         const otpInputs = document.querySelectorAll('.otp-input');
         let otp = '';
@@ -70,27 +111,58 @@
         try {
             const response = await axios.post('/verifyOtp', { otp });
             if (response.data.success) {
-                Swal.fire({
+                await Swal.fire({
                     icon: 'success',
                     title: 'Success',
                     text: 'OTP verified successfully!',
-                }).then(() => {
-                    window.location.href = '/home';
+                    confirmButtonColor: '#000'
                 });
+                window.location.href = '/home';
             }
         } catch (error) {
-            const errorMessage = error.response.data.message || 'An error occurred during OTP verification';
-            Swal.fire({
+            const errorMessage = error.response?.data?.message || 'An error occurred during OTP verification';
+            await Swal.fire({
                 icon: 'error',
                 title: 'Oops...',
                 text: errorMessage,
+                confirmButtonColor: '#000'
             }).then(() => {
                 if (errorMessage.includes('Too many attempts')) {
                     window.location.href = '/signup';
                 } else {
-                    otpInputs.forEach(input => input.value = ''); // Clear OTP fields
-                    otpInputs[0].focus(); // Focus on the first input
+                    otpInputs.forEach(input => input.value = '');
+                    otpInputs[0].focus();
                 }
+            });
+        }
+    });
+
+    // Handle OTP resend
+    document.getElementById('resendOtpBtn').addEventListener('click', async function() {
+        if (!canResend) return;
+
+        try {
+            const response = await axios.post('/resendOtp');
+            
+            if (response.data.success) {
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: 'New OTP sent successfully!',
+                    confirmButtonColor: '#000'
+                });
+                
+                // Update OTP expiry time and restart timers
+                otpExpiresAt = new Date(response.data.otpExpiresAt);
+                startResendTimer();
+            }
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || 'Error sending new OTP';
+            await Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: errorMessage,
+                confirmButtonColor: '#000'
             });
         }
     });
