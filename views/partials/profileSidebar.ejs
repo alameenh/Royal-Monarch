@@ -1,12 +1,12 @@
 <!-- Profile Sidebar -->
 <div class="relative">
     <!-- Mobile Menu Button -->
-    <button id="mobileMenuButton" class="md:hidden fixed top-16 left-4 p-2 rounded-lg bg-[#8B4513] text-white shadow-lg z-[60]">
+    <button id="mobileMenuButton" class="md:hidden fixed top-16 left-4 p-2 rounded-lg bg-gradient-to-r from-[#8B4513] to-[#A05C2C] text-white shadow-lg z-[60] hover:from-[#A05C2C] hover:to-[#8B4513] transition-all duration-300">
         <i class="fas fa-bars text-xl"></i>
     </button>
 
     <!-- Sidebar -->
-    <div id="sidebar" class="md:static fixed top-28 left-4 h-auto w-48 md:w-72 bg-white shadow-xl rounded-lg p-3 md:p-6 border border-gray-100 transform -translate-x-full md:translate-x-0 transition-all duration-300 ease-in-out z-[55] opacity-0 md:opacity-100 md:ml-8">
+    <div id="sidebar" class="md:static fixed top-28 left-4 h-auto w-48 md:w-72 bg-gradient-to-br from-gray-50 to-gray-100 shadow-xl rounded-lg p-3 md:p-6 border border-gray-100 transform -translate-x-full md:translate-x-0 transition-all duration-300 ease-in-out z-[55] opacity-0 md:opacity-100 md:ml-8">
         <% // Set default for currentPage if it's not provided
            if (typeof currentPage === 'undefined') { 
                currentPage = ''; 
@@ -18,10 +18,10 @@
                 <img src="<%= user.profileImage || '/images/default-avatar.png' %>" 
                      alt="Profile Picture" 
                      class="w-16 h-16 rounded-full shadow-lg border-2 border-[#8B4513] object-cover">
-                <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-[#8B4513] rounded-full border-2 border-white"></div>
+                <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-r from-[#8B4513] to-[#A05C2C] rounded-full border-2 border-white"></div>
             </div>
             <div>
-                <h4 class="text-lg font-serif font-semibold text-[#2c2c2c]"><%= user.firstname %> <%= user.lastname %></h4>
+                <h4 class="text-lg font-serif font-semibold text-gray-800"><%= user.firstname %> <%= user.lastname %></h4>
                 <p class="text-sm text-gray-600 font-serif"><%= user.email %></p>
             </div>
         </div>
@@ -29,43 +29,43 @@
         
         <nav class="space-y-2">
             <a href="/profile" 
-               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'profile' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
+               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'profile' ? 'bg-gradient-to-r from-[#8B4513] to-[#A05C2C] text-white' : 'text-gray-700 hover:bg-gradient-to-r hover:from-[#A05C2C] hover:to-[#8B4513] hover:text-white' %>">
                 <i class="fas fa-user text-lg w-6"></i> 
                 <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Profile</span>
             </a>
             
             <a href="/orders" 
-               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'orders' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
+               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'orders' ? 'bg-gradient-to-r from-[#8B4513] to-[#A05C2C] text-white' : 'text-gray-700 hover:bg-gradient-to-r hover:from-[#A05C2C] hover:to-[#8B4513] hover:text-white' %>">
                 <i class="fas fa-box text-lg w-6"></i>
                 <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Orders</span>
             </a>
             
             <a href="/cart" 
-               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'cart' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
+               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'cart' ? 'bg-gradient-to-r from-[#8B4513] to-[#A05C2C] text-white' : 'text-gray-700 hover:bg-gradient-to-r hover:from-[#A05C2C] hover:to-[#8B4513] hover:text-white' %>">
                 <i class="fas fa-shopping-cart text-lg w-6"></i>
                 <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Cart</span>
             </a>
             
             <a href="/wishlist" 
-               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'wishlist' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
+               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'wishlist' ? 'bg-gradient-to-r from-[#8B4513] to-[#A05C2C] text-white' : 'text-gray-700 hover:bg-gradient-to-r hover:from-[#A05C2C] hover:to-[#8B4513] hover:text-white' %>">
                 <i class="fas fa-heart text-lg w-6"></i>
                 <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Wishlist</span>
             </a>
             
             <a href="/address" 
-               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'address' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
+               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'address' ? 'bg-gradient-to-r from-[#8B4513] to-[#A05C2C] text-white' : 'text-gray-700 hover:bg-gradient-to-r hover:from-[#A05C2C] hover:to-[#8B4513] hover:text-white' %>">
                 <i class="fas fa-map-marker-alt text-lg w-6"></i>
                 <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Address</span>
             </a>
             
             <a href="/wallet" 
-               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'wallet' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
+               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'wallet' ? 'bg-gradient-to-r from-[#8B4513] to-[#A05C2C] text-white' : 'text-gray-700 hover:bg-gradient-to-r hover:from-[#A05C2C] hover:to-[#8B4513] hover:text-white' %>">
                 <i class="fas fa-wallet text-lg w-6"></i>
                 <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Wallet</span>
             </a>
             
             <a href="/change-password" 
-               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'changepassword' ? 'bg-[#8B4513] text-white' : 'text-[#2c2c2c] hover:bg-[#A05C2C] hover:text-white' %>">
+               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group <%= currentPage === 'changepassword' ? 'bg-gradient-to-r from-[#8B4513] to-[#A05C2C] text-white' : 'text-gray-700 hover:bg-gradient-to-r hover:from-[#A05C2C] hover:to-[#8B4513] hover:text-white' %>">
                 <i class="fas fa-key text-lg w-6"></i>
                 <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Change Password</span>
             </a>
@@ -74,7 +74,7 @@
             <div class="border-t border-gray-200 my-4"></div>
             
             <a href="/logout" 
-               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group text-red-600 hover:bg-red-100">
+               class="flex items-center px-2 py-2 rounded-lg transition-all duration-300 font-serif group text-gray-700 hover:bg-gradient-to-r hover:from-red-600 hover:to-red-700 hover:text-white">
                 <i class="fas fa-sign-out-alt text-lg w-6"></i>
                 <span class="ml-2 text-sm md:text-base group-hover:translate-x-1 transition-transform duration-300">Logout</span>
             </a>
@@ -82,7 +82,7 @@
     </div>
 
     <!-- Mobile Menu Overlay -->
-    <div id="mobileMenuOverlay" class="hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[50]"></div>
+    <div id="mobileMenuOverlay" class="hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-[50]"></div>
 </div>
 
 <script>
