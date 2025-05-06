@@ -55,9 +55,13 @@ const viewProduct = async (req, res) => {
         // Check if products are in the user's wishlist
         let wishlistStatus = {};
         let isInWishlist = false;
+        let wishlistCount = 0;
         if (userId) {
             const wishlist = await Wishlist.findOne({ userId });
             if (wishlist) {
+                // Get wishlist count
+                wishlistCount = wishlist.products.length;
+                
                 // Create a map of variant types that are in wishlist
                 wishlistStatus = wishlist.products.reduce((acc, item) => {
                     if (item.productId.toString() === productId) {
@@ -78,6 +82,9 @@ const viewProduct = async (req, res) => {
             userId, 
             productId 
         }) : [];
+
+        // Get cart count
+        const cartCount = userId ? await CartItem.countDocuments({ userId }) : 0;
 
         // Mark which variants are in cart and add offer information
         product.variants = product.variants.map(variant => {
@@ -162,7 +169,9 @@ const viewProduct = async (req, res) => {
             product,
             similarProducts: processedSimilarProducts,
             isInWishlist,
-            initialCartStatus: product.variants[0].inCart // Pass initial cart status
+            initialCartStatus: product.variants[0].inCart, // Pass initial cart status
+            wishlistCount, // Add wishlist count
+            cartCount // Add cart count
         });
     } catch (error) {
         console.error('View Product Error:', error);
@@ -316,7 +325,8 @@ const toggleWishlist = async (req, res) => {
             return res.json({
                 success: true,
                 added: true,
-                message: 'Product added to wishlist'
+                message: 'Product added to wishlist',
+                wishlistCount: 1
             });
         }
         
@@ -332,7 +342,8 @@ const toggleWishlist = async (req, res) => {
             return res.json({
                 success: true,
                 added: false,
-                message: 'Product removed from wishlist'
+                message: 'Product removed from wishlist',
+                wishlistCount: wishlist.products.length
             });
         } else {
             // Check wishlist limit before adding
@@ -353,7 +364,8 @@ const toggleWishlist = async (req, res) => {
             return res.json({
                 success: true,
                 added: true,
-                message: 'Product added to wishlist'
+                message: 'Product added to wishlist',
+                wishlistCount: wishlist.products.length
             });
         }
     } catch (error) {

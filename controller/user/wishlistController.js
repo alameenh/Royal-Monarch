@@ -87,7 +87,9 @@ const wishlistController = {
             })) : [];
 
             // Filter out null items (inactive products or invalid variants)
-            const validWishlistItems = processedWishlistItems.filter(item => item !== null);
+            const validWishlistItems = processedWishlistItems
+                .filter(item => item !== null)
+                .sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt)); // Sort by addedAt in descending order
 
             // Get wishlist count for the navbar
             const wishlistCount = validWishlistItems.length;
@@ -233,7 +235,104 @@ const wishlistController = {
             console.error('Error getting wishlist count:', error);
             res.status(500).json({ count: 0 });
         }
-    }
+    },
+
+    // Toggle wishlist
+    toggleWishlist: async (req, res) => {
+        try {
+            const userId = req.session.userId;
+            const { productId } = req.params;
+            const { variantType } = req.body;
+
+            if (!userId) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Please login to add items to wishlist'
+                });
+            }
+
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+
+            const product = await Product.findOne({
+                _id: productId,
+                status: 'Active'
+            });
+
+            if (!product) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Product not found or unavailable'
+                });
+            }
+
+            const variant = product.variants.find(v => v.type === variantType);
+            if (!variant) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid variant selected'
+                });
+            }
+
+            let wishlist = await Wishlist.findOne({ userId });
+            if (!wishlist) {
+                wishlist = new Wishlist({ userId, products: [] });
+            }
+
+            const existingItem = wishlist.products.find(
+                item => item.productId.toString() === productId && item.variantType === variantType
+            );
+
+            if (existingItem) {
+                // Remove from wishlist
+                wishlist.products = wishlist.products.filter(
+                    item => !(item.productId.toString() === productId && item.variantType === variantType)
+                );
+                await wishlist.save();
+
+                // Get updated wishlist count
+                const updatedWishlist = await Wishlist.findOne({ userId });
+                const wishlistCount = updatedWishlist ? updatedWishlist.products.length : 0;
+
+                return res.json({
+                    success: true,
+                    added: false,
+                    message: 'Product removed from wishlist',
+                    wishlistCount
+                });
+            } else {
+                // Add to wishlist
+                wishlist.products.push({
+                    productId,
+                    variantType,
+                    addedAt: new Date()
+                });
+                await wishlist.save();
+
+                // Get updated wishlist count
+                const updatedWishlist = await Wishlist.findOne({ userId });
+                const wishlistCount = updatedWishlist ? updatedWishlist.products.length : 0;
+
+                return res.json({
+                    success: true,
+                    added: true,
+                    message: 'Product added to wishlist',
+                    wishlistCount
+                });
+            }
+        } catch (error) {
+            console.error('Toggle Wishlist Error:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to update wishlist'
+            });
+        }
+    },
 };
 
 export default wishlistController;
