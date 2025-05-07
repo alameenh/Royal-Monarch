@@ -4,6 +4,11 @@ import Wishlist from "../model/wishlistModel.js"
 
 const checkSession = async (req, res, next) => {
     try {
+        // Skip session check for admin routes
+        if (req.path.startsWith('/admin')) {
+            return next();
+        }
+
         if (!req.session.isLoggedIn) {
             // Check if it's an API request
             if (req.path.startsWith('/api/') || req.xhr) {

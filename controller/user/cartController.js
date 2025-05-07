@@ -9,28 +9,23 @@ const cartController = {
             const { productId, variantType } = req.body;
             const userId = req.session.userId;
 
-            // Validate inputs
-            if (!productId || !variantType || typeof variantType !== 'string') {
-                return res.status(400).json({
+            if (!userId) {
+                return res.status(401).json({
                     success: false,
-                    message: 'Invalid product or variant data'
+                    message: 'Please login to add items to cart'
                 });
             }
 
-            // Check if product exists and is active
-            const product = await Product.findOne({ 
-                _id: productId,
-                status: 'Active'
-            });
-
+            // Check if product exists and is in stock
+            const product = await Product.findById(productId);
             if (!product) {
                 return res.status(404).json({
                     success: false,
-                    message: 'Product not found or unavailable'
+                    message: 'Product not found'
                 });
             }
 
-            // Find the variant and validate it exists
+            // Find the variant
             const variant = product.variants.find(v => v.type === variantType);
             if (!variant) {
                 return res.status(404).json({
@@ -47,69 +42,50 @@ const cartController = {
                 });
             }
 
-            // Check total number of items in cart
-            const totalItems = await CartItem.countDocuments({ userId });
-            if (totalItems >= 10) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Cart is full (maximum 10 items)'
-                });
-            }
-
-            // Check if this exact variant is already in cart
-            const existingItem = await CartItem.findOne({
+            // Check if item already exists in cart
+            let cartItem = await CartItem.findOne({
                 userId,
                 productId,
                 variantType
             });
 
-            if (existingItem) {
-                if (existingItem.quantity < 4) {
-                    existingItem.quantity += 1;
-                    await existingItem.save();
-                    const updatedCount = await CartItem.countDocuments({ userId });
-                    return res.json({
-                        success: true,
-                        message: 'Item quantity updated in cart',
-                        cartCount: updatedCount
-                    });
-                } else {
+            if (cartItem) {
+                // Check if adding one more would exceed stock
+                if (cartItem.quantity >= variant.stock) {
                     return res.status(400).json({
                         success: false,
-                        message: 'Maximum quantity limit reached for this variant'
+                        message: 'Maximum stock limit reached'
                     });
                 }
+
+                // Increment quantity
+                cartItem.quantity += 1;
+                await cartItem.save();
+            } else {
+                // Create new cart item
+                cartItem = new CartItem({
+                    userId,
+                    productId,
+                    variantType,
+                    quantity: 1
+                });
+                await cartItem.save();
             }
 
-            // Add new variant to cart
-            const cartItem = new CartItem({
-                userId,
-                productId,
-                variantType,
-                quantity: 1
-            });
-
-            await cartItem.save();
-
-            const updatedCount = await CartItem.countDocuments({ userId });
+            // Get updated cart count
+            const cartCount = await CartItem.countDocuments({ userId });
 
             res.json({
                 success: true,
-                message: 'Item added to cart',
-                cartCount: updatedCount
+                message: 'Added to cart successfully',
+                cartCount
             });
 
         } catch (error) {
             console.error('Add to Cart Error:', error);
-            if (error.code === 11000) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'This variant is already in your cart'
-                });
-            }
             res.status(500).json({
                 success: false,
-                message: 'Failed to add item to cart'
+                message: 'Error adding to cart'
             });
         }
     },
@@ -119,43 +95,62 @@ const cartController = {
             const { productId, variantType } = req.body;
             const userId = req.session.userId;
 
-            const result = await CartItem.findOneAndDelete({
+            if (!userId) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Please login to remove items from cart'
+                });
+            }
+
+            // Find and remove the cart item
+            await CartItem.findOneAndDelete({
                 userId,
                 productId,
                 variantType
             });
 
-            if (!result) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Item not found in cart'
-                });
-            }
-
-            const updatedCount = await CartItem.countDocuments({ userId });
+            // Get updated cart count
+            const cartCount = await CartItem.countDocuments({ userId });
 
             res.json({
                 success: true,
-                message: 'Item removed from cart',
-                cartCount: updatedCount
+                message: 'Removed from cart successfully',
+                cartCount
             });
 
         } catch (error) {
             console.error('Remove from Cart Error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Failed to remove item from cart'
+                message: 'Error removing from cart'
             });
         }
     },
 
     getCartCount: async (req, res) => {
         try {
-            const count = await CartItem.countDocuments({ userId: req.session.userId });
-            res.json({ count });
+            const userId = req.session.userId;
+
+            if (!userId) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Please login to get cart count'
+                });
+            }
+
+            const count = await CartItem.countDocuments({ userId });
+
+            res.json({
+                success: true,
+                count
+            });
+
         } catch (error) {
-            console.error('Error getting cart count:', error);
-            res.status(500).json({ count: 0 });
+            console.error('Get Cart Count Error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error getting cart count'
+            });
         }
     },
 
@@ -336,6 +331,13 @@ const cartController = {
             const { productId, variantType } = req.query;
             const userId = req.session.userId;
 
+            if (!userId) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Please login to check cart'
+                });
+            }
+
             const cartItem = await CartItem.findOne({
                 userId,
                 productId,
@@ -344,15 +346,14 @@ const cartController = {
 
             res.json({
                 success: true,
-                inCart: !!cartItem,
-                quantity: cartItem ? cartItem.quantity : 0
+                inCart: !!cartItem
             });
 
         } catch (error) {
-            console.error('Check Cart Status Error:', error);
+            console.error('Check Cart Error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Failed to check cart status'
+                message: 'Error checking cart'
             });
         }
     }

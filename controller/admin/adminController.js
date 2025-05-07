@@ -55,9 +55,9 @@ const postAdmin = async (req, res) => {
 }
 
 const getLogout = (req, res) => {
-    req.session.destroy(() => {
-        res.redirect('/admin/login');
-    });
+    // Only clear admin-related session data
+    delete req.session.admin;
+    res.redirect('/admin/login');
 }
 
 const getDashboard = async (req, res) => {

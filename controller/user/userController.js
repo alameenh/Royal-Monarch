@@ -390,8 +390,19 @@ const getHomePage = async (req, res) => {
 };
 
 const getLogout = (req, res) => {
-    req.session.destroy();
-    res.redirect('/');
+    // Only clear user-related session data
+    delete req.session.userId;
+    delete req.session.email;
+    delete req.session.isLoggedIn;
+    delete req.session.user;
+
+    // Check if the request is coming from admin panel
+    const referer = req.headers.referer || '';
+    if (referer.includes('/admin')) {
+        res.redirect('/admin/dashboard');
+    } else {
+        res.redirect('/');
+    }
 };
 
 const postLogin = async (req, res) => {

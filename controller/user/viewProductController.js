@@ -52,44 +52,38 @@ const viewProduct = async (req, res) => {
             endDate: { $gte: currentDate }
         });
 
-        // Check if products are in the user's wishlist
+        // Initialize wishlist and cart data
         let wishlistStatus = {};
         let isInWishlist = false;
         let wishlistCount = 0;
+        let cartItems = [];
+        let cartCount = 0;
+
+        // Get wishlist and cart data if user is logged in
         if (userId) {
+            // Get wishlist data
             const wishlist = await Wishlist.findOne({ userId });
             if (wishlist) {
-                // Get wishlist count
                 wishlistCount = wishlist.products.length;
-                
-                // Create a map of variant types that are in wishlist
                 wishlistStatus = wishlist.products.reduce((acc, item) => {
-                    if (item.productId.toString() === productId) {
-                        acc[item.variantType] = true;
-                    }
+                    acc[item.productId.toString()] = acc[item.productId.toString()] || {};
+                    acc[item.productId.toString()][item.variantType] = true;
                     return acc;
                 }, {});
-                
-                // Check if the first variant is in wishlist
-                if (product.variants.length > 0) {
-                    isInWishlist = wishlistStatus[product.variants[0].type] || false;
-                }
             }
+
+            // Get cart data
+            cartItems = await CartItem.find({ userId }).lean();
+            cartCount = await CartItem.countDocuments({ userId });
         }
 
-        // Check if any variants are in the user's cart
-        const cartItems = userId ? await CartItem.find({ 
-            userId, 
-            productId 
-        }) : [];
-
-        // Get cart count
-        const cartCount = userId ? await CartItem.countDocuments({ userId }) : 0;
-
-        // Mark which variants are in cart and add offer information
+        // Mark which variants are in cart and add offer information for main product
         product.variants = product.variants.map(variant => {
-            const inCart = cartItems.some(item => item.variantType === variant.type);
-            const inWishlist = wishlistStatus[variant.type] || false;
+            const inCart = cartItems.some(item => 
+                item.productId.toString() === productId && 
+                item.variantType === variant.type
+            );
+            const inWishlist = wishlistStatus[productId]?.[variant.type] || false;
             
             // Find applicable offer for this variant
             const productOffer = activeOffers.find(offer => 
@@ -115,6 +109,11 @@ const viewProduct = async (req, res) => {
             };
         });
 
+        // Check if the first variant is in wishlist
+        if (product.variants.length > 0) {
+            isInWishlist = product.variants[0].inWishlist;
+        }
+
         // Get similar products from same category
         const similarProducts = await Product.find({
             category: product.category._id,
@@ -125,7 +124,7 @@ const viewProduct = async (req, res) => {
         .lean()
         .limit(5);
 
-        // Process similar products to include offer information and cart status
+        // Process similar products to include offer information and cart/wishlist status
         const processedSimilarProducts = similarProducts.map(similarProduct => {
             // Find product-specific offer
             const productOffer = activeOffers.find(offer => 
@@ -142,17 +141,18 @@ const viewProduct = async (req, res) => {
             // Use product offer if available, otherwise use category offer
             const applicableOffer = productOffer || categoryOffer;
 
-            // Check if any variants are in cart
-            const similarCartItems = userId ? cartItems.filter(item => 
-                item.productId.toString() === similarProduct._id.toString()
-            ) : [];
-
             // Process variants with cart status and offers
             similarProduct.variants = similarProduct.variants.map(variant => {
-                const inCart = similarCartItems.some(item => item.variantType === variant.type);
+                const inCart = cartItems.some(item => 
+                    item.productId.toString() === similarProduct._id.toString() && 
+                    item.variantType === variant.type
+                );
+                const inWishlist = wishlistStatus[similarProduct._id.toString()]?.[variant.type] || false;
+
                 return {
                     ...variant,
                     inCart,
+                    inWishlist,
                     offerName: applicableOffer ? applicableOffer.name : null,
                     discount: applicableOffer ? applicableOffer.discount : 0
                 };
@@ -169,9 +169,9 @@ const viewProduct = async (req, res) => {
             product,
             similarProducts: processedSimilarProducts,
             isInWishlist,
-            initialCartStatus: product.variants[0].inCart, // Pass initial cart status
-            wishlistCount, // Add wishlist count
-            cartCount // Add cart count
+            initialCartStatus: product.variants[0].inCart,
+            wishlistCount,
+            cartCount
         });
     } catch (error) {
         console.error('View Product Error:', error);

@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import razorpay, { verifyRazorpayConfig } from '../../utils/razorpay.js';
 import crypto from 'crypto';
 import { log } from 'console';
+import Wishlist from '../../model/wishlistModel.js';
 
 const getShopPage = async (req, res) => {
     try {
@@ -44,8 +45,29 @@ const getProducts = async (req, res) => {
         const category = req.query.category || '';
         const sortBy = req.query.sortBy || 'createdAt';
         const order = req.query.order || 'desc';
-        const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice) : 0;
-        const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice) : Number.MAX_SAFE_INTEGER;
+        
+        // Validate and parse price filters
+        let minPrice = 0;
+        let maxPrice = Number.MAX_SAFE_INTEGER;
+        
+        if (req.query.minPrice) {
+            const parsedMinPrice = parseFloat(req.query.minPrice);
+            if (!isNaN(parsedMinPrice) && parsedMinPrice >= 0) {
+                minPrice = parsedMinPrice;
+            }
+        }
+        
+        if (req.query.maxPrice) {
+            const parsedMaxPrice = parseFloat(req.query.maxPrice);
+            if (!isNaN(parsedMaxPrice) && parsedMaxPrice >= 0) {
+                maxPrice = parsedMaxPrice;
+            }
+        }
+        
+        // Ensure maxPrice is greater than minPrice
+        if (maxPrice < minPrice) {
+            maxPrice = Number.MAX_SAFE_INTEGER;
+        }
 
         // Get current date for offer validation
         const currentDate = new Date();
@@ -56,6 +78,30 @@ const getProducts = async (req, res) => {
             startDate: { $lte: currentDate },
             endDate: { $gte: currentDate }
         });
+
+        // Get user's wishlist and cart if logged in
+        let wishlistMap = new Map();
+        let cartMap = new Map();
+        if (req.session.userId) {
+            const [wishlist, cartItems] = await Promise.all([
+                Wishlist.findOne({ userId: req.session.userId }),
+                CartItem.find({ userId: req.session.userId })
+            ]);
+
+            if (wishlist) {
+                wishlist.products.forEach(item => {
+                    const key = `${item.productId.toString()}-${item.variantType}`;
+                    wishlistMap.set(key, true);
+                });
+            }
+
+            if (cartItems) {
+                cartItems.forEach(item => {
+                    const key = `${item.productId.toString()}-${item.variantType}`;
+                    cartMap.set(key, true);
+                });
+            }
+        }
 
         // Build base query
         let query = { status: 'Active' };
@@ -111,8 +157,15 @@ const getProducts = async (req, res) => {
             // Use product offer if available, otherwise use category offer
             const applicableOffer = productOffer || categoryOffer;
 
+            // Add wishlist and cart status to each variant
+            const variantsWithStatus = product.variants.map(variant => ({
+                ...variant,
+                inWishlist: wishlistMap.has(`${product._id.toString()}-${variant.type}`),
+                inCart: cartMap.has(`${product._id.toString()}-${variant.type}`)
+            }));
+
             // Calculate discounted price for the base variant
-            const baseVariant = product.variants[0];
+            const baseVariant = variantsWithStatus[0];
             const originalPrice = baseVariant.price;
             const discountedPrice = applicableOffer 
                 ? Math.round(originalPrice * (1 - applicableOffer.discount/100))
@@ -120,6 +173,7 @@ const getProducts = async (req, res) => {
 
             return {
                 ...product,
+                variants: variantsWithStatus,
                 offer: applicableOffer,
                 discountedPrice,
                 originalPrice

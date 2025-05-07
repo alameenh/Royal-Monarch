@@ -155,21 +155,21 @@
                 Similar Products
                 <div class="absolute bottom-0 left-0 w-20 h-[2px] bg-gradient-to-r from-transparent via-[#8B4513] to-transparent"></div>
             </h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                 <% similarProducts.forEach(similar => { %>
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden group">
+                    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden group transform hover:scale-[1.02] transition-all duration-300">
                         <a href="/product/view/<%= similar._id %>" class="block">
                             <div class="aspect-w-1 aspect-h-1 overflow-hidden">
                                 <img 
                                     src="<%= similar.images[0].path %>" 
                                     alt="<%= similar.name %>"
-                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 product-image"
+                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 product-image"
                                     data-fallback="/images/placeholder.jpg"
                                 >
                             </div>
-                            <div class="p-3">
-                                <h3 class="text-sm font-serif mb-1 text-[#2c2c2c] group-hover:text-[#8B4513] transition-colors duration-300"><%= similar.name %></h3>
-                                <p class="text-gray-600 mb-2 font-serif text-xs"><%= similar.brand %></p>
+                            <div class="p-4">
+                                <h3 class="text-sm font-serif mb-1 text-gray-800 group-hover:text-[#8B4513] transition-colors duration-300"><%= similar.name %></h3>
+                                <p class="text-gray-600 mb-2 font-serif text-xs"><%= similar.brand || 'No brand' %></p>
                                 <div class="flex justify-between items-center mb-2">
                                     <div class="flex items-center gap-1">
                                         <% const similarVariant = similar.variants[0]; %>
@@ -185,18 +185,26 @@
                                             <span class="text-xs text-[#8B4513] font-serif ml-1"><%= similar.offer.discount %>% OFF</span>
                                         <% } %>
                                     </div>
-                                    <span class="text-gray-600 hover:text-[#8B4513] transition-colors">
-                                        <i class="fas fa-eye text-sm"></i>
-                                    </span>
+                                    <button class="wishlist-toggle text-gray-600 hover:text-red-500 transition-colors" 
+                                            onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist('<%= similar._id %>', this);"
+                                            data-product-id="<%= similar._id %>"
+                                            data-variant-type="<%= similar.variants[0].type %>"
+                                            data-in-wishlist="<%= similar.variants[0].inWishlist ? 'true' : 'false' %>">
+                                        <i class="<%= similar.variants[0].inWishlist ? 'fas fa-heart text-red-500' : 'far fa-heart' %>"></i>
+                                    </button>
                                 </div>
                             </div>
                         </a>
-                        <div class="p-3 pt-0">
-                            <div class="flex flex-col gap-1.5">
-                                <select class="variant-select w-full p-1 text-xs border border-gray-300 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300" data-product-id="<%= similar._id %>">
+                        <div class="p-4 pt-0">
+                            <div class="flex flex-col gap-2">
+                                <select class="variant-select w-full p-2 text-xs border border-gray-200 text-gray-700 rounded-lg focus:border-[#8B4513] focus:outline-none font-serif hover:border-[#8B4513] transition-colors duration-300" data-product-id="<%= similar._id %>">
                                     <% if (similar.variants && similar.variants.length > 0) { %>
                                         <% similar.variants.forEach(variant => { %>
-                                            <option value="<%= variant.type %>" data-stock="<%= variant.stock %>" data-price="<%= variant.price %>">
+                                            <option value="<%= variant.type %>" 
+                                                    data-stock="<%= variant.stock %>" 
+                                                    data-price="<%= variant.price %>"
+                                                    data-in-wishlist="<%= variant.inWishlist ? 'true' : 'false' %>"
+                                                    data-in-cart="<%= variant.inCart ? 'true' : 'false' %>">
                                                 <%= variant.type %> - ₹<%= variant.price %>
                                             </option>
                                         <% }) %>
@@ -205,15 +213,17 @@
                                     <% } %>
                                 </select>
                                 <button 
-                                    class="add-to-cart-btn w-full bg-white text-[#8B4513] py-1 text-xs uppercase border border-[#8B4513] hover:bg-[#8B4513] hover:text-white transition-all duration-300 font-serif rounded-lg group" 
-                                    data-product-id="<%= similar._id %>">
-                                    Add to Cart
+                                    class="add-to-cart-btn w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white py-2 text-xs uppercase hover:from-gray-800 hover:to-gray-700 transition-all duration-300 font-serif rounded-lg group" 
+                                    onclick="event.preventDefault(); event.stopPropagation(); handleCart('<%= similar._id %>', this);"
+                                    data-product-id="<%= similar._id %>"
+                                    data-action="<%= similar.variants[0].inCart ? 'remove' : 'add' %>">
+                                    <%= similar.variants[0].inCart ? 'Remove from Cart' : 'Add to Cart' %>
                                     <span class="inline-block transform group-hover:translate-x-1 transition-transform duration-300 ml-1">→</span>
                                 </button>
                             </div>
                         </div>
                     </div>
-                <% }) %>
+                <% }); %>
             </div>
         </div>
     </section>
@@ -334,252 +344,93 @@ function updateCartButton(inCart) {
 
 function updateVariantDetails() {
     const select = document.getElementById('variantSelect');
-    const option = select.options[select.selectedIndex];
+    const selectedOption = select.options[select.selectedIndex];
+    const cartBtn = document.getElementById('cartBtn');
+    const buyNowBtn = document.getElementById('buyNowBtn');
     
-    const price = parseInt(option.getAttribute('data-price'));
-    const stock = parseInt(option.getAttribute('data-stock'));
-    const specs = JSON.parse(option.getAttribute('data-specs') || '[]');
-    const type = option.getAttribute('data-type');
-    const discount = parseInt(option.getAttribute('data-discount') || '0');
-    const offerName = option.getAttribute('data-offer-name');
-    const inCart = option.getAttribute('data-in-cart') === 'true';
-    const inWishlist = option.getAttribute('data-in-wishlist') === 'true';
-    
-    // Update wishlist button state
-    const wishlistBtn = document.getElementById('wishlistBtn').querySelector('i');
-    if (inWishlist) {
-        wishlistBtn.classList.remove('text-gray-400');
-        wishlistBtn.classList.add('text-red-500');
-    } else {
-        wishlistBtn.classList.remove('text-red-500');
-        wishlistBtn.classList.add('text-gray-400');
-    }
-    
-    // Calculate discounted price
+    // Update price
+    const price = selectedOption.getAttribute('data-price');
+    const discount = selectedOption.getAttribute('data-discount');
     const discountedPrice = Math.round(price * (1 - discount/100));
-
-    // Update prices and discount
-    const priceDisplay = document.getElementById('currentPrice');
-    const originalPriceDisplay = document.getElementById('originalPrice');
-    const discountBadge = document.getElementById('discountBadge');
-
-    priceDisplay.textContent = `₹${discountedPrice}`;
     
+    document.getElementById('currentPrice').textContent = `₹${discountedPrice}`;
+    document.getElementById('originalPrice').textContent = `₹${price}`;
+    
+    // Update discount badge
+    const discountBadge = document.getElementById('discountBadge');
     if (discount > 0) {
-        // Show original price with strikethrough
-        originalPriceDisplay.textContent = `₹${price}`;
-        originalPriceDisplay.style.display = 'inline';
-        
-        // Show discount badge with offer name if available
-        let discountText = `${discount}% OFF`;
-        discountBadge.textContent = discountText;
-        discountBadge.style.display = 'inline-block';
+        discountBadge.textContent = `${discount}% OFF`;
+        discountBadge.style.display = 'block';
     } else {
-        // Hide original price and discount badge if no discount
-        originalPriceDisplay.style.display = 'none';
         discountBadge.style.display = 'none';
     }
     
     // Update stock status
+    const stock = selectedOption.getAttribute('data-stock');
     const stockStatus = document.getElementById('stockStatus');
     if (stock > 0) {
-        stockStatus.textContent = `In Stock (${stock} available)`;
-        stockStatus.className = 'font-medium text-green-600 mt-2';
-    } else {
-        stockStatus.textContent = 'Out of Stock';
-        stockStatus.className = 'font-medium text-red-600 mt-2';
-    }
-    
-    // Update specifications
-    const specsList = document.getElementById('specsList');
-    specsList.innerHTML = '';
-    
-    if (specs && specs.length > 0) {
-        specs.forEach(spec => {
-            const li = document.createElement('li');
-            li.textContent = spec;
-            li.className = 'mb-1';
-            specsList.appendChild(li);
-        });
-    } else {
-        specsList.innerHTML = '<li>No specifications available</li>';
-    }
-
-    // Update button states
-    const addToCartBtn = document.getElementById('cartBtn');
-    const buyNowBtn = document.getElementById('buyNowBtn');
-    
-    if (stock <= 0) {
-        addToCartBtn.disabled = true;
-        buyNowBtn.disabled = true;
-        addToCartBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        buyNowBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        addToCartBtn.textContent = 'Out of Stock';
-        addToCartBtn.classList.remove('bg-[#8B4513]', 'hover:bg-[#6B3513]', 'bg-red-600', 'hover:bg-red-700');
-        addToCartBtn.classList.add('bg-gray-400');
-    } else {
-        addToCartBtn.disabled = false;
+        stockStatus.innerHTML = `<span class="text-green-600">In Stock (${stock} available)</span>`;
+        cartBtn.disabled = false;
         buyNowBtn.disabled = false;
-        addToCartBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
-        buyNowBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        updateCartButton(inCart);
+    } else {
+        stockStatus.innerHTML = '<span class="text-red-600">Out of Stock</span>';
+        cartBtn.disabled = true;
+        buyNowBtn.disabled = true;
     }
+    
+    // Update cart button state
+    const inCart = selectedOption.getAttribute('data-in-cart') === 'true';
+    updateCartButtonState(cartBtn, inCart);
 }
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
+// Function to handle cart actions
+async function handleCart(productId, button = null) {
+    let variantSelect;
+    let selectedOption;
+    let variantType;
+    let stock;
+    let cartBtn;
+    let action;
+
+    if (button) {
+        // For similar products
+        cartBtn = button;
+        variantSelect = document.querySelector(`.variant-select[data-product-id="${productId}"]`);
+        selectedOption = variantSelect.options[variantSelect.selectedIndex];
+        variantType = selectedOption.value;
+        stock = parseInt(selectedOption.getAttribute('data-stock'));
+        action = cartBtn.getAttribute('data-action');
+    } else {
+        // For main product
+        cartBtn = document.getElementById('cartBtn');
+        variantSelect = document.getElementById('variantSelect');
+        selectedOption = variantSelect.options[variantSelect.selectedIndex];
+        variantType = selectedOption.getAttribute('data-type');
+        stock = parseInt(selectedOption.getAttribute('data-stock'));
+        action = cartBtn.textContent.trim() === 'Add to Cart' ? 'add' : 'remove';
+    }
+    
+    // Check if product is in stock (only for add action)
+    if (action === 'add' && stock <= 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Out of Stock',
+            text: 'This variant is currently out of stock'
+        });
+        return;
+    }
+    
     try {
-        console.log('DOM loaded, initializing product details');
-        
-        // Initialize zoom functionality
-        setupZoom();
-        
-        // Initialize variant selection
-        const variantSelect = document.getElementById('variantSelect');
-        const firstVariantOption = variantSelect.options[0];
-        
-        // Set up cart status for variants
-        const variants = JSON.parse('<%= JSON.stringify(product.variants) %>'.replace(/&quot;/g, '"'));
-        console.log('Product variants:', variants);
-        
-        if (variants && variants.length > 0) {
-            console.log('First variant specs:', variants[0].specifications);
-            
-            // Update data attributes for each variant option
-            variants.forEach((variant, index) => {
-                if (index < variantSelect.options.length) {
-                    const option = variantSelect.options[index];
-                    option.setAttribute('data-in-cart', variant.inCart);
-                    option.setAttribute('data-stock', variant.stock);
-                    
-                    // Debug specs from data attribute
-                    const specsData = option.getAttribute('data-specs');
-                    console.log(`Variant ${index} specs data attribute:`, specsData);
-                }
-            });
-            
-            // Manually initialize the specifications display for the first variant
-            const firstVariantSpecs = variants[0].specifications || [];
-            console.log('Initializing with specs:', firstVariantSpecs);
-            
-            // Check initial stock status and disable buttons if needed
-            const initialStock = variants[0].stock;
-            const cartBtn = document.getElementById('cartBtn');
-            const buyNowBtn = document.getElementById('buyNowBtn');
-            
-            if (initialStock <= 0) {
-                cartBtn.disabled = true;
-                buyNowBtn.disabled = true;
-                cartBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                buyNowBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                cartBtn.textContent = 'Out of Stock';
-            } else {
-                // Only update cart button if product is in stock
-                updateCartButton(variants[0].inCart);
+        // Show loading state
+        Swal.fire({
+            title: action === 'add' ? 'Adding to Cart...' : 'Removing from Cart...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
             }
-            
-            // Force update variant details to initialize stock status
-            updateVariantDetails();
-        }
-    } catch (err) {
-        console.error('Error initializing product page:', err);
-    }
-});
+        });
 
-function setupZoom() {
-    const container = document.querySelector('.image-zoom-container');
-    const img = document.getElementById('mainImage');
-    
-    // Create zoom lens and result elements
-    const zoomLens = document.createElement('div');
-    zoomLens.className = 'zoom-lens';
-    container.appendChild(zoomLens);
-    
-    const zoomResult = document.createElement('div');
-    zoomResult.className = 'zoom-result';
-    container.appendChild(zoomResult);
-    
-    // Create zoomed image inside result
-    const zoomedImg = document.createElement('img');
-    zoomedImg.src = img.src;
-    zoomResult.appendChild(zoomedImg);
-    
-    // Show zoom elements on mouse enter
-    container.addEventListener('mouseenter', function() {
-        zoomLens.style.display = 'block';
-        zoomResult.style.display = 'block';
-    });
-    
-    // Hide zoom elements on mouse leave
-    container.addEventListener('mouseleave', function() {
-        zoomLens.style.display = 'none';
-        zoomResult.style.display = 'none';
-    });
-    
-    // Update zoom on mouse move
-    container.addEventListener('mousemove', function(e) {
-        const rect = container.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        // Calculate lens position (centered on cursor)
-        const lensWidth = 150;
-        const lensHeight = 150;
-        
-        // Calculate the position of the lens, ensuring it stays within the container
-        let lensX = x - (lensWidth / 2);
-        let lensY = y - (lensHeight / 2);
-        
-        // Keep lens within container bounds
-        if (lensX < 0) lensX = 0;
-        if (lensY < 0) lensY = 0;
-        if (lensX > rect.width - lensWidth) lensX = rect.width - lensWidth;
-        if (lensY > rect.height - lensHeight) lensY = rect.height - lensHeight;
-        
-        // Position the lens
-        zoomLens.style.left = lensX + 'px';
-        zoomLens.style.top = lensY + 'px';
-        
-        // Position the zoom result (overlay on top of the lens)
-        zoomResult.style.left = lensX + 'px';
-        zoomResult.style.top = lensY + 'px';
-        
-        // Calculate zoom ratio
-        const zoomRatio = 3;
-        
-        // Set the zoomed image size
-        zoomedImg.style.width = (rect.width * zoomRatio) + 'px';
-        zoomedImg.style.height = (rect.height * zoomRatio) + 'px';
-        
-        // Calculate the position of the zoomed image
-        // This is the key part that ensures the correct portion is zoomed
-        const posX = (x / rect.width) * (rect.width * zoomRatio) - (lensWidth / 2);
-        const posY = (y / rect.height) * (rect.height * zoomRatio) - (lensHeight / 2);
-        
-        // Calculate maximum positions to prevent white space at edges
-        const maxX = (rect.width * zoomRatio) - lensWidth;
-        const maxY = (rect.height * zoomRatio) - lensHeight;
-        
-        // Clamp the position values to prevent going beyond the image boundaries
-        const clampedPosX = Math.max(0, Math.min(posX, maxX));
-        const clampedPosY = Math.max(0, Math.min(posY, maxY));
-        
-        // Apply the clamped position
-        zoomedImg.style.left = -clampedPosX + 'px';
-        zoomedImg.style.top = -clampedPosY + 'px';
-    });
-}
-
-async function handleCart(productId) {
-    try {
-        const variantSelect = document.getElementById('variantSelect');
-        const selectedVariant = variantSelect.options[variantSelect.selectedIndex];
-        const variantType = selectedVariant.getAttribute('data-type');
-        const inCart = selectedVariant.getAttribute('data-in-cart') === 'true';
-
-        const endpoint = inCart ? '/cart/remove' : '/cart/add';
-        
-        const response = await fetch(endpoint, {
+        const response = await fetch(action === 'add' ? '/cart/add' : '/cart/remove', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -593,30 +444,39 @@ async function handleCart(productId) {
         const data = await response.json();
 
         if (data.success) {
-            // Update only the current variant's cart status
-            selectedVariant.setAttribute('data-in-cart', !inCart);
-            updateCartButton(!inCart);
-            
-            // Update cart count in navbar using DOM manipulation
-            const cartIcon = document.querySelector('.fa-shopping-cart').parentElement;
-            let cartBadge = cartIcon.querySelector('.cart-badge');
-            
-            if (data.cartCount > 0) {
-                if (!cartBadge) {
-                    cartBadge = document.createElement('span');
-                    cartBadge.className = 'cart-badge absolute -top-1 -right-1 rounded-full flex items-center justify-center';
-                    cartIcon.appendChild(cartBadge);
-                }
-                cartBadge.textContent = data.cartCount;
-            } else if (cartBadge) {
-                cartBadge.remove();
+            // Close loading state
+            Swal.close();
+
+            // Update cart count in navbar using the global function
+            if (typeof window.updateCartCount === 'function' && data.cartCount !== undefined) {
+                window.updateCartCount(data.cartCount);
             }
 
-            // Show success message with specific variant info
-            Swal.fire({
+            // Update button state
+            if (button) {
+                // For similar products - only update text and action
+                if (action === 'add') {
+                    cartBtn.textContent = 'Remove from Cart';
+                    cartBtn.setAttribute('data-action', 'remove');
+                } else {
+                    cartBtn.textContent = 'Add to Cart';
+                    cartBtn.setAttribute('data-action', 'add');
+                }
+            } else {
+                // For main product
+                updateCartButtonState(cartBtn, action === 'add');
+            }
+
+            // Update variant option data attribute
+            selectedOption.setAttribute('data-in-cart', (action === 'add').toString());
+
+            // Show success message
+            await Swal.fire({
                 icon: 'success',
-                title: inCart ? 'Removed from Cart!' : 'Added to Cart!',
-                text: `${variantType} ${inCart ? 'removed from' : 'added to'} cart successfully`,
+                title: action === 'add' ? 'Added to Cart!' : 'Removed from Cart!',
+                text: action === 'add' ? 
+                    `${variantType} added to cart successfully` : 
+                    `${variantType} removed from cart successfully`,
                 showConfirmButton: false,
                 timer: 1500
             });
@@ -624,38 +484,151 @@ async function handleCart(productId) {
             throw new Error(data.message);
         }
     } catch (error) {
-        Swal.fire({
+        console.error('Cart operation error:', error);
+        // Close loading state
+        Swal.close();
+
+        // Show error message
+        await Swal.fire({
             icon: 'error',
             title: 'Oops...',
-            text: error.message || 'Failed to update cart'
+            text: error.message || `Failed to ${action} from cart`
         });
     }
 }
 
-async function buyNow(productId) {
-    try {
-        const variantSelect = document.getElementById('variantSelect');
-        const selectedVariant = variantSelect.options[variantSelect.selectedIndex];
-        const variantType = selectedVariant.getAttribute('data-type');
+// Function to update cart button state
+function updateCartButtonState(button, inCart) {
+    if (inCart) {
+        button.textContent = 'Remove from Cart';
+        button.setAttribute('data-action', 'remove');
+    } else {
+        button.textContent = 'Add to Cart';
+        button.setAttribute('data-action', 'add');
+    }
+}
 
-        // First add to cart
-        await handleCart(productId);
+// Function to handle buy now
+function buyNow(productId) {
+    const select = document.getElementById('variantSelect');
+    const selectedOption = select.options[select.selectedIndex];
+    const variantType = selectedOption.getAttribute('data-type');
+    const stock = parseInt(selectedOption.getAttribute('data-stock'));
+    
+    if (stock <= 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Out of Stock',
+            text: 'This variant is currently out of stock'
+        });
+        return;
+    }
+    
+    // Redirect to checkout with product details
+    window.location.href = `/checkout?productId=${productId}&variantType=${variantType}`;
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize main product cart button
+    const mainCartBtn = document.getElementById('cartBtn');
+    const mainVariantSelect = document.getElementById('variantSelect');
+    const initialInCart = mainVariantSelect.options[mainVariantSelect.selectedIndex].getAttribute('data-in-cart') === 'true';
+    updateCartButtonState(mainCartBtn, initialInCart);
+
+    // Initialize similar products cart buttons
+    document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+        const productId = button.getAttribute('data-product-id');
+        const variantSelect = document.querySelector(`.variant-select[data-product-id="${productId}"]`);
+        const option = variantSelect.options[variantSelect.selectedIndex];
+        const inCart = option.getAttribute('data-in-cart') === 'true';
         
-        // Then redirect to checkout
-        window.location.href = '/checkout';
-    } catch (error) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Oops...',
-            text: error.message || 'Failed to process purchase'
-        });
-    }
-}
+        // Only update text and action, keep original styling
+        if (inCart) {
+            button.textContent = 'Remove from Cart';
+            button.setAttribute('data-action', 'remove');
+        } else {
+            button.textContent = 'Add to Cart';
+            button.setAttribute('data-action', 'add');
+        }
+    });
 
-function toggleWishlist(productId) {
-    const variantSelect = document.getElementById('variantSelect');
-    const selectedVariant = variantSelect.options[variantSelect.selectedIndex];
-    const variantType = selectedVariant.getAttribute('data-type');
+    // Initialize wishlist icons
+    document.querySelectorAll('.wishlist-toggle').forEach(button => {
+        const inWishlist = button.getAttribute('data-in-wishlist') === 'true';
+        const icon = button.querySelector('i');
+        if (inWishlist) {
+            icon.classList.remove('far');
+            icon.classList.add('fas', 'text-red-500');
+        } else {
+            icon.classList.remove('fas', 'text-red-500');
+            icon.classList.add('far');
+        }
+    });
+
+    // Add event listeners for variant changes
+    document.querySelectorAll('.variant-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const productId = this.getAttribute('data-product-id');
+            const option = this.options[this.selectedIndex];
+            const inCart = option.getAttribute('data-in-cart') === 'true';
+            const inWishlist = option.getAttribute('data-in-wishlist') === 'true';
+            
+            // Update the corresponding cart button - only text and action
+            const cartBtn = document.querySelector(`.add-to-cart-btn[data-product-id="${productId}"]`);
+            if (cartBtn) {
+                if (inCart) {
+                    cartBtn.textContent = 'Remove from Cart';
+                    cartBtn.setAttribute('data-action', 'remove');
+                } else {
+                    cartBtn.textContent = 'Add to Cart';
+                    cartBtn.setAttribute('data-action', 'add');
+                }
+            }
+
+            // Update wishlist icon
+            const wishlistBtn = document.querySelector(`.wishlist-toggle[data-product-id="${productId}"]`);
+            if (wishlistBtn) {
+                wishlistBtn.setAttribute('data-variant-type', option.value);
+                wishlistBtn.setAttribute('data-in-wishlist', inWishlist.toString());
+                const icon = wishlistBtn.querySelector('i');
+                if (inWishlist) {
+                    icon.classList.remove('far');
+                    icon.classList.add('fas', 'text-red-500');
+                } else {
+                    icon.classList.remove('fas', 'text-red-500');
+                    icon.classList.add('far');
+                }
+            }
+        });
+    });
+
+    // Handle image loading errors
+    document.querySelectorAll('.product-image').forEach(img => {
+        img.addEventListener('error', function() {
+            const fallback = this.getAttribute('data-fallback');
+            if (fallback && this.src !== fallback) {
+                this.src = fallback;
+            }
+        });
+    });
+});
+
+async function toggleWishlist(productId, button = null) {
+    let variantType;
+    let selectedVariant;
+    
+    if (button) {
+        // For similar products
+        variantType = button.getAttribute('data-variant-type');
+        const variantSelect = document.querySelector(`.variant-select[data-product-id="${productId}"]`);
+        selectedVariant = variantSelect.options[variantSelect.selectedIndex];
+    } else {
+        // For main product
+        const variantSelect = document.getElementById('variantSelect');
+        selectedVariant = variantSelect.options[variantSelect.selectedIndex];
+        variantType = selectedVariant.getAttribute('data-type');
+    }
 
     if (!variantType) {
         Swal.fire({
@@ -678,42 +651,55 @@ function toggleWishlist(productId) {
         }
     });
 
-    fetch(`/wishlist/toggle/${productId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            variantType
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
+    try {
+        const response = await fetch(`/wishlist/toggle/${productId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                variantType
+            })
+        });
+        
+        const data = await response.json();
+        
         if (data.success) {
-            const wishlistBtn = document.getElementById('wishlistBtn').querySelector('i');
+            let wishlistBtn;
+            let wishlistIcon;
+            
+            if (button) {
+                // For similar products
+                wishlistBtn = button;
+                wishlistIcon = button.querySelector('i');
+            } else {
+                // For main product
+                wishlistBtn = document.getElementById('wishlistBtn');
+                wishlistIcon = wishlistBtn.querySelector('i');
+            }
             
             if (data.added) {
                 // Product was added to wishlist
-                wishlistBtn.classList.remove('text-gray-400');
-                wishlistBtn.classList.add('text-red-500');
+                wishlistIcon.classList.remove('far', 'text-gray-400');
+                wishlistIcon.classList.add('fas', 'text-red-500');
             } else {
                 // Product was removed from wishlist
-                wishlistBtn.classList.remove('text-red-500');
-                wishlistBtn.classList.add('text-gray-400');
+                wishlistIcon.classList.remove('fas', 'text-red-500');
+                wishlistIcon.classList.add('far', 'text-gray-400');
             }
 
             // Update the variant's wishlist status
             selectedVariant.setAttribute('data-in-wishlist', data.added);
 
             // Update wishlist count in navbar
-            const wishlistIcon = document.querySelector('.fa-heart').parentElement;
-            let wishlistBadge = wishlistIcon.querySelector('.cart-badge');
+            const navbarWishlistIcon = document.querySelector('.fa-heart').parentElement;
+            let wishlistBadge = navbarWishlistIcon.querySelector('.cart-badge');
             
             if (data.wishlistCount > 0) {
                 if (!wishlistBadge) {
                     wishlistBadge = document.createElement('span');
                     wishlistBadge.className = 'cart-badge absolute -top-1 -right-1 rounded-full flex items-center justify-center';
-                    wishlistIcon.appendChild(wishlistBadge);
+                    navbarWishlistIcon.appendChild(wishlistBadge);
                 }
                 wishlistBadge.textContent = data.wishlistCount;
             } else if (wishlistBadge) {
@@ -721,7 +707,7 @@ function toggleWishlist(productId) {
             }
 
             // Show success message
-            Swal.fire({
+            await Swal.fire({
                 icon: data.added ? 'success' : 'info',
                 title: data.added ? 'Added to Wishlist' : 'Removed from Wishlist',
                 text: data.added ? 'This product has been added to your wishlist' : 'This product has been removed from your wishlist',
@@ -730,95 +716,18 @@ function toggleWishlist(productId) {
                 timer: 2000
             });
         } else {
-            // Show error message
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.message || 'Something went wrong',
-                confirmButtonColor: '#000',
-                showConfirmButton: false,
-                timer: 2000
-            });
+            throw new Error(data.message || 'Something went wrong');
         }
-    })
-    .catch(error => {
+    } catch (error) {
         console.error('Error toggling wishlist:', error);
-        Swal.fire({
+        await Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Failed to update wishlist. Please try again.',
+            text: error.message || 'Failed to update wishlist. Please try again.',
             confirmButtonColor: '#000',
             showConfirmButton: false,
             timer: 2000
         });
-    });
+    }
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Add event listeners to all "Add to Cart" buttons in similar products
-    document.querySelectorAll('.add-to-cart-btn').forEach(button => {
-        button.addEventListener('click', async function() {
-            const productId = this.getAttribute('data-product-id');
-            const variantSelect = document.querySelector(`.variant-select[data-product-id="${productId}"]`);
-            const variantType = variantSelect.value;
-            const stock = variantSelect.options[variantSelect.selectedIndex].getAttribute('data-stock');
-            
-            // Check if product is in stock
-            if (parseInt(stock) <= 0) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Out of Stock',
-                    text: 'This variant is currently out of stock'
-                });
-                return;
-            }
-            
-            try {
-                const response = await fetch('/cart/add', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        productId,
-                        variantType
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Trigger cart updated event
-                    document.dispatchEvent(new CustomEvent('cartUpdated'));
-                    
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Added to Cart!',
-                        text: `${variantType} added to cart successfully`,
-                        showConfirmButton: false,
-                        timer: 1500
-                    });
-                } else {
-                    throw new Error(data.message);
-                }
-            } catch (error) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
-                    text: error.message || 'Failed to add to cart'
-                });
-            }
-        });
-    });
-
-    // Handle image loading errors
-    document.querySelectorAll('.product-image').forEach(img => {
-        img.addEventListener('error', function() {
-            const fallback = this.getAttribute('data-fallback');
-            if (fallback && this.src !== fallback) {
-                this.src = fallback;
-            }
-        });
-    });
-});
 </script>

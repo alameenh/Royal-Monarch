@@ -378,6 +378,9 @@
   .col-span-4 {
     grid-column: span 4 / span 4;
   }
+  .col-span-full {
+    grid-column: 1 / -1;
+  }
   .container {
     width: 100%;
     @media (width >= 40rem) {
@@ -416,6 +419,9 @@
   }
   .mt-1 {
     margin-top: calc(var(--spacing) * 1);
+  }
+  .mt-1\.5 {
+    margin-top: calc(var(--spacing) * 1.5);
   }
   .mt-2 {
     margin-top: calc(var(--spacing) * 2);
@@ -1260,6 +1266,10 @@
   }
   .to-\[\#A05C2C\] {
     --tw-gradient-to: #A05C2C;
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+  }
+  .to-\[\#A0522D\] {
+    --tw-gradient-to: #A0522D;
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
   .to-black {
@@ -2145,6 +2155,14 @@
       }
     }
   }
+  .hover\:from-\[\#A0522D\] {
+    &:hover {
+      @media (hover: hover) {
+        --tw-gradient-from: #A0522D;
+        --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+      }
+    }
+  }
   .hover\:from-gray-800 {
     &:hover {
       @media (hover: hover) {
@@ -2181,6 +2199,14 @@
     &:hover {
       @media (hover: hover) {
         --tw-gradient-to: var(--color-gray-700);
+        --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+      }
+    }
+  }
+  .hover\:to-red-600 {
+    &:hover {
+      @media (hover: hover) {
+        --tw-gradient-to: var(--color-red-600);
         --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
       }
     }
@@ -2433,6 +2459,11 @@
   .sm\:w-64 {
     @media (width >= 40rem) {
       width: calc(var(--spacing) * 64);
+    }
+  }
+  .sm\:w-96 {
+    @media (width >= 40rem) {
+      width: calc(var(--spacing) * 96);
     }
   }
   .sm\:grid-cols-2 {
