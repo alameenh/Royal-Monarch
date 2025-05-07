@@ -397,13 +397,15 @@
         right: 0;
         margin: 0 auto;
         z-index: 5;
-        background-color: rgba(0, 0, 0, 0.2);
+        background-color: rgba(0, 0, 0, 0.4);
         padding: 0.5rem 1.5rem;
         border-radius: 3rem;
         backdrop-filter: blur(8px);
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
         width: fit-content;
         transition: all 0.3s ease;
+        opacity: 1 !important;
+        visibility: visible !important;
     }
 
     .carousel-dot {
@@ -433,15 +435,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Shared interval for all carousels
     let sharedInterval;
     let carouselInstances = [];
+    let globalStartTime = Date.now();
     
     // Function to handle image loading errors
     function handleImageErrors() {
         // Handle product images
         document.querySelectorAll('.product-image').forEach(img => {
-            // Remove any existing error handlers
             img.onerror = null;
-            
-            // Add new error handler
             img.addEventListener('error', function() {
                 const fallback = this.getAttribute('data-fallback');
                 if (fallback && this.src !== fallback) {
@@ -452,10 +452,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Handle category images
         document.querySelectorAll('.category-image').forEach(img => {
-            // Remove any existing error handlers
             img.onerror = null;
-            
-            // Add new error handler
             img.addEventListener('error', function() {
                 const fallback = this.getAttribute('data-fallback');
                 if (fallback && this.src !== fallback) {
@@ -466,10 +463,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Handle handpicked product images
         document.querySelectorAll('.handpicked-image').forEach(img => {
-            // Remove any existing error handlers
             img.onerror = null;
-            
-            // Add new error handler
             img.addEventListener('error', function() {
                 const fallback = this.getAttribute('data-fallback');
                 if (fallback && this.src !== fallback) {
@@ -481,18 +475,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Handle hero section background
         const heroSection = document.getElementById('heroSection');
         if (heroSection) {
-            // Create a test image to check if the hero image exists
             const testImg = new Image();
             const heroImageUrl = window.getComputedStyle(heroSection).backgroundImage.replace(/url\(['"](.+)['"]\)/, '$1');
-            
-            // Remove any existing error handlers
             testImg.onerror = null;
-            
-            // Add new error handler
             testImg.addEventListener('error', function() {
                 heroSection.style.backgroundImage = 'url("/images/placeholder.jpg")';
             }, { once: true });
-            
             testImg.src = heroImageUrl;
         }
     }
@@ -541,19 +529,6 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error fetching product images:', error);
         });
-    }
-    
-    function startSharedInterval() {
-        if (sharedInterval) clearInterval(sharedInterval);
-        
-        sharedInterval = setInterval(() => {
-            carouselInstances.forEach(instance => {
-                if (!instance.isHovered && !instance.isUserInteracted) {
-                    const nextIndex = (instance.currentIndex + 1) % instance.totalImages;
-                    instance.showImage(nextIndex);
-                }
-            });
-        }, 4000);
     }
     
     function initCarousel(productId, images, position) {
@@ -622,6 +597,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 totalImages: images.length,
                 isHovered: false,
                 isUserInteracted: false,
+                lastUserInteractionTime: 0,
                 showImage: function(index) {
                     // Update images
                     carouselContainer.querySelectorAll('.carousel-image').forEach((img, i) => {
@@ -656,11 +632,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     const index = parseInt(this.getAttribute('data-index'));
                     carouselInstance.showImage(index);
                     carouselInstance.isUserInteracted = true;
+                    carouselInstance.lastUserInteractionTime = Date.now();
                     
-                    // Reset user interaction after 8 seconds
+                    // Reset user interaction after 3 seconds
                     setTimeout(() => {
-                        carouselInstance.isUserInteracted = false;
-                    }, 8000);
+                        if (Date.now() - carouselInstance.lastUserInteractionTime >= 3000) {
+                            carouselInstance.isUserInteracted = false;
+                            // Calculate the correct slide based on global time
+                            const elapsedTime = Date.now() - globalStartTime;
+                            const slideInterval = 4000; // 4 seconds per slide
+                            const correctIndex = Math.floor(elapsedTime / slideInterval) % carouselInstance.totalImages;
+                            carouselInstance.showImage(correctIndex);
+                        }
+                    }, 3000);
                 });
             });
             
@@ -673,6 +657,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 carouselInstance.isHovered = false;
             });
         }
+    }
+    
+    function startSharedInterval() {
+        if (sharedInterval) clearInterval(sharedInterval);
+        
+        sharedInterval = setInterval(() => {
+            const elapsedTime = Date.now() - globalStartTime;
+            const slideInterval = 4000; // 4 seconds per slide
+            const currentSlideIndex = Math.floor(elapsedTime / slideInterval);
+            
+            carouselInstances.forEach(instance => {
+                if (!instance.isHovered && !instance.isUserInteracted) {
+                    const index = currentSlideIndex % instance.totalImages;
+                    instance.showImage(index);
+                }
+            });
+        }, 100); // Check more frequently for smoother transitions
     }
     
     // Initialize carousels

@@ -352,7 +352,7 @@ function updateVariantDetails() {
     const price = selectedOption.getAttribute('data-price');
     const discount = selectedOption.getAttribute('data-discount');
     const discountedPrice = Math.round(price * (1 - discount/100));
-    
+
     document.getElementById('currentPrice').textContent = `₹${discountedPrice}`;
     document.getElementById('originalPrice').textContent = `₹${price}`;
     
@@ -625,7 +625,7 @@ async function toggleWishlist(productId, button = null) {
         selectedVariant = variantSelect.options[variantSelect.selectedIndex];
     } else {
         // For main product
-        const variantSelect = document.getElementById('variantSelect');
+    const variantSelect = document.getElementById('variantSelect');
         selectedVariant = variantSelect.options[variantSelect.selectedIndex];
         variantType = selectedVariant.getAttribute('data-type');
     }
@@ -653,13 +653,13 @@ async function toggleWishlist(productId, button = null) {
 
     try {
         const response = await fetch(`/wishlist/toggle/${productId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                variantType
-            })
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            variantType
+        })
         });
         
         const data = await response.json();
