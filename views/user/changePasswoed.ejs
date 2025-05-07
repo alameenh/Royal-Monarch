@@ -2,92 +2,91 @@
 
 <div class="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-gray-50 to-gray-100">
     <div class="container mx-auto px-4 py-6">
-        <div class="flex flex-col lg:flex-row gap-4">
-            <!-- Sidebar -->
-            <div class="lg:w-1/4">
-                <%- include('../partials/profileSidebar', { currentPage: 'changepassword' }) %>
-            </div>
+        <div class="max-w-2xl mx-auto">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl">
+                <!-- Header Section -->
+                <div class="bg-gradient-to-r from-gray-900 to-gray-800 p-4 flex justify-between items-center">
+                    <h2 class="text-2xl font-serif font-bold text-white">Change Password</h2>
+                    <a href="/profile" 
+                        class="inline-flex items-center px-4 py-2 border border-white text-sm font-serif font-medium rounded-lg text-white hover:bg-white/10 focus:outline-none transition-all duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back to Profile
+                    </a>
+                </div>
 
-            <!-- Main Content -->
-            <div class="lg:w-3/4">
-                <div class="bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl max-w-2xl mx-auto">
-                    <!-- Header Section -->
-                    <div class="bg-gradient-to-r from-gray-900 to-gray-800 p-4">
-                        <h2 class="text-2xl font-serif font-bold text-white">Change Password</h2>
-                    </div>
-
-                    <!-- Form Section -->
-                    <div class="p-4">
-                        <form id="changePasswordForm" class="space-y-4">
-                            <!-- Current Password -->
-                            <div class="group">
-                                <label for="currentPassword" class="block text-sm font-medium text-gray-700 mb-1 group-hover:text-gray-900 transition-colors">
-                                    Current Password
-                                </label>
-                                <div class="relative">
-                                    <input type="password" 
-                                           id="currentPassword" 
-                                           name="currentPassword"
-                                           class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all duration-300 pr-10"
-                                           required>
-                                    <button type="button" 
-                                            onclick="togglePassword('currentPassword')"
-                                            class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
-                                        <i class="fas fa-eye" id="currentPassword-icon"></i>
-                                    </button>
-                                </div>
+                <!-- Form Section -->
+                <div class="p-4">
+                    <form id="changePasswordForm" class="space-y-4">
+                        <!-- Current Password -->
+                        <div class="group">
+                            <label for="currentPassword" class="block text-sm font-medium text-gray-700 mb-1 group-hover:text-gray-900 transition-colors">
+                                Current Password
+                            </label>
+                            <div class="relative">
+                                <input type="password" 
+                                       id="currentPassword" 
+                                       name="currentPassword"
+                                       class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all duration-300 pr-10"
+                                       required>
+                                <button type="button" 
+                                        onclick="togglePassword('currentPassword')"
+                                        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
+                                    <i class="fas fa-eye" id="currentPassword-icon"></i>
+                                </button>
                             </div>
+                        </div>
 
-                            <!-- New Password -->
-                            <div class="group">
-                                <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-1 group-hover:text-gray-900 transition-colors">
-                                    New Password
-                                </label>
-                                <div class="relative">
-                                    <input type="password" 
-                                           id="newPassword" 
-                                           name="newPassword"
-                                           class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all duration-300 pr-10"
-                                           required
-                                           minlength="6">
-                                    <button type="button" 
-                                            onclick="togglePassword('newPassword')"
-                                            class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
-                                        <i class="fas fa-eye" id="newPassword-icon"></i>
-                                    </button>
-                                </div>
-                                <p class="text-xs text-gray-500 mt-1 flex items-center">
-                                    <i class="fas fa-info-circle mr-1"></i>
-                                    Password must be at least 6 characters long
-                                </p>
+                        <!-- New Password -->
+                        <div class="group">
+                            <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-1 group-hover:text-gray-900 transition-colors">
+                                New Password
+                            </label>
+                            <div class="relative">
+                                <input type="password" 
+                                       id="newPassword" 
+                                       name="newPassword"
+                                       class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all duration-300 pr-10"
+                                       required
+                                       minlength="6">
+                                <button type="button" 
+                                        onclick="togglePassword('newPassword')"
+                                        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
+                                    <i class="fas fa-eye" id="newPassword-icon"></i>
+                                </button>
                             </div>
+                            <p class="text-xs text-gray-500 mt-1 flex items-center">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Password must be at least 6 characters long
+                            </p>
+                        </div>
 
-                            <!-- Confirm New Password -->
-                            <div class="group">
-                                <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1 group-hover:text-gray-900 transition-colors">
-                                    Confirm New Password
-                                </label>
-                                <div class="relative">
-                                    <input type="password" 
-                                           id="confirmPassword" 
-                                           name="confirmPassword"
-                                           class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all duration-300 pr-10"
-                                           required>
-                                    <button type="button" 
-                                            onclick="togglePassword('confirmPassword')"
-                                            class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
-                                        <i class="fas fa-eye" id="confirmPassword-icon"></i>
-                                    </button>
-                                </div>
+                        <!-- Confirm New Password -->
+                        <div class="group">
+                            <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1 group-hover:text-gray-900 transition-colors">
+                                Confirm New Password
+                            </label>
+                            <div class="relative">
+                                <input type="password" 
+                                       id="confirmPassword" 
+                                       name="confirmPassword"
+                                       class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all duration-300 pr-10"
+                                       required>
+                                <button type="button" 
+                                        onclick="togglePassword('confirmPassword')"
+                                        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
+                                    <i class="fas fa-eye" id="confirmPassword-icon"></i>
+                                </button>
                             </div>
+                        </div>
 
-                            <!-- Submit Button -->
-                            <button type="submit"
-                                    class="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white py-2 px-4 rounded-lg font-medium hover:from-gray-800 hover:to-gray-700 transform hover:scale-[1.01] transition-all duration-300 shadow-md hover:shadow-lg mt-2">
-                                Update Password
-                            </button>
-                        </form>
-                    </div>
+                        <!-- Submit Button -->
+                        <button type="submit"
+                                class="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white py-2 px-4 rounded-lg font-medium hover:from-gray-800 hover:to-gray-700 transform hover:scale-[1.01] transition-all duration-300 shadow-md hover:shadow-lg mt-2">
+                            Update Password
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>

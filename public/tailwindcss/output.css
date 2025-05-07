@@ -333,6 +333,9 @@
   .bottom-0 {
     bottom: calc(var(--spacing) * 0);
   }
+  .bottom-2 {
+    bottom: calc(var(--spacing) * 2);
+  }
   .bottom-4 {
     bottom: calc(var(--spacing) * 4);
   }
@@ -1034,6 +1037,15 @@
   .border-gray-700 {
     border-color: var(--color-gray-700);
   }
+  .border-gray-900 {
+    border-color: var(--color-gray-900);
+  }
+  .border-gray-900\/20 {
+    border-color: color-mix(in oklab, var(--color-gray-900) 20%, transparent);
+  }
+  .border-red-500 {
+    border-color: var(--color-red-500);
+  }
   .border-transparent {
     border-color: transparent;
   }
@@ -1121,6 +1133,9 @@
   .bg-gray-900 {
     background-color: var(--color-gray-900);
   }
+  .bg-gray-900\/10 {
+    background-color: color-mix(in oklab, var(--color-gray-900) 10%, transparent);
+  }
   .bg-green-100 {
     background-color: var(--color-green-100);
   }
@@ -1132,6 +1147,9 @@
   }
   .bg-green-600 {
     background-color: var(--color-green-600);
+  }
+  .bg-green-800 {
+    background-color: var(--color-green-800);
   }
   .bg-indigo-600 {
     background-color: var(--color-indigo-600);
@@ -1716,6 +1734,18 @@
   .ring-\[\#8B4513\]\/20 {
     --tw-ring-color: color-mix(in oklab, #8B4513 20%, transparent);
   }
+  .ring-gray-900 {
+    --tw-ring-color: var(--color-gray-900);
+  }
+  .ring-gray-900\/20 {
+    --tw-ring-color: color-mix(in oklab, var(--color-gray-900) 20%, transparent);
+  }
+  .ring-green-500 {
+    --tw-ring-color: var(--color-green-500);
+  }
+  .ring-green-500\/20 {
+    --tw-ring-color: color-mix(in oklab, var(--color-green-500) 20%, transparent);
+  }
   .outline {
     outline-style: var(--tw-outline-style);
     outline-width: 1px;
@@ -1964,6 +1994,13 @@
       }
     }
   }
+  .hover\:border-gray-900 {
+    &:hover {
+      @media (hover: hover) {
+        border-color: var(--color-gray-900);
+      }
+    }
+  }
   .hover\:bg-\[\#6B3513\] {
     &:hover {
       @media (hover: hover) {
@@ -2076,6 +2113,13 @@
       }
     }
   }
+  .hover\:bg-gray-900 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-gray-900);
+      }
+    }
+  }
   .hover\:bg-green-600 {
     &:hover {
       @media (hover: hover) {
@@ -2108,6 +2152,13 @@
     &:hover {
       @media (hover: hover) {
         background-color: var(--color-red-700);
+      }
+    }
+  }
+  .hover\:bg-white\/10 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: color-mix(in oklab, var(--color-white) 10%, transparent);
       }
     }
   }
@@ -2163,10 +2214,26 @@
       }
     }
   }
+  .hover\:from-gray-700 {
+    &:hover {
+      @media (hover: hover) {
+        --tw-gradient-from: var(--color-gray-700);
+        --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+      }
+    }
+  }
   .hover\:from-gray-800 {
     &:hover {
       @media (hover: hover) {
         --tw-gradient-from: var(--color-gray-800);
+        --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+      }
+    }
+  }
+  .hover\:from-red-500 {
+    &:hover {
+      @media (hover: hover) {
+        --tw-gradient-from: var(--color-red-500);
         --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
       }
     }
@@ -2191,6 +2258,14 @@
     &:hover {
       @media (hover: hover) {
         --tw-gradient-to: #8B4513;
+        --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+      }
+    }
+  }
+  .hover\:to-gray-600 {
+    &:hover {
+      @media (hover: hover) {
+        --tw-gradient-to: var(--color-gray-600);
         --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
       }
     }
@@ -2356,6 +2431,11 @@
   .focus\:border-emerald-500 {
     &:focus {
       border-color: var(--color-emerald-500);
+    }
+  }
+  .focus\:border-gray-900 {
+    &:focus {
+      border-color: var(--color-gray-900);
     }
   }
   .focus\:border-transparent {

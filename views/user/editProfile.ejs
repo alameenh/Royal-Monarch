@@ -1,98 +1,128 @@
 <%- include("../partials/navbar") %>
 
 <div class="container mx-auto px-4 py-8">
-    <div class="flex flex-col lg:flex-row gap-8">
-        <!-- Sidebar -->
-        <div class="lg:w-1/4">
-            <%- include("../partials/profileSidebar", { currentPage: 'profile' }) %>
-        </div>
+    <div class="max-w-4xl mx-auto">
+        <!-- Profile Card -->
+        <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 transform hover:scale-[1.01] transition-all duration-300 backdrop-blur-sm">
+            <!-- Cover Photo -->
+            <div class="h-48 bg-gradient-to-r from-gray-900 to-gray-800 relative">
+                <div class="absolute inset-0 bg-black/10 backdrop-blur-sm"></div>
+                <div class="absolute -bottom-24 left-1/2 transform -translate-x-1/2">
+                    <div class="w-48 h-48 rounded-full border-4 border-white overflow-hidden bg-white shadow-xl ring-4 ring-gray-900/20 group">
+                        <img id="profilePreview" src="<%= user.profileImage %>" 
+                            alt="Profile Picture" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                            <label for="profileImage" class="cursor-pointer text-white text-sm font-serif">Click to Change</label>
+                            <input type="file" id="profileImage" name="profileImage" accept="image/*" 
+                                class="hidden" onchange="previewImage(this)">
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        <!-- Main Content -->
-        <div class="lg:w-3/4">
-            <div class="max-w-3xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
-                <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 flex justify-between items-center">
-                    <h3 class="text-2xl font-bold text-white">Edit Profile</h3>
-                    <a href="/profile" 
-                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-700 hover:bg-blue-800 focus:outline-none">
-                        Back to Profile
-                    </a>
+            <!-- Profile Content -->
+            <div class="pt-28 pb-8 px-8">
+                <!-- Header -->
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-3xl font-serif font-bold text-gray-800">Edit Profile</h2>
+                    <div class="flex gap-3">
+                        <a href="/profile" 
+                            class="inline-flex items-center px-5 py-2.5 border border-gray-900 text-sm font-serif font-medium rounded-lg text-gray-900 bg-white hover:bg-gray-900 hover:text-white focus:outline-none transition-all duration-300 shadow-sm hover:shadow-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            Back to Profile
+                        </a>
+                    </div>
                 </div>
 
-                <div class="p-6">
-                    <form id="profileForm" class="space-y-6" enctype="multipart/form-data">
-                        <!-- Profile image section -->
-                        <div class="flex flex-col items-center gap-4 mb-6">
-                            <div class="w-32 h-32 rounded-full overflow-hidden bg-gray-200">
-                                <img id="profilePreview" src="<%= user.profileImage %>" 
-                                    alt="Profile Picture" class="w-full h-full object-cover">
-                            </div>
-                            <div class="flex flex-col items-center">
-                                <label for="profileImage" 
-                                    class="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                                    Change Profile Picture
-                                </label>
-                                <input type="file" id="profileImage" name="profileImage" accept="image/*" 
-                                    class="hidden" onchange="previewImage(this)">
-                            </div>
-                        </div>
-
-                        <!-- Profile Information -->
-                        <div class="space-y-6">
-                            <!-- Name Section -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label for="firstname" class="block text-sm font-medium text-gray-700">First Name</label>
+                <!-- Edit Form -->
+                <form id="profileForm" class="space-y-6" enctype="multipart/form-data">
+                    <!-- Profile Information in Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Personal Information Card -->
+                        <div class="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-100 hover:shadow-xl transition-all duration-300 backdrop-blur-sm">
+                            <h3 class="text-xl font-serif font-semibold text-gray-800 mb-6 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3 text-gray-900" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                                </svg>
+                                Personal Information
+                            </h3>
+                            
+                            <div class="space-y-6">
+                                <div class="bg-white/50 p-4 rounded-lg border border-gray-100 hover:bg-white/80 transition-all duration-300">
+                                    <label for="firstname" class="block text-sm font-serif font-medium text-gray-500">First Name</label>
                                     <input type="text" id="firstname" name="firstname" 
                                         value="<%= user.firstname %>"
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                        required>
+                                        placeholder="2-50 characters, letters only"
+                                        class="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:border-gray-900 focus:ring-gray-900 font-serif"
+                                        required
+                                        minlength="2"
+                                        maxlength="50"
+                                        pattern="[A-Za-z\s]+"
+                                        title="First name should only contain letters and spaces"
+                                        oninput="validateNameField(this, 'firstname')"
+                                        onblur="validateNameField(this, 'firstname')"
+                                        onkeydown="handleEnterKey(event, 'lastname')">
+                                    <p id="firstnameError" class="mt-1 text-sm text-red-500 hidden"></p>
                                 </div>
-                                <div>
-                                    <label for="lastname" class="block text-sm font-medium text-gray-700">Last Name</label>
+
+                                <div class="bg-white/50 p-4 rounded-lg border border-gray-100 hover:bg-white/80 transition-all duration-300">
+                                    <label for="lastname" class="block text-sm font-serif font-medium text-gray-500">Last Name</label>
                                     <input type="text" id="lastname" name="lastname" 
                                         value="<%= user.lastname %>"
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                        required>
+                                        placeholder="1-50 characters, letters only"
+                                        class="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:border-gray-900 focus:ring-gray-900 font-serif"
+                                        required
+                                        minlength="1"
+                                        maxlength="50"
+                                        pattern="[A-Za-z\s]+"
+                                        title="Last name should only contain letters and spaces"
+                                        oninput="validateNameField(this, 'lastname')"
+                                        onblur="validateNameField(this, 'lastname')"
+                                        onkeydown="handleEnterKey(event, 'saveButton')">
+                                    <p id="lastnameError" class="mt-1 text-sm text-red-500 hidden"></p>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Email Section - Only show if not Google user -->
-                            <% if (!user.googleId) { %>
-                            <div>
-                                <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                                <input type="email" id="email" name="email" 
-                                    value="<%= user.email %>"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                    required>
-                            </div>
-                            <% } else { %>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Email</label>
-                                <div class="mt-1 flex items-center gap-2">
-                                    <span class="block w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
-                                        <%= user.email %>
-                                    </span>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        Google Account
-                                    </span>
+                        <!-- Account Information Card -->
+                        <div class="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-100 hover:shadow-xl transition-all duration-300 backdrop-blur-sm">
+                            <h3 class="text-xl font-serif font-semibold text-gray-800 mb-6 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3 text-gray-900" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                                Account Information
+                            </h3>
+                            
+                            <div class="space-y-6">
+                                <div class="bg-white/50 p-4 rounded-lg border border-gray-100 hover:bg-white/80 transition-all duration-300">
+                                    <p class="text-sm font-serif font-medium text-gray-500">Email Address</p>
+                                    <div class="mt-1 flex items-center">
+                                        <span class="text-gray-800 font-serif"><%= user.email %></span>
+                                        <% if (user.googleId) { %>
+                                            <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-serif font-medium bg-gray-900/10 text-gray-900 border border-gray-900/20">
+                                                Google
+                                            </span>
+                                        <% } %>
+                                    </div>
                                 </div>
                             </div>
-                            <% } %>
                         </div>
+                    </div>
 
-                        <!-- Submit Button -->
-                        <div class="flex justify-end space-x-4">
-                            <a href="/profile" 
-                                class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
-                                Cancel
-                            </a>
-                            <button type="submit" 
-                                class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">
-                                Save Changes
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <!-- Submit Button -->
+                    <div class="flex justify-end space-x-4 mt-8">
+                        <a href="/profile" 
+                            class="inline-flex justify-center py-2.5 px-5 border border-gray-900 text-sm font-serif font-medium rounded-lg text-gray-900 bg-white hover:bg-gray-900 hover:text-white focus:outline-none transition-all duration-300 shadow-sm hover:shadow-md">
+                            Cancel
+                        </a>
+                        <button type="submit" id="saveButton"
+                            class="inline-flex justify-center py-2.5 px-5 border border-transparent text-sm font-serif font-medium rounded-lg text-white bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 focus:outline-none transition-all duration-300 shadow-lg hover:shadow-xl">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -109,16 +139,122 @@ function previewImage(input) {
     }
 }
 
+// Custom name validation function
+function validateNameField(input, fieldName) {
+    const value = input.value.trim();
+    const errorElement = document.getElementById(`${fieldName}Error`);
+    const nameRegex = /^[A-Za-z\s]+$/;
+    
+    // Remove any existing error styling
+    input.classList.remove('border-red-500');
+    errorElement.classList.add('hidden');
+    
+    // Check if empty
+    if (!value) {
+        input.classList.add('border-red-500');
+        errorElement.textContent = `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} cannot be empty`;
+        errorElement.classList.remove('hidden');
+        return false;
+    }
+    
+    // Check length
+    const minLength = fieldName === 'lastname' ? 1 : 2;
+    if (value.length < minLength || value.length > 50) {
+        input.classList.add('border-red-500');
+        errorElement.textContent = `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} must be between ${minLength} and 50 characters`;
+        errorElement.classList.remove('hidden');
+        return false;
+    }
+    
+    // Check for valid characters
+    if (!nameRegex.test(value)) {
+        input.classList.add('border-red-500');
+        errorElement.textContent = `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} should only contain letters and spaces`;
+        errorElement.classList.remove('hidden');
+        return false;
+    }
+    
+    return true;
+}
+
+// Validation function
+function validateForm() {
+    const firstname = document.getElementById('firstname');
+    const lastname = document.getElementById('lastname');
+    const profileImage = document.getElementById('profileImage').files[0];
+    
+    // Validate names
+    const isFirstnameValid = validateNameField(firstname, 'firstname');
+    const isLastnameValid = validateNameField(lastname, 'lastname');
+    
+    if (!isFirstnameValid || !isLastnameValid) {
+        return false;
+    }
+
+    // Image validation
+    if (profileImage) {
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        const maxSize = 5 * 1024 * 1024; // 5MB
+
+        if (!validTypes.includes(profileImage.type)) {
+            alert('Please upload a valid image file (JPEG, PNG, or GIF)');
+            return false;
+        }
+        if (profileImage.size > maxSize) {
+            alert('Image size should be less than 5MB');
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// Handle Enter key navigation
+function handleEnterKey(event, nextElementId) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        if (nextElementId === 'saveButton') {
+            // If next element is save button, trigger click
+            const saveButton = document.getElementById('saveButton');
+            if (saveButton) {
+                saveButton.click();
+            }
+        } else {
+            // Otherwise focus the next input
+            const nextElement = document.getElementById(nextElementId);
+            if (nextElement) {
+                nextElement.focus();
+            }
+        }
+    }
+}
+
+// Add global Enter key handler
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+        // Don't trigger if we're in a text input or textarea
+        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+            return;
+        }
+        // Trigger save button
+        const saveButton = document.getElementById('saveButton');
+        if (saveButton) {
+            event.preventDefault();
+            saveButton.click();
+        }
+    }
+});
+
 document.getElementById('profileForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const formData = new FormData();
-    formData.append('firstname', document.getElementById('firstname').value);
-    formData.append('lastname', document.getElementById('lastname').value);
+    if (!validateForm()) {
+        return;
+    }
     
-    <% if (!user.googleId) { %>
-    formData.append('email', document.getElementById('email').value);
-    <% } %>
+    const formData = new FormData();
+    formData.append('firstname', document.getElementById('firstname').value.trim());
+    formData.append('lastname', document.getElementById('lastname').value.trim());
     
     const profileImage = document.getElementById('profileImage').files[0];
     if (profileImage) {

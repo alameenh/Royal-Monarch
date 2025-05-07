@@ -465,7 +465,7 @@ async function handleCart(productId, button = null) {
             } else {
                 // For main product
                 updateCartButtonState(cartBtn, action === 'add');
-            }
+                }
 
             // Update variant option data attribute
             selectedOption.setAttribute('data-in-cart', (action === 'add').toString());
