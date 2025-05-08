@@ -1275,6 +1275,11 @@ const orderController = {
                     throw new Error('Cart is empty');
                 }
 
+                // Map client items to a lookup object for easy access
+                const clientItemsMap = new Map(
+                    clientItems.map(item => [item.productId, item])
+                );
+
                 // Validate and process each cart item
                 const orderItems = [];
                 let totalAmount = 0;
@@ -1295,6 +1300,12 @@ const orderController = {
 
                     if (variant.stock < item.quantity) {
                         throw new Error(`Insufficient stock for ${product.name} (${item.variantType})`);
+                    }
+
+                    // Get the corresponding client item with coupon details
+                    const clientItem = clientItemsMap.get(item.productId._id.toString());
+                    if (!clientItem) {
+                        throw new Error(`Client item data not found for ${product.name}`);
                     }
 
                     // Calculate prices and discounts
@@ -1329,7 +1340,18 @@ const orderController = {
                     const itemGstAmount = Number((Math.round(priceAfterOffer * 0.18 * 100) / 100).toFixed(2));
                     const itemShippingCost = Number((Math.round(priceAfterOffer * 0.02 * 100) / 100).toFixed(2));
                     const itemSubtotal = priceAfterOffer * item.quantity;
-                    const itemTotal = itemSubtotal + (itemGstAmount * item.quantity) + (itemShippingCost * item.quantity);
+
+                    // Get coupon discount from client item
+                    const couponDiscount = Number(clientItem.couponDiscount || 0);
+                    const couponForProduct = clientItem.couponForProduct || {
+                        code: null,
+                        discount: 0,
+                        type: null
+                    };
+
+                    // Calculate final amount after all discounts
+                    const finalAmount = Number((priceAfterOffer * item.quantity - couponDiscount).toFixed(2));
+                    const itemTotal = finalAmount + (itemGstAmount * item.quantity) + (itemShippingCost * item.quantity);
 
                     // Add to order items
                     orderItems.push({
@@ -1349,11 +1371,13 @@ const orderController = {
                         } : null,
                         offerDiscount,
                         priceAfterOffer,
+                        couponDiscount,
+                        couponForProduct,
                         gstAmount: Number((itemGstAmount * item.quantity).toFixed(2)),
                         shippingCost: Number((itemShippingCost * item.quantity).toFixed(2)),
                         totalAmount: Number(itemTotal.toFixed(2)),
-                        finalAmount: Number((priceAfterOffer * item.quantity).toFixed(2)),
-                        finalPrice: Number(priceAfterOffer.toFixed(2)),
+                        finalAmount,
+                        finalPrice: Number((priceAfterOffer - (couponDiscount / item.quantity)).toFixed(2)),
                         subtotalforproduct: Number(itemSubtotal.toFixed(2))
                     });
 
