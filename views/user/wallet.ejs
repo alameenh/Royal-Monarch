@@ -38,7 +38,13 @@
                                 <div class="p-6 hover:bg-gray-50 transition-colors duration-200">
                                     <div class="flex justify-between items-center">
                                         <div>
-                                            <p class="font-medium text-gray-800 mb-1"><%= transaction.description %></p>
+                                            <p class="font-medium text-gray-800 mb-1">
+                                                <% if (transaction.description.includes('Refund for cancelled order')) { %>
+                                                    Refund for cancelled order <%= transaction.description.split('(')[0].split('-')[0] %>... (<%= transaction.description.split('(')[1] %>
+                                                <% } else { %>
+                                                    <%= transaction.description %>
+                                                <% } %>
+                                            </p>
                                             <p class="text-sm text-gray-500">
                                                 <%= new Date(transaction.date).toLocaleDateString('en-IN', {
                                                     year: 'numeric',

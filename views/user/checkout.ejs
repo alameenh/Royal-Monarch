@@ -307,20 +307,20 @@ let rzpInstance = null;
 // Function to calculate all amounts
 function calculateAmounts(subtotal, offerDiscount = 0, couponDiscount = 0) {
     // Original subtotal is the sum of original product prices
-    const originalSubtotal = subtotal;
+    const originalSubtotal = Number(subtotal.toFixed(2));
     
     // Calculate subtotal after offers (this should remain constant)
-    const subtotalAfterOffers = originalSubtotal - offerDiscount;
+    const subtotalAfterOffers = Number((originalSubtotal - offerDiscount).toFixed(2));
     
     // Calculate subtotal after coupon by deducting coupon discount from subtotal after offers
-    const subtotalAfterCoupon = subtotalAfterOffers - couponDiscount;
+    const subtotalAfterCoupon = Number((subtotalAfterOffers - couponDiscount).toFixed(2));
 
     // Calculate GST and shipping based on subtotal after coupon
-    const totalGstAmount = Math.round(subtotalAfterCoupon * 0.18); // 18% GST
-    const totalShippingCost = Math.round(subtotalAfterCoupon * 0.02); // 2% Shipping
+    const totalGstAmount = Number((Math.round(subtotalAfterCoupon * 18) / 100).toFixed(2)); // 18% GST
+    const totalShippingCost = Number((Math.round(subtotalAfterCoupon * 2) / 100).toFixed(2)); // 2% Shipping
 
     // Calculate final total
-    const finalTotal = subtotalAfterCoupon + totalGstAmount + totalShippingCost;
+    const finalTotal = Number((subtotalAfterCoupon + totalGstAmount + totalShippingCost).toFixed(2));
 
     return {
         originalSubtotal,
@@ -337,21 +337,21 @@ function updateDisplayedAmounts(amounts) {
     // Keep subtotal after offer constant
     const subtotalAfterOfferElement = document.getElementById('subtotalAfterOffer');
     if (subtotalAfterOfferElement) {
-        subtotalAfterOfferElement.textContent = '<%= subtotal.toFixed(2) %>';
+        subtotalAfterOfferElement.textContent = Number('<%= subtotal %>').toFixed(2);
     }
 
     // Update subtotal after coupon by deducting coupon discount from subtotal after offer
     const subtotalAfterCouponElement = document.getElementById('subtotalAfterCoupon');
     if (subtotalAfterCouponElement) {
-        const subtotalAfterOffer = parseFloat('<%= subtotal %>');
-        const couponDiscount = parseFloat(document.getElementById('couponDiscountAmount').textContent || '0');
-        const subtotalAfterCoupon = subtotalAfterOffer - couponDiscount;
+        const subtotalAfterOffer = Number('<%= subtotal %>');
+        const couponDiscount = Number(document.getElementById('couponDiscountAmount').textContent || '0');
+        const subtotalAfterCoupon = Number((subtotalAfterOffer - couponDiscount).toFixed(2));
         subtotalAfterCouponElement.textContent = subtotalAfterCoupon.toFixed(2);
 
         // Calculate GST and shipping based on subtotal after coupon
-        const gstAmount = Math.round(subtotalAfterCoupon * 0.18); // 18% GST
-        const shippingCost = Math.round(subtotalAfterCoupon * 0.02); // 2% Shipping
-        const finalTotal = subtotalAfterCoupon + gstAmount + shippingCost;
+        const gstAmount = Number((Math.round(subtotalAfterCoupon * 0.18 * 100) / 100).toFixed(2)); // 18% GST
+        const shippingCost = Number((Math.round(subtotalAfterCoupon * 0.02 * 100) / 100).toFixed(2)); // 2% Shipping
+        const finalTotal = Number((subtotalAfterCoupon + gstAmount + shippingCost).toFixed(2));
 
         // Update GST amount
         const gstAmountElement = document.getElementById('gstAmount');
@@ -377,13 +377,13 @@ function updateDisplayedAmounts(amounts) {
 const cartItemsData = <%- JSON.stringify(cartItems.map(item => {
     // Get the original price from the product model
     const variant = item.productId.variants.find(v => v.type === item.variantType);
-    const originalPrice = variant ? variant.price : 0;
-    const priceAfterOffer = item.priceAfterOffer;
-    const offerDiscount = originalPrice - priceAfterOffer;
+    const originalPrice = Number(variant ? variant.price : 0).toFixed(2);
+    const priceAfterOffer = Number(item.priceAfterOffer).toFixed(2);
+    const offerDiscount = Number((originalPrice - priceAfterOffer).toFixed(2));
     
     // Calculate GST and shipping for this item
-    const itemGstAmount = Math.round(priceAfterOffer * 0.18);
-    const itemShippingCost = Math.round(priceAfterOffer * 0.02);
+    const itemGstAmount = Number((Math.round(priceAfterOffer * 0.18 * 100) / 100).toFixed(2));
+    const itemShippingCost = Number((Math.round(priceAfterOffer * 0.02 * 100) / 100).toFixed(2));
     
     return {
         productId: item.productId._id,
@@ -397,17 +397,21 @@ const cartItemsData = <%- JSON.stringify(cartItems.map(item => {
         status: 'pending',
         priceAfterOffer: Number(priceAfterOffer),
         offerDiscount: Number(offerDiscount),
-        subtotalforproduct: Number(originalPrice * item.quantity),
+        subtotalforproduct: Number((originalPrice * item.quantity).toFixed(2)),
         finalPrice: Number(priceAfterOffer),
-        finalAmount: Number(priceAfterOffer * item.quantity),
-        gstAmount: Number(itemGstAmount * item.quantity),
-        shippingCost: Number(itemShippingCost * item.quantity),
+        finalAmount: Number((priceAfterOffer * item.quantity).toFixed(2)),
+        gstAmount: Number((itemGstAmount * item.quantity).toFixed(2)),
+        shippingCost: Number((itemShippingCost * item.quantity).toFixed(2)),
         couponDiscount: 0,
-        couponForProduct: null,
+        couponForProduct: {
+            code: null,
+            discount: 0,
+            type: null
+        },
         offer: item.offer ? {
             name: item.offer.name || '',
             type: item.offer.type || 'product',
-            discount: Number(item.offer.discount || 0)
+            discount: Number(item.offer.discount || 0).toFixed(2)
         } : null
     };
 })) %>;
@@ -508,6 +512,18 @@ async function applyCoupon() {
         const subtotalValue = parseFloat('<%= subtotal %>');
         const offerDiscountValue = parseFloat('<%= totalOfferDiscount %>');
 
+        // Prepare items data with subtotal after offer for each product
+        const itemsData = cartItemsData.map(item => ({
+            productId: item.productId,
+            name: item.name,
+            quantity: item.quantity,
+            priceAfterOffer: item.priceAfterOffer,
+            subtotalAfterOffer: item.priceAfterOffer * item.quantity,
+            originalPrice: item.originalPrice,
+            variantType: item.variantType,
+            offer: item.offer
+        }));
+
         const response = await fetch('/apply-coupon', {
             method: 'POST',
             headers: {
@@ -515,8 +531,7 @@ async function applyCoupon() {
             },
             body: JSON.stringify({
                 couponId: option.value,
-                subtotal: subtotalValue,
-                items: cartItemsData
+                items: itemsData
             })
         });
 
@@ -534,7 +549,6 @@ async function applyCoupon() {
                 button.textContent = 'Remove Coupon';
                 button.classList.remove('bg-black', 'hover:bg-gray-800');
                 button.classList.add('bg-red-600', 'hover:bg-red-700');
-                // Ensure the button is clickable
                 button.disabled = false;
             }
 
@@ -547,21 +561,58 @@ async function applyCoupon() {
             // Update displayed amounts
             updateDisplayedAmounts(amounts);
 
-            // Store applied coupon with all details
+            // Store applied coupon with all details including individual item discounts
             appliedCoupon = {
                 id: option.value,
                 code: option.textContent.split(' - ')[0],
-                discount: data.discount
+                type: option.dataset.type,
+                value: parseFloat(option.dataset.value),
+                maxDiscount: option.dataset.max ? parseFloat(option.dataset.max) : null,
+                discount: data.discount,
+                items: data.items.map(item => ({
+                    productId: item.productId,
+                    couponDiscount: Number(item.couponDiscount || 0).toFixed(2),
+                    couponForProduct: {
+                        code: item.couponForProduct.code,
+                        discount: Number(item.couponForProduct.discount || 0).toFixed(2),
+                        type: item.couponForProduct.type
+                    }
+                }))
             };
+
+            // Update cart items data with coupon discounts
+            cartItemsData.forEach((item, index) => {
+                if (data.items[index]) {
+                    const couponData = data.items[index];
+                    item.couponDiscount = Number(couponData.couponDiscount || 0).toFixed(2);
+                    item.couponForProduct = {
+                        code: couponData.couponForProduct.code,
+                        discount: Number(couponData.couponForProduct.discount || 0).toFixed(2),
+                        type: couponData.couponForProduct.type
+                    };
+                }
+            });
 
             // Update payment options based on new total
             updatePaymentOptions();
 
-            Swal.fire({
-                icon: 'success',
-                title: 'Coupon Applied',
-                text: `Discount of ₹${data.discount.toFixed(2)} applied successfully!`
-            });
+            // Show appropriate alert based on maxDiscountApplied
+            if (data.maxDiscountApplied) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Maximum Discount Applied',
+                    text: `The coupon discount has been capped at ₹${data.discount.toFixed(2)} as per the maximum discount limit.`,
+                    confirmButtonText: 'OK'
+                });
+            } else {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Coupon Applied',
+                    text: `Discount of ₹${data.discount.toFixed(2)} applied successfully!`,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
         } else {
             throw new Error(data.message);
         }
@@ -640,7 +691,11 @@ async function placeOrder() {
             addressId: selectedAddress.value,
             paymentMethod: paymentMethod,
             coupon: couponData,
-            items: processedItems,
+            items: processedItems.map(item => ({
+                ...item,
+                couponDiscount: Number(item.couponDiscount || 0).toFixed(2),
+                couponForProduct: item.couponForProduct
+            })),
             totalAmount: Number(document.getElementById('finalTotal').textContent),
             originalSubtotal: Number('<%= originalSubtotal %>'),
             totalOfferDiscount: Number('<%= totalOfferDiscount %>'),

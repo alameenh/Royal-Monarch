@@ -21,8 +21,8 @@
                 <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-green-600 rounded-full border-2 border-white"></div>
             </div>
             <div>
-                <h4 class="text-lg font-serif font-semibold text-gray-800"><%= user.firstname %> <%= user.lastname %></h4>
-                <p class="text-sm text-gray-600 font-serif"><%= user.email %></p>
+                <h4 class="text-lg font-serif font-semibold text-gray-800 truncate max-w-[180px]"><%= user.firstname %> <%= user.lastname %></h4>
+                <p class="text-sm text-gray-600 font-serif truncate max-w-[180px]"><%= user.email %></p>
             </div>
         </div>
         <% } %>

@@ -18,7 +18,8 @@
                         <div class="absolute -bottom-24 left-1/2 transform -translate-x-1/2">
                             <div class="w-48 h-48 rounded-full border-4 border-white overflow-hidden bg-white shadow-xl ring-4 ring-gray-900/20">
                                 <img src="<%= user.profileImage || '/images/default-avatar.png' %>" 
-                                     alt="Profile Picture" class="w-full h-full object-cover transition-all duration-300 hover:scale-110">
+                                     alt="Profile Picture" class="w-full h-full object-cover transition-all duration-300 hover:scale-110 cursor-pointer"
+                                     onclick="openImageModal(this.src)">
                             </div>
                         </div>
                     </div>
@@ -28,7 +29,7 @@
                         <!-- Name and Edit Button -->
                         <div class="flex justify-between items-center mb-8">
                             <div class="flex items-center">
-                                <h2 class="text-3xl font-serif font-bold text-gray-800"><%= user.firstname + ' ' + user.lastname %></h2>
+                                <h2 class="text-3xl font-serif font-bold text-gray-800 truncate max-w-[400px]"><%= user.firstname + ' ' + user.lastname %></h2>
                             </div>
                             <div class="flex gap-3">
                                 <% if (hasPassword) { %>
@@ -64,7 +65,7 @@
                                 <div class="space-y-6">
                                     <div class="bg-white/50 p-4 rounded-lg border border-gray-100 hover:bg-white/80 transition-all duration-300">
                                         <p class="text-sm font-serif font-medium text-gray-500">Full Name</p>
-                                        <p class="text-gray-800 mt-1 font-serif"><%= user.firstname + ' ' + user.lastname %></p>
+                                        <p class="text-gray-800 mt-1 font-serif truncate"><%= user.firstname + ' ' + user.lastname %></p>
                                     </div>
 
                                     <div class="bg-white/50 p-4 rounded-lg border border-gray-100 hover:bg-white/80 transition-all duration-300">
@@ -114,5 +115,42 @@
         </div>
     </div>
 </div>
+
+<!-- Image Modal -->
+<div id="imageModal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center" onclick="closeImageModal()">
+    <div class="relative max-w-md w-full mx-4 bg-white rounded-xl overflow-hidden shadow-2xl">
+        <button onclick="closeImageModal()" class="absolute -top-4 -right-4 z-10 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+        <img id="modalImage" src="" alt="Full Profile Picture" class="w-full h-auto">
+    </div>
+</div>
+
+<script>
+function openImageModal(imageSrc) {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    modalImage.src = imageSrc;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('imageModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.style.overflow = 'auto';
+}
+
+// Close modal when pressing Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeImageModal();
+    }
+});
+</script>
 
 <%- include('../partials/footer') %>

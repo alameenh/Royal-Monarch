@@ -22,7 +22,38 @@
                             </div>
                         </label>
                         <input type="file" id="profileImage" name="profileImage" accept="image/*" 
-                            class="hidden" onchange="previewImage(this)">
+                            class="hidden" onchange="handleImageSelect(this)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Crop Modal -->
+            <div id="cropModal" class="fixed inset-0 z-[9999] hidden">
+                <!-- Backdrop -->
+                <div class="fixed inset-0 bg-black/90"></div>
+                
+                <!-- Modal Content -->
+                <div class="fixed inset-0 z-[10000] flex items-center justify-center">
+                    <div class="bg-white rounded-xl p-4 w-full max-w-2xl mx-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-serif font-semibold text-gray-800">Crop Profile Picture</h3>
+                            <button onclick="closeCropModal()" class="text-gray-500 hover:text-gray-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="aspect-square max-h-[80vh] bg-gray-50 rounded-lg">
+                            <img id="cropperImage" src="" alt="Image to crop" class="max-w-full">
+                        </div>
+                        <div class="flex justify-end gap-3 mt-4">
+                            <button onclick="closeCropModal()" class="px-4 py-2 text-sm font-serif font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-300">
+                                Cancel
+                            </button>
+                            <button onclick="cropImage()" class="px-4 py-2 text-sm font-serif font-medium text-white bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg hover:from-gray-800 hover:to-gray-700 transition-colors duration-300">
+                                Crop & Save
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -70,7 +101,7 @@
                                         title="First name should only contain letters and spaces"
                                         oninput="validateNameField(this, 'firstname')"
                                         onblur="validateNameField(this, 'firstname')"
-                                        onkeydown="handleEnterKey(event, 'lastname')">
+                                        onkeydown="handleArrowKeys(event, 'firstname')">
                                     <p id="firstnameError" class="mt-1 text-sm text-red-500 hidden"></p>
                                 </div>
 
@@ -87,7 +118,7 @@
                                         title="Last name should only contain letters and spaces"
                                         oninput="validateNameField(this, 'lastname')"
                                         onblur="validateNameField(this, 'lastname')"
-                                        onkeydown="handleEnterKey(event, 'saveButton')">
+                                        onkeydown="handleArrowKeys(event, 'lastname')">
                                     <p id="lastnameError" class="mt-1 text-sm text-red-500 hidden"></p>
                                 </div>
                             </div>
@@ -136,15 +167,120 @@
 </div>
 
 <script>
-function previewImage(input) {
+let cropper = null;
+
+function handleImageSelect(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            document.getElementById('profilePreview').src = e.target.result;
+            const cropModal = document.getElementById('cropModal');
+            const cropperImage = document.getElementById('cropperImage');
+            
+            // Show modal
+            cropModal.classList.remove('hidden');
+            // Don't modify body overflow
+            
+            // Set image source
+            cropperImage.src = e.target.result;
+            
+            // Initialize cropper after image is loaded
+            cropperImage.onload = function() {
+                if (cropper) {
+                    cropper.destroy();
+                }
+                
+                cropper = new Cropper(cropperImage, {
+                    aspectRatio: 1,
+                    viewMode: 2,
+                    dragMode: 'move',
+                    autoCropArea: 1,
+                    restore: false,
+                    guides: true,
+                    center: true,
+                    highlight: false,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
+                    toggleDragModeOnDblclick: false,
+                    zoomable: true,
+                    scalable: true,
+                });
+            };
         }
         reader.readAsDataURL(input.files[0]);
     }
 }
+
+function closeCropModal() {
+    const cropModal = document.getElementById('cropModal');
+    cropModal.classList.add('hidden');
+    
+    if (cropper) {
+        cropper.destroy();
+        cropper = null;
+    }
+}
+
+function cropImage() {
+    if (!cropper) return;
+    
+    const canvas = cropper.getCroppedCanvas({
+        width: 400,
+        height: 400,
+        fillColor: '#fff',
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high',
+    });
+    
+    // Convert canvas to blob
+    canvas.toBlob((blob) => {
+        const formData = new FormData();
+        formData.append('profileImage', blob, 'profile-image.jpg');
+        formData.append('firstname', document.getElementById('firstname').value.trim());
+        formData.append('lastname', document.getElementById('lastname').value.trim());
+
+        // Show loading state
+        const saveButton = document.querySelector('button[onclick="cropImage()"]');
+        const originalText = saveButton.innerHTML;
+        saveButton.innerHTML = 'Saving...';
+        saveButton.disabled = true;
+
+        // Send to server
+        fetch('/profile/update', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update the preview image with the cropped version
+                const previewImage = document.getElementById('profilePreview');
+                previewImage.src = canvas.toDataURL('image/jpeg');
+                closeCropModal();
+            } else {
+                alert('Failed to update profile: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the profile');
+        })
+        .finally(() => {
+            // Reset button state
+            saveButton.innerHTML = originalText;
+            saveButton.disabled = false;
+        });
+    }, 'image/jpeg', 0.9);
+}
+
+// Add Cropper.js CSS and JS
+const cropperCSS = document.createElement('link');
+cropperCSS.rel = 'stylesheet';
+cropperCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css';
+document.head.appendChild(cropperCSS);
+
+const cropperJS = document.createElement('script');
+cropperJS.src = 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js';
+document.body.appendChild(cropperJS);
 
 // Custom name validation function
 function validateNameField(input, fieldName) {
@@ -216,37 +352,23 @@ function validateForm() {
     return true;
 }
 
-// Handle Enter key navigation
-function handleEnterKey(event, nextElementId) {
-    if (event.key === 'Enter') {
+// Handle arrow key navigation
+function handleArrowKeys(event, currentField) {
+    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
         event.preventDefault();
-        if (nextElementId === 'saveButton') {
-            // If next element is save button, trigger click
-            const saveButton = document.getElementById('saveButton');
-            if (saveButton) {
-                saveButton.click();
-            }
-        } else {
-            // Otherwise focus the next input
-            const nextElement = document.getElementById(nextElementId);
-            if (nextElement) {
-                nextElement.focus();
-            }
-        }
+        const nextField = currentField === 'firstname' ? 'lastname' : 'firstname';
+        document.getElementById(nextField).focus();
     }
 }
 
-// Add global Enter key handler
+// Update the global Enter key handler
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Enter') {
-        // Don't trigger if we're in a text input or textarea
-        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-            return;
-        }
+        // Prevent default form submission
+        event.preventDefault();
         // Trigger save button
         const saveButton = document.getElementById('saveButton');
         if (saveButton) {
-            event.preventDefault();
             saveButton.click();
         }
     }

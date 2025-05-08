@@ -658,15 +658,14 @@ const orderController = {
     applyCoupon: async (req, res) => {
         try {
             const userId = req.session.userId;
-            const { couponId, subtotal, items } = req.body;
+            const { couponId, items } = req.body;
 
             // Validate coupon with proper filters based on couponModel schema
             const coupon = await Coupon.findOne({
                 _id: couponId,
                 isActive: true,
                 startDate: { $lte: new Date() },
-                expiryDate: { $gte: new Date() },
-                minPurchase: { $lte: subtotal }
+                expiryDate: { $gte: new Date() }
             });
 
             if (!coupon) {
@@ -688,38 +687,112 @@ const orderController = {
                 });
             }
 
-            // Calculate discount and final amounts
-            let discount = 0;
-            let subtotalAfterCoupon = subtotal;
+            // Calculate total subtotal after offers for minimum purchase check
+            const totalSubtotalAfterOffers = Number(items.reduce((total, item) => {
+                return total + (item.priceAfterOffer * item.quantity);
+            }, 0).toFixed(2));
 
-            if (coupon.discountType === 'PERCENTAGE') {
-                // For percentage discounts
-                discount = (subtotal * coupon.discountValue) / 100;
-                if (coupon.maxDiscount) {
-                    discount = Math.min(discount, coupon.maxDiscount);
-                }
-                subtotalAfterCoupon = subtotal - discount;
-            } else if (coupon.discountType === 'FIXED') {
-                // For fixed discounts, directly subtract from subtotal after offers
-                discount = Number(coupon.discountValue);
-                // Ensure discount doesn't exceed the subtotal after offers
-                discount = Math.min(discount, subtotal);
-                subtotalAfterCoupon = subtotal - discount;
+            // Check minimum purchase requirement
+            if (coupon.minPurchase > totalSubtotalAfterOffers) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Minimum purchase amount of ₹${coupon.minPurchase} required`
+                });
             }
 
-            // Calculate GST and shipping on the final subtotal after coupon
-            const gstAmount = Math.round(subtotalAfterCoupon * 0.18);
-            const shippingCost = Math.round(subtotalAfterCoupon * 0.02);
-            const finalTotal = subtotalAfterCoupon + gstAmount + shippingCost;
+            // Calculate discounts for each product
+            let initialTotalDiscount = 0;
+            const initialItemsWithDiscount = items.map(item => {
+                const productSubtotalAfterOffer = Number(item.priceAfterOffer.toFixed(2));
+                let itemDiscount = 0;
+
+                if (coupon.discountType === 'PERCENTAGE') {
+                    // Calculate percentage discount on the product's subtotal after offer
+                    const discountPerProduct = Number(((productSubtotalAfterOffer * coupon.discountValue) / 100).toFixed(2));
+                    // Multiply by quantity after calculating the discount per product
+                    itemDiscount = Number((discountPerProduct * item.quantity).toFixed(2));
+                } else if (coupon.discountType === 'FIXED') {
+                    // For fixed discount, calculate per product based on its proportion of total
+                    const productProportion = Number((productSubtotalAfterOffer / totalSubtotalAfterOffers).toFixed(4));
+                    const fixedDiscountPerProduct = Number((coupon.discountValue * productProportion).toFixed(2));
+                    // Multiply by quantity after calculating the fixed discount per product
+                    itemDiscount = Number((fixedDiscountPerProduct * item.quantity).toFixed(2));
+                }
+
+                initialTotalDiscount = Number((initialTotalDiscount + itemDiscount).toFixed(2));
+
+                // Return item with coupon details matching orderModel schema
+                return {
+                    ...item,
+                    couponDiscount: Number(itemDiscount.toFixed(2)),
+                    couponForProduct: {
+                        code: coupon.code,
+                        discount: Number(itemDiscount.toFixed(2)),
+                        type: coupon.discountType
+                    }
+                };
+            });
+
+            // Check if total discount exceeds maxDiscount
+            let finalTotalDiscount = initialTotalDiscount;
+            let itemsWithDiscount = initialItemsWithDiscount;
+            let maxDiscountApplied = false;
+
+            if (coupon.maxDiscount && initialTotalDiscount > coupon.maxDiscount) {
+                maxDiscountApplied = true;
+                finalTotalDiscount = Number(coupon.maxDiscount.toFixed(2));
+
+                // Redistribute the max discount proportionally based on each item's contribution to total
+                const totalSubtotal = Number(items.reduce((total, item) => {
+                    return total + (item.priceAfterOffer * item.quantity);
+                }, 0).toFixed(2));
+
+                itemsWithDiscount = items.map(item => {
+                    const itemSubtotal = Number((item.priceAfterOffer * item.quantity).toFixed(2));
+                    const proportion = Number((itemSubtotal / totalSubtotal).toFixed(4));
+                    const redistributedDiscount = Number((finalTotalDiscount * proportion).toFixed(2));
+
+                    return {
+                        ...item,
+                        couponDiscount: redistributedDiscount,
+                        couponForProduct: {
+                            code: coupon.code,
+                            discount: redistributedDiscount,
+                            type: coupon.discountType
+                        }
+                    };
+                });
+            }
+
+            // Calculate final amounts
+            const subtotalAfterCoupon = Number((totalSubtotalAfterOffers - finalTotalDiscount).toFixed(2));
+            const gstAmount = Number((Math.round(subtotalAfterCoupon * 0.18 * 100) / 100).toFixed(2));
+            const shippingCost = Number((Math.round(subtotalAfterCoupon * 0.02 * 100) / 100).toFixed(2));
+            const finalTotal = Number((subtotalAfterCoupon + gstAmount + shippingCost).toFixed(2));
+
+            // Ensure all items have proper coupon information matching orderModel schema
+            const processedItems = itemsWithDiscount.map(item => ({
+                ...item,
+                couponDiscount: Number(item.couponDiscount || 0).toFixed(2),
+                couponForProduct: {
+                    code: coupon.code,
+                    discount: Number(item.couponDiscount || 0).toFixed(2),
+                    type: coupon.discountType
+                }
+            }));
 
             res.json({
                 success: true,
-                discount,
+                discount: Number(finalTotalDiscount.toFixed(2)),
                 subtotalAfterCoupon,
                 gstAmount,
                 shippingCost,
                 finalTotal,
-                message: 'Coupon applied successfully'
+                items: processedItems,
+                maxDiscountApplied,
+                message: maxDiscountApplied ? 
+                    `Coupon applied with maximum discount of ₹${coupon.maxDiscount}` : 
+                    'Coupon applied successfully'
             });
 
         } catch (error) {
@@ -915,6 +988,10 @@ const orderController = {
                 });
             }
 
+            // Calculate total refund amount for cancellable items
+            let totalRefundAmount = 0;
+            const cancelledProductNames = [];
+
             // Process each cancellable item
             for (const item of cancellableItems) {
                 // Update product stock
@@ -927,42 +1004,54 @@ const orderController = {
                     }
                 }
 
-                // Calculate refund amount
-                let refundAmount = item.finalAmount;
-
-                // Process refund if payment was made
-                if (order.paymentMethod === 'wallet' || order.paymentMethod === 'online') {
-                    let wallet = await Wallet.findOne({ userId });
-                    if (!wallet) {
-                        wallet = new Wallet({
-                            userId,
-                            balance: 0,
-                            transactions: []
-                        });
-                    }
-
-                    wallet.balance += refundAmount;
-                    wallet.transactions.push({
-                        transactionId: uuidv4(),
-                        type: 'CREDIT',
-                        amount: refundAmount,
-                        description: `Refund for cancelled order ${order.orderId} (${item.name})`,
-                        date: new Date()
-                    });
-
-                    await wallet.save();
-                }
+                // Add to total refund amount
+                totalRefundAmount += item.finalAmount;
+                cancelledProductNames.push(item.name);
 
                 // Update item status
                 item.status = 'cancelled';
                 item.cancelledDate = new Date();
             }
 
+            // Process refund if payment was made and there are cancellable items
+            if (totalRefundAmount > 0 && (order.paymentMethod === 'wallet' || order.paymentMethod === 'online')) {
+                let wallet = await Wallet.findOne({ userId });
+                if (!wallet) {
+                    wallet = new Wallet({
+                        userId,
+                        balance: 0,
+                        transactions: []
+                    });
+                }
+
+                // Create a single transaction for all cancelled items
+                wallet.balance += totalRefundAmount;
+                wallet.transactions.push({
+                    transactionId: uuidv4(),
+                    type: 'CREDIT',
+                    amount: totalRefundAmount,
+                    description: `Refund for cancelled order ${order.orderId} (${cancelledProductNames.join(', ')})`,
+                    date: new Date()
+                });
+
+                await wallet.save();
+            }
+
             await order.save();
+
+            // Prepare response message based on cancellation status
+            let message = 'Order cancelled successfully';
+            if (cancellableItems.length < order.items.length) {
+                const nonCancellableItems = order.items.length - cancellableItems.length;
+                message = `Partially cancelled order. ${cancellableItems.length} items cancelled, ${nonCancellableItems} items could not be cancelled.`;
+            }
 
             res.json({
                 success: true,
-                message: 'Order cancelled successfully'
+                message,
+                cancelledItems: cancellableItems.length,
+                totalItems: order.items.length,
+                refundAmount: totalRefundAmount
             });
 
         } catch (error) {
@@ -1035,8 +1124,8 @@ const orderController = {
                 }
 
                 // Calculate GST and shipping for this item
-                const itemGstAmount = Math.round(priceAfterOffer * 0.18);
-                const itemShippingCost = Math.round(priceAfterOffer * 0.02);
+                const itemGstAmount = Number((Math.round(priceAfterOffer * 0.18 * 100) / 100).toFixed(2));
+                const itemShippingCost = Number((Math.round(priceAfterOffer * 0.02 * 100) / 100).toFixed(2));
 
                 // Calculate subtotal for this product after offer
                 const subtotalAfterOffer = priceAfterOffer * item.quantity;
@@ -1237,8 +1326,8 @@ const orderController = {
                     }
 
                     // Calculate GST and shipping
-                    const itemGstAmount = Math.round(priceAfterOffer * 0.18);
-                    const itemShippingCost = Math.round(priceAfterOffer * 0.02);
+                    const itemGstAmount = Number((Math.round(priceAfterOffer * 0.18 * 100) / 100).toFixed(2));
+                    const itemShippingCost = Number((Math.round(priceAfterOffer * 0.02 * 100) / 100).toFixed(2));
                     const itemSubtotal = priceAfterOffer * item.quantity;
                     const itemTotal = itemSubtotal + (itemGstAmount * item.quantity) + (itemShippingCost * item.quantity);
 
@@ -1260,17 +1349,17 @@ const orderController = {
                         } : null,
                         offerDiscount,
                         priceAfterOffer,
-                        gstAmount: itemGstAmount * item.quantity,
-                        shippingCost: itemShippingCost * item.quantity,
-                        totalAmount: itemTotal,
-                        finalAmount: priceAfterOffer * item.quantity,
-                        finalPrice: priceAfterOffer,
-                        subtotalforproduct: itemSubtotal
+                        gstAmount: Number((itemGstAmount * item.quantity).toFixed(2)),
+                        shippingCost: Number((itemShippingCost * item.quantity).toFixed(2)),
+                        totalAmount: Number(itemTotal.toFixed(2)),
+                        finalAmount: Number((priceAfterOffer * item.quantity).toFixed(2)),
+                        finalPrice: Number(priceAfterOffer.toFixed(2)),
+                        subtotalforproduct: Number(itemSubtotal.toFixed(2))
                     });
 
                     subtotalAfterOffers += itemSubtotal;
-                    totalGstAmount += itemGstAmount * item.quantity;
-                    totalShippingCost += itemShippingCost * item.quantity;
+                    totalGstAmount += Number((itemGstAmount * item.quantity).toFixed(2));
+                    totalShippingCost += Number((itemShippingCost * item.quantity).toFixed(2));
                 }
 
                 // Apply coupon discount if any
@@ -1580,8 +1669,24 @@ const orderController = {
                 const order = new Order({
                     orderId: newOrderId,
                     userId,
-                    items,
-                    totalAmount: razorpayOrder.amount / 100, // Convert from paise to rupees
+                    items: items.map(item => {
+                        // Find the corresponding item from the client data
+                        const clientItem = JSON.parse(notes.items).find(ci => 
+                            ci.productId === item.productId.toString() && 
+                            ci.variantType === item.variantType
+                        );
+
+                        return {
+                            ...item,
+                            couponDiscount: clientItem ? Number(clientItem.couponDiscount || 0).toFixed(2) : 0,
+                            couponForProduct: clientItem && clientItem.couponForProduct ? {
+                                code: clientItem.couponForProduct.code,
+                                discount: Number(clientItem.couponForProduct.discount || 0).toFixed(2),
+                                type: clientItem.couponForProduct.type
+                            } : null
+                        };
+                    }),
+                    totalAmount: razorpayOrder.amount / 100,
                     originalSubtotal: notes.subtotal,
                     totalOfferDiscount: notes.offerDiscount,
                     totalCouponDiscount: notes.couponDiscount,
@@ -1589,7 +1694,7 @@ const orderController = {
                     gstAmount: notes.gst,
                     shippingCost: notes.shipping,
                     paymentMethod: 'online',
-                    paymentStatus: 'pending', // Always set as pending initially
+                    paymentStatus: 'pending',
                     shippingAddress: await Address.findById(addressId).select('name houseName localityStreet city state pincode phone alternatePhone'),
                     expectedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
                     coupon: coupon ? {
