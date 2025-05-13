@@ -675,9 +675,10 @@ const orderController = {
                 });
             }
 
-            // Check usage limit
+            // Check usage limit - only count successful usages
             const userUsage = coupon.usageHistory.filter(
-                history => history.userId.toString() === userId.toString()
+                history => history.userId.toString() === userId.toString() && 
+                          history.status === 'success'
             ).length;
 
             if (userUsage >= coupon.usageLimit) {
@@ -1224,23 +1225,15 @@ const orderController = {
                 coupon, 
                 totalAmount: clientTotalAmount, 
                 items: clientItems, 
-                originalSubtotal, 
+                originalSubtotal: clientOriginalSubtotal, 
                 totalOfferDiscount, 
                 totalCouponDiscount,
                 subtotal: clientSubtotal,
                 gstAmount: clientGstAmount,
                 shippingCost: clientShippingCost
             } = req.body;
-
-            console.log("Coupon in place order controller", coupon);
-            console.log("Client amounts:", {
-                totalAmount: clientTotalAmount,
-                subtotal: clientSubtotal,
-                gstAmount: clientGstAmount,
-                shippingCost: clientShippingCost,
-                totalCouponDiscount
-            });
-
+console.log("body from frontend",req.body);
+let a = clientOriginalSubtotal;
             // Validate required fields
             if (!addressId || !paymentMethod || !clientTotalAmount || !clientItems || !clientItems.length) {
                 return res.status(400).json({
@@ -1275,17 +1268,10 @@ const orderController = {
                     throw new Error('Cart is empty');
                 }
 
-                // Map client items to a lookup object for easy access
-                const clientItemsMap = new Map(
-                    clientItems.map(item => [item.productId, item])
-                );
-
-                // Validate and process each cart item
-                const orderItems = [];
-                let totalAmount = 0;
-                let totalGstAmount = 0;
-                let totalShippingCost = 0;
-                let subtotalAfterOffers = 0;
+                // First pass: Calculate original subtotal and subtotal after offers
+                let totalOriginalSubtotal = 0;
+                let totalSubtotalAfterOffers = 0;
+                const itemsWithOffers = [];
 
                 for (const item of cartItems) {
                     const product = await Product.findById(item.productId._id).session(session);
@@ -1302,14 +1288,16 @@ const orderController = {
                         throw new Error(`Insufficient stock for ${product.name} (${item.variantType})`);
                     }
 
-                    // Get the corresponding client item with coupon details
-                    const clientItem = clientItemsMap.get(item.productId._id.toString());
-                    if (!clientItem) {
-                        throw new Error(`Client item data not found for ${product.name}`);
-                    }
-
-                    // Calculate prices and discounts
-                    const originalPrice = variant.price;
+                    // Get the original price from variant (before any offers)
+                    const originalPrice = Number(variant.price);
+                    
+                    // Calculate original subtotal for this item (price × quantity)
+                    const originalSubtotal = Number((originalPrice * item.quantity).toFixed(2));
+                    
+                    // Add to total original subtotal
+                    totalOriginalSubtotal = Number((totalOriginalSubtotal + originalSubtotal).toFixed(2));
+                    
+                    // Calculate price after offer
                     let priceAfterOffer = originalPrice;
                     let offerDiscount = 0;
 
@@ -1332,26 +1320,60 @@ const orderController = {
 
                     const applicableOffer = productOffer || categoryOffer;
                     if (applicableOffer) {
-                        offerDiscount = (originalPrice * applicableOffer.discount) / 100;
-                        priceAfterOffer = originalPrice - offerDiscount;
+                        offerDiscount = Number(((originalPrice * applicableOffer.discount) / 100).toFixed(2));
+                        priceAfterOffer = Number((originalPrice - offerDiscount).toFixed(2));
                     }
 
-                    // Calculate GST and shipping
-                    const itemGstAmount = Number((Math.round(priceAfterOffer * 0.18 * 100) / 100).toFixed(2));
-                    const itemShippingCost = Number((Math.round(priceAfterOffer * 0.02 * 100) / 100).toFixed(2));
-                    const itemSubtotal = priceAfterOffer * item.quantity;
+                    // Calculate subtotal after offer (price after offer × quantity)
+                    const subtotalAfterOffer = Number((priceAfterOffer * item.quantity).toFixed(2));
+                    totalSubtotalAfterOffers = Number((totalSubtotalAfterOffers + subtotalAfterOffer).toFixed(2));
 
-                    // Get coupon discount from client item
-                    const couponDiscount = Number(clientItem.couponDiscount || 0);
-                    const couponForProduct = clientItem.couponForProduct || {
-                        code: null,
-                        discount: 0,
-                        type: null
-                    };
+                    itemsWithOffers.push({
+                        product,
+                        variant,
+                        item,
+                        originalPrice,
+                        originalSubtotal,
+                        priceAfterOffer,
+                        offerDiscount,
+                        applicableOffer,
+                        subtotalAfterOffer
+                    });
+                }
 
-                    // Calculate final amount after all discounts
-                    const finalAmount = Number((priceAfterOffer * item.quantity - couponDiscount).toFixed(2));
-                    const itemTotal = finalAmount + (itemGstAmount * item.quantity) + (itemShippingCost * item.quantity);
+                // Calculate order level amounts
+                const finalSubtotal = Number(clientSubtotal); // Use the subtotal after coupon from client
+                const orderGstAmount = Number((Math.round(finalSubtotal * 0.18 * 100) / 100).toFixed(2));
+                const orderShippingCost = Number((Math.round(finalSubtotal * 0.02 * 100) / 100).toFixed(2));
+                const totalAmount = Number((finalSubtotal + orderGstAmount + orderShippingCost).toFixed(2));
+
+                // Second pass: Distribute costs to items based on their weight
+                const orderItems = [];
+
+                for (const itemData of itemsWithOffers) {
+                    const { 
+                        product, 
+                        variant, 
+                        item, 
+                        originalPrice, 
+                        originalSubtotal,
+                        priceAfterOffer, 
+                        offerDiscount, 
+                        applicableOffer, 
+                        subtotalAfterOffer 
+                    } = itemData;
+
+                    // Calculate weight of this item in total subtotal after offers
+                    const priceWeight = Number((subtotalAfterOffer / totalSubtotalAfterOffers).toFixed(4));
+
+                    // Distribute costs proportionally
+                    const itemCouponDiscount = Number((totalCouponDiscount * priceWeight).toFixed(2));
+                    const itemGstAmount = Number((orderGstAmount * priceWeight).toFixed(2));
+                    const itemShippingCost = Number((orderShippingCost * priceWeight).toFixed(2));
+
+                    // Calculate final amounts
+                    const finalAmount = Number((subtotalAfterOffer - itemCouponDiscount).toFixed(2));
+                    const itemTotal = Number((finalAmount + itemGstAmount + itemShippingCost).toFixed(2));
 
                     // Add to order items
                     orderItems.push({
@@ -1371,48 +1393,31 @@ const orderController = {
                         } : null,
                         offerDiscount,
                         priceAfterOffer,
-                        couponDiscount,
-                        couponForProduct,
-                        gstAmount: Number((itemGstAmount * item.quantity).toFixed(2)),
-                        shippingCost: Number((itemShippingCost * item.quantity).toFixed(2)),
-                        totalAmount: Number(itemTotal.toFixed(2)),
+                        couponDiscount: itemCouponDiscount,
+                        couponForProduct: coupon ? {
+                            code: coupon.code,
+                            discount: itemCouponDiscount,
+                            type: coupon.type
+                        } : null,
+                        gstAmount: itemGstAmount,
+                        shippingCost: itemShippingCost,
+                        totalAmount: itemTotal,
                         finalAmount,
-                        finalPrice: Number((priceAfterOffer - (couponDiscount / item.quantity)).toFixed(2)),
-                        subtotalforproduct: Number(itemSubtotal.toFixed(2))
+                        finalPrice: Number((priceAfterOffer - (itemCouponDiscount / item.quantity)).toFixed(2)),
+                        subtotalforproduct: originalSubtotal // This is (original price × quantity)
                     });
-
-                    subtotalAfterOffers += itemSubtotal;
-                    totalGstAmount += Number((itemGstAmount * item.quantity).toFixed(2));
-                    totalShippingCost += Number((itemShippingCost * item.quantity).toFixed(2));
                 }
 
-                // Apply coupon discount if any
-                let finalSubtotal = subtotalAfterOffers;
-                if (coupon && totalCouponDiscount > 0) {
-                    finalSubtotal = subtotalAfterOffers - totalCouponDiscount;
-                }
-
-                console.log("Server calculations:", {
-                    subtotalAfterOffers,
-                    totalCouponDiscount,
-                    finalSubtotal,
-                    totalGstAmount,
-                    totalShippingCost
-                });
-
-                // Calculate final total amount
-                totalAmount = finalSubtotal + totalGstAmount + totalShippingCost;
-
-                // Use client-provided amounts to ensure consistency
+                // Create order data with the correct original subtotal
                 const orderData = {
                     orderId: uuidv4(),
                     userId,
                     items: orderItems,
                     totalAmount: clientTotalAmount,
-                    originalSubtotal,
-                    totalOfferDiscount,
+                    originalSubtotal: totalOriginalSubtotal, // This is the sum of original prices before any offers/coupons
+                    totalOfferDiscount: Number((totalOriginalSubtotal - totalSubtotalAfterOffers).toFixed(2)),
                     totalCouponDiscount,
-                    subtotal: clientSubtotal,
+                    subtotal: finalSubtotal, // This is subtotal after offers minus coupon discount
                     gstAmount: clientGstAmount,
                     shippingCost: clientShippingCost,
                     paymentMethod,
@@ -1471,6 +1476,7 @@ const orderController = {
                             notes: {
                                 userId: userId.toString(),
                                 subtotal: clientSubtotal,
+                                originalSubtotal: clientOriginalSubtotal,
                                 offerDiscount: totalOfferDiscount,
                                 couponDiscount: totalCouponDiscount,
                                 gst: clientGstAmount,
@@ -1680,6 +1686,7 @@ const orderController = {
                 
                 // Extract order data from Razorpay notes
                 const notes = razorpayOrder.notes;
+                console.log("notes from razorpay",notes);
                 const userId = new mongoose.Types.ObjectId(notes.userId);
                 const addressId = new mongoose.Types.ObjectId(notes.addressId);
                 const items = JSON.parse(notes.items);
@@ -1711,7 +1718,7 @@ const orderController = {
                         };
                     }),
                     totalAmount: razorpayOrder.amount / 100,
-                    originalSubtotal: notes.subtotal,
+                    originalSubtotal: Number(notes.originalSubtotal),
                     totalOfferDiscount: notes.offerDiscount,
                     totalCouponDiscount: notes.couponDiscount,
                     subtotal: notes.subtotal,

@@ -530,9 +530,6 @@
   .table {
     display: table;
   }
-  .table-row {
-    display: table-row;
-  }
   .aspect-square {
     aspect-ratio: 1 / 1;
   }

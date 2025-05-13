@@ -700,7 +700,7 @@ async function placeOrder() {
             originalSubtotal: Number('<%= originalSubtotal %>'),
             totalOfferDiscount: Number('<%= totalOfferDiscount %>'),
             totalCouponDiscount: Number(document.getElementById('couponDiscountAmount').textContent || '0'),
-            subtotal: Number('<%= subtotal %>'),
+            subtotal: Number(document.getElementById('subtotalAfterCoupon').textContent || '<%= subtotal %>'),
             gstAmount: Number(document.getElementById('gstAmount').textContent),
             shippingCost: Number(document.getElementById('shippingCost').textContent)
         };
