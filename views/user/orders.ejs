@@ -148,10 +148,9 @@ const createOrderCard = (order) => `
                                 <p class="text-sm text-gray-600 font-serif mt-1">${item.brand}</p>
                                 <p class="text-sm text-gray-600 font-serif mt-1">Variant: ${item.variantType}</p>
                                 <p class="text-sm text-gray-600 font-serif mt-1">Quantity: ${item.quantity}</p>
-                                <p class="text-sm text-gray-600 font-serif mt-1">Price: ₹${Number(item.finalPrice).toFixed(2)}</p>
+                                <p class="text-sm text-gray-600 font-serif mt-1">Price: ₹${Number(item.finalAmount).toFixed(2)}</p>
                                 <p class="text-sm text-gray-600 font-serif mt-1">GST (18%): ₹${Number(item.gstAmount).toFixed(2)}</p>
-                                <p class="text-sm text-gray-600 font-serif mt-1">Shipping: ₹${Number(item.shippingCost).toFixed(2)}</p>
-                                <p class="text-sm text-gray-600 font-serif mt-1 font-medium">Total: ₹${Number(item.finalAmount).toFixed(2)}</p>
+                                <p class="text-sm text-gray-600 font-serif mt-1 font-medium">Total: ₹${Number(Number(item.finalAmount) + Number(item.gstAmount)).toFixed(2)}</p>
                                 <div class="mt-3 flex items-center justify-between">
                                     <span class="text-sm px-3 py-1 rounded-full ${getItemStatusClass(item)} item-status font-serif">
                                         ${item.status}
