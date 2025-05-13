@@ -193,7 +193,24 @@ const orderController = {
             }
 
             // Calculate refund amount
-            let refundAmount = item.finalAmount;
+            let refundAmount = item.finalAmount + item.gstAmount; // Include GST in refund
+            let refundDetails = {
+                finalAmount: item.finalAmount,
+                gstAmount: item.gstAmount,
+                shippingCost: 0
+            };
+
+            // Add shipping cost proportionally if status is pending or processing
+            if (['pending', 'processing'].includes(item.status)) {
+                const orderSubtotal = order.subtotal;
+                if (orderSubtotal > 0) {
+                    const itemProportion = item.finalAmount / orderSubtotal;
+                    const shippingCost = order.shippingCost;
+                    const itemShippingCost = shippingCost * itemProportion;
+                    refundAmount += itemShippingCost;
+                    refundDetails.shippingCost = itemShippingCost;
+                }
+            }
 
             // Process refund if payment was made
             if (order.paymentMethod === 'wallet' || order.paymentMethod === 'online') {
@@ -212,6 +229,7 @@ const orderController = {
                     type: 'CREDIT',
                     amount: refundAmount,
                     description: `Refund for cancelled item in order ${order.orderId} (${item.name})`,
+                    refundDetails: refundDetails,
                     date: new Date()
                 });
 
@@ -225,7 +243,8 @@ const orderController = {
 
             res.json({
                 success: true,
-                message: 'Item cancelled successfully'
+                message: 'Item cancelled successfully',
+                refundDetails: refundDetails
             });
 
         } catch (error) {
@@ -992,6 +1011,7 @@ const orderController = {
             // Calculate total refund amount for cancellable items
             let totalRefundAmount = 0;
             const cancelledProductNames = [];
+            const refundDetails = [];
 
             // Process each cancellable item
             for (const item of cancellableItems) {
@@ -1005,9 +1025,33 @@ const orderController = {
                     }
                 }
 
+                // Calculate refund amount for this item
+                let itemRefundAmount = item.finalAmount + item.gstAmount; // Include GST in refund
+                let itemRefundDetails = {
+                    finalAmount: item.finalAmount,
+                    gstAmount: item.gstAmount,
+                    shippingCost: 0
+                };
+
+                // Add shipping cost proportionally if status is pending or processing
+                if (['pending', 'processing'].includes(item.status)) {
+                    const orderSubtotal = order.subtotal;
+                    if (orderSubtotal > 0) {
+                        const itemProportion = item.finalAmount / orderSubtotal;
+                        const shippingCost = order.shippingCost;
+                        const itemShippingCost = shippingCost * itemProportion;
+                        itemRefundAmount += itemShippingCost;
+                        itemRefundDetails.shippingCost = itemShippingCost;
+                    }
+                }
+
                 // Add to total refund amount
-                totalRefundAmount += item.finalAmount;
+                totalRefundAmount += itemRefundAmount;
                 cancelledProductNames.push(item.name);
+                refundDetails.push({
+                    itemName: item.name,
+                    ...itemRefundDetails
+                });
 
                 // Update item status
                 item.status = 'cancelled';
@@ -1032,6 +1076,7 @@ const orderController = {
                     type: 'CREDIT',
                     amount: totalRefundAmount,
                     description: `Refund for cancelled order ${order.orderId} (${cancelledProductNames.join(', ')})`,
+                    refundDetails: refundDetails,
                     date: new Date()
                 });
 
@@ -1052,7 +1097,8 @@ const orderController = {
                 message,
                 cancelledItems: cancellableItems.length,
                 totalItems: order.items.length,
-                refundAmount: totalRefundAmount
+                refundAmount: totalRefundAmount,
+                refundDetails: refundDetails
             });
 
         } catch (error) {
