@@ -72,15 +72,38 @@ const getDashboard = async (req, res) => {
         const orders = await Order.find({});
         const orderCount = orders.length;
 
-        // Calculate total revenue from delivered items properly
-        let totalRevenue = 0;
-        orders.forEach(order => {
-            order.items.forEach(item => {
-                if (item.status === 'delivered') {
-                    totalRevenue += item.finalPrice * item.quantity;
+        // Calculate total revenue from delivered items including GST and shipping
+        const totalRevenueData = await Order.aggregate([
+            {
+                $addFields: {
+                    itemCount: { $size: '$items' }
                 }
-            });
-        });
+            },
+            {
+                $unwind: '$items'
+            },
+            {
+                $match: {
+                    'items.status': 'delivered'
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalRevenue: {
+                        $sum: {
+                            $add: [
+                                { $multiply: ['$items.finalAmount', '$items.quantity'] }, // Final amount per item
+                                { $multiply: ['$items.gstAmount', '$items.quantity'] }, // GST per item
+                                { $divide: ['$shippingCost', '$itemCount'] } // Shipping cost per item (divided by total items in order)
+                            ]
+                        }
+                    }
+                }
+            }
+        ]);
+
+        const totalRevenue = totalRevenueData[0]?.totalRevenue || 0;
 
         // Get top 10 products based on sold count
         const topProducts = await Product.find({})
@@ -149,6 +172,11 @@ const getDashboard = async (req, res) => {
                 }
             },
             {
+                $addFields: {
+                    itemCount: { $size: '$items' }
+                }
+            },
+            {
                 $unwind: '$items'
             },
             {
@@ -160,7 +188,15 @@ const getDashboard = async (req, res) => {
                 $group: {
                     _id: { $dateToString: { format: "%Y-%m-%d", date: "$orderDate" } },
                     count: { $sum: '$items.quantity' },
-                    revenue: { $sum: { $multiply: ['$items.finalPrice', '$items.quantity'] } }
+                    revenue: {
+                        $sum: {
+                            $add: [
+                                { $multiply: ['$items.finalAmount', '$items.quantity'] }, // Final amount per item
+                                { $multiply: ['$items.gstAmount', '$items.quantity'] }, // GST per item
+                                { $divide: ['$shippingCost', '$itemCount'] } // Shipping cost per item
+                            ]
+                        }
+                    }
                 }
             },
             {

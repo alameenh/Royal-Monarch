@@ -1,197 +1,201 @@
 <!-- sidebar.ejs -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
 
-<aside class="fixed top-0 left-0 w-72 h-full bg-gradient-to-br from-gray-50 to-gray-100 p-8 shadow-xl md:block hidden z-50 overflow-y-auto">
-    <!-- Logo -->
-    <div class="flex items-center justify-center mb-12">
-      <img src="/images/Royal Monarch logo.png" alt="Monarch Logo" class="h-12 md:h-14 lg:h-16 transition-all duration-300 hover:scale-105" />
+<aside class="fixed top-0 left-0 w-72 h-full bg-gray-900 text-white p-8 shadow-xl md:block hidden z-50 overflow-y-auto">
+    <!-- Logo and Brand -->
+    <div class="flex items-center space-x-4 mb-12">
+        <img src="/images/Royal Monarch logo.png" alt="Monarch Logo" class="h-12 md:h-14 lg:h-16 transition-all duration-300 hover:scale-105" />
+        <span class="text-xl font-serif tracking-wider text-white">ROYAL MONARCH</span>
     </div>
-  
-    <!-- Navigation Links -->
-    <nav class="space-y-4" aria-label="Main Navigation">
-      <a href="/admin/dashboard" 
-         class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-        <i class="material-icons text-2xl md:text-3xl text-gray-600">dashboard</i>
-        <span class="text-base md:text-lg font-medium">Dashboard</span>
-      </a>
-  
-      <a href="/admin/product" 
-         class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-        <i class="material-icons text-2xl md:text-3xl text-gray-600">inventory_2</i>
-        <span class="text-base md:text-lg font-medium">Products</span>
-      </a>
 
-      <a href="/admin/home-settings" 
-         class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-        <i class="material-icons text-2xl md:text-3xl text-gray-600">settings</i>
-        <span class="text-base md:text-lg font-medium">Home Settings</span>
-      </a>
-  
-      <a href="/admin/list-users" 
-         class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-        <i class="material-icons text-2xl md:text-3xl text-gray-600">people</i>
-        <span class="text-base md:text-lg font-medium">Users</span>
-      </a>
-  
-      <a href="/admin/category" 
-         class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-        <i class="material-icons text-2xl md:text-3xl text-gray-600">category</i>
-        <span class="text-base md:text-lg font-medium">Categories</span>
-      </a>
-  
-      <a href="/admin/orders" 
-         class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-        <i class="material-icons text-2xl md:text-3xl text-gray-600">shopping_cart</i>
-        <span class="text-base md:text-lg font-medium">Orders</span>
-      </a>
-  
-      <a href="/admin/offers" 
-         class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-        <i class="material-icons text-2xl md:text-3xl text-gray-600">local_offer</i>
-        <span class="text-base md:text-lg font-medium">Offers</span>
-      </a>
-  
-      <a href="/admin/coupons" 
-         class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-        <i class="material-icons text-2xl md:text-3xl text-gray-600">card_giftcard</i>
-        <span class="text-base md:text-lg font-medium">Coupon</span>
-      </a>
-  
-      <a href="/admin/sales-report" 
-         class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-        <i class="material-icons text-2xl md:text-3xl text-gray-600">assessment</i>
-        <span class="text-base md:text-lg font-medium">Sales Report</span>
-      </a>
-  
-      <!-- Logout Button -->
-      <form action="/admin/logout" method="get" class="mt-12">
-        <button type="submit" 
-                class="w-full flex items-center justify-center space-x-4 px-8 py-4 bg-gradient-to-r from-gray-900 to-gray-800 text-white text-lg font-semibold rounded-2xl hover:from-gray-800 hover:to-gray-700 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-100">
-          <i class="material-icons text-2xl">logout</i>
-          <span>Logout</span>
-        </button>
-      </form>
+    <!-- Navigation Links -->
+    <nav class="space-y-2" aria-label="Main Navigation">
+        <a href="/admin/dashboard" 
+           class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+            <i class="material-icons text-2xl text-gray-400 group-hover:text-white">dashboard</i>
+            <span class="text-base font-medium">Dashboard</span>
+        </a>
+
+        <a href="/admin/product" 
+           class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+            <i class="material-icons text-2xl text-gray-400 group-hover:text-white">inventory_2</i>
+            <span class="text-base font-medium">Products</span>
+        </a>
+
+        <a href="/admin/home-settings" 
+           class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+            <i class="material-icons text-2xl text-gray-400 group-hover:text-white">settings</i>
+            <span class="text-base font-medium">Home Settings</span>
+        </a>
+
+        <a href="/admin/list-users" 
+           class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+            <i class="material-icons text-2xl text-gray-400 group-hover:text-white">people</i>
+            <span class="text-base font-medium">Users</span>
+        </a>
+
+        <a href="/admin/category" 
+           class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+            <i class="material-icons text-2xl text-gray-400 group-hover:text-white">category</i>
+            <span class="text-base font-medium">Categories</span>
+        </a>
+
+        <a href="/admin/orders" 
+           class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+            <i class="material-icons text-2xl text-gray-400 group-hover:text-white">shopping_cart</i>
+            <span class="text-base font-medium">Orders</span>
+        </a>
+
+        <a href="/admin/offers" 
+           class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+            <i class="material-icons text-2xl text-gray-400 group-hover:text-white">local_offer</i>
+            <span class="text-base font-medium">Offers</span>
+        </a>
+
+        <a href="/admin/coupons" 
+           class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+            <i class="material-icons text-2xl text-gray-400 group-hover:text-white">card_giftcard</i>
+            <span class="text-base font-medium">Coupon</span>
+        </a>
+
+        <a href="/admin/sales-report" 
+           class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+            <i class="material-icons text-2xl text-gray-400 group-hover:text-white">assessment</i>
+            <span class="text-base font-medium">Sales Report</span>
+        </a>
+
+        <!-- Logout Button -->
+        <form action="/admin/logout" method="get" class="mt-12">
+            <button type="submit" 
+                    class="w-full flex items-center justify-center space-x-4 px-8 py-4 bg-red-600 text-white text-lg font-semibold rounded-lg hover:bg-red-700 transition-all duration-300 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900">
+                <i class="material-icons text-2xl">logout</i>
+                <span>Logout</span>
+            </button>
+        </form>
     </nav>
-  </aside>
-  
-  <!-- Mobile Header and Sidebar -->
-  <div class="md:hidden">
+</aside>
+
+<!-- Mobile Header and Sidebar -->
+<div class="md:hidden">
     <!-- Mobile Header -->
-    <header class="fixed top-0 left-0 w-full bg-gradient-to-r from-gray-50 to-gray-100 text-gray-800 p-4 flex justify-between items-center z-50 shadow-xl">
-      <button id="sidebar-toggle" 
-              class="text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-100 rounded-2xl p-2 hover:bg-white/80 transition-all duration-300"
-              aria-label="Toggle Menu"
-              aria-expanded="false">
-        <i class="material-icons text-2xl">menu</i>
-      </button>
-      <img src="/images/Royal Monarch logo.png" alt="Monarch Logo" class="h-10 transition-all duration-300 hover:scale-105" />
+    <header class="fixed top-0 left-0 w-full bg-gray-900 text-white p-4 flex justify-between items-center z-50 shadow-xl">
+        <button id="sidebar-toggle" 
+                class="text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900 rounded-lg p-2 hover:bg-gray-800 transition-all duration-300"
+                aria-label="Toggle Menu"
+                aria-expanded="false">
+            <i class="material-icons text-2xl">menu</i>
+        </button>
+        <div class="flex items-center space-x-4">
+            <img src="/images/Royal Monarch logo.png" alt="Monarch Logo" class="h-10 transition-all duration-300 hover:scale-105" />
+            <span class="text-lg font-serif tracking-wider text-white">ROYAL MONARCH</span>
+        </div>
     </header>
-  
+
     <!-- Add spacing div for mobile -->
     <div class="h-16 md:hidden"><!-- Spacer for mobile header --></div>
-  
+
     <!-- Mobile Sidebar -->
     <div id="mobile-sidebar" 
-         class="fixed top-0 left-0 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 p-8 transform -translate-x-full transition-transform duration-300 ease-in-out z-40 overflow-y-auto"
+         class="fixed top-0 left-0 w-full h-full bg-gray-900 p-8 transform -translate-x-full transition-transform duration-300 ease-in-out z-40 overflow-y-auto"
          aria-hidden="true">
-      <!-- Add padding top to prevent content hiding behind mobile header -->
-      <div class="pt-24"><!-- Additional top padding for mobile sidebar content --></div>
-      <nav class="space-y-6" aria-label="Mobile Navigation">
-        <!-- Mobile Navigation Links -->
-        <a href="/admin/dashboard" 
-           class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-          <i class="material-icons text-2xl text-gray-600">dashboard</i>
-          <span class="text-lg font-medium">Dashboard</span>
-        </a>
-        <a href="/admin/product" 
-           class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-          <i class="material-icons text-2xl text-gray-600">inventory_2</i>
-          <span class="text-lg font-medium">Products</span>
-        </a>
-        <a href="/admin/list-users" 
-           class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-          <i class="material-icons text-2xl text-gray-600">people</i>
-          <span class="text-lg font-medium">Users</span>
-        </a>
-        <a href="/admin/category" 
-           class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-          <i class="material-icons text-2xl text-gray-600">category</i>
-          <span class="text-lg font-medium">Categories</span>
-        </a>
-        <a href="/admin/orders" 
-           class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-          <i class="material-icons text-2xl text-gray-600">shopping_cart</i>
-          <span class="text-lg font-medium">Orders</span>
-        </a>
-        <a href="/admin/offers" 
-           class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-          <i class="material-icons text-2xl text-gray-600">local_offer</i>
-          <span class="text-lg font-medium">Offers</span>
-        </a>
-        <a href="/admin/coupons" 
-           class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-          <i class="material-icons text-2xl text-gray-600">card_giftcard</i>
-          <span class="text-lg font-medium">Coupon</span>
-        </a>
-        <a href="/admin/sales-report" 
-           class="flex items-center space-x-4 text-gray-700 hover:text-gray-900 transition-all duration-300 p-4 rounded-2xl hover:bg-white/80 group transform hover:scale-[1.02] hover:shadow-lg">
-          <i class="material-icons text-2xl text-gray-600">assessment</i>
-          <span class="text-lg font-medium">Sales Report</span>
-        </a>
-  
-        <!-- Mobile Logout Button -->
-        <form action="/admin/logout" method="get" class="mt-12">
-          <button type="submit" 
-                  class="w-full flex items-center justify-center space-x-4 px-8 py-4 bg-gradient-to-r from-gray-900 to-gray-800 text-white text-lg font-semibold rounded-2xl hover:from-gray-800 hover:to-gray-700 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-500">
-            <i class="material-icons text-2xl">logout</i>
-            <span>Logout</span>
-          </button>
-        </form>
-      </nav>
+        <!-- Add padding top to prevent content hiding behind mobile header -->
+        <div class="pt-24"><!-- Additional top padding for mobile sidebar content --></div>
+        <nav class="space-y-2" aria-label="Mobile Navigation">
+            <!-- Mobile Navigation Links -->
+            <a href="/admin/dashboard" 
+               class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+                <i class="material-icons text-2xl text-gray-400 group-hover:text-white">dashboard</i>
+                <span class="text-base font-medium">Dashboard</span>
+            </a>
+            <a href="/admin/product" 
+               class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+                <i class="material-icons text-2xl text-gray-400 group-hover:text-white">inventory_2</i>
+                <span class="text-base font-medium">Products</span>
+            </a>
+            <a href="/admin/list-users" 
+               class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+                <i class="material-icons text-2xl text-gray-400 group-hover:text-white">people</i>
+                <span class="text-base font-medium">Users</span>
+            </a>
+            <a href="/admin/category" 
+               class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+                <i class="material-icons text-2xl text-gray-400 group-hover:text-white">category</i>
+                <span class="text-base font-medium">Categories</span>
+            </a>
+            <a href="/admin/orders" 
+               class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+                <i class="material-icons text-2xl text-gray-400 group-hover:text-white">shopping_cart</i>
+                <span class="text-base font-medium">Orders</span>
+            </a>
+            <a href="/admin/offers" 
+               class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+                <i class="material-icons text-2xl text-gray-400 group-hover:text-white">local_offer</i>
+                <span class="text-base font-medium">Offers</span>
+            </a>
+            <a href="/admin/coupons" 
+               class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+                <i class="material-icons text-2xl text-gray-400 group-hover:text-white">card_giftcard</i>
+                <span class="text-base font-medium">Coupon</span>
+            </a>
+            <a href="/admin/sales-report" 
+               class="flex items-center space-x-4 text-gray-300 hover:text-white transition-all duration-300 p-4 rounded-lg hover:bg-gray-800 group">
+                <i class="material-icons text-2xl text-gray-400 group-hover:text-white">assessment</i>
+                <span class="text-base font-medium">Sales Report</span>
+            </a>
+
+            <!-- Mobile Logout Button -->
+            <form action="/admin/logout" method="get" class="mt-12">
+                <button type="submit" 
+                        class="w-full flex items-center justify-center space-x-4 px-8 py-4 bg-red-600 text-white text-lg font-semibold rounded-lg hover:bg-red-700 transition-all duration-300 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-red-500">
+                    <i class="material-icons text-2xl">logout</i>
+                    <span>Logout</span>
+                </button>
+            </form>
+        </nav>
     </div>
-  </div>
-  
-  <!-- Mobile Sidebar Overlay -->
-  <div id="sidebar-overlay" 
-       class="fixed inset-0 bg-black/30 backdrop-blur-sm hidden md:hidden z-30" 
-       aria-hidden="true">
-  </div>
-  
-  <script>
+</div>
+
+<!-- Mobile Sidebar Overlay -->
+<div id="sidebar-overlay" 
+     class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden md:hidden z-30" 
+     aria-hidden="true">
+</div>
+
+<script>
     document.addEventListener("DOMContentLoaded", function () {
-      const sidebarToggle = document.getElementById("sidebar-toggle");
-      const mobileSidebar = document.getElementById("mobile-sidebar");
-      const sidebarOverlay = document.getElementById("sidebar-overlay");
-  
-      function toggleSidebar() {
-        const isExpanded = sidebarToggle.getAttribute("aria-expanded") === "true";
-        sidebarToggle.setAttribute("aria-expanded", !isExpanded);
-        mobileSidebar.classList.toggle("-translate-x-full");
-        mobileSidebar.setAttribute("aria-hidden", isExpanded);
-        sidebarOverlay.classList.toggle("hidden");
-        document.body.classList.toggle("overflow-hidden");
-      }
-  
-      if (sidebarToggle && mobileSidebar && sidebarOverlay) {
-        sidebarToggle.addEventListener("click", toggleSidebar);
-        sidebarOverlay.addEventListener("click", toggleSidebar);
-  
-        // Close sidebar when clicking outside
-        document.addEventListener("click", function (event) {
-          if (!mobileSidebar.contains(event.target) && 
-              !sidebarToggle.contains(event.target) && 
-              !mobileSidebar.classList.contains("-translate-x-full")) {
-            toggleSidebar();
-          }
-        });
-  
-        // Handle escape key
-        document.addEventListener("keydown", function (event) {
-          if (event.key === "Escape" && 
-              !mobileSidebar.classList.contains("-translate-x-full")) {
-            toggleSidebar();
-          }
-        });
-      }
+        const sidebarToggle = document.getElementById("sidebar-toggle");
+        const mobileSidebar = document.getElementById("mobile-sidebar");
+        const sidebarOverlay = document.getElementById("sidebar-overlay");
+
+        function toggleSidebar() {
+            const isExpanded = sidebarToggle.getAttribute("aria-expanded") === "true";
+            sidebarToggle.setAttribute("aria-expanded", !isExpanded);
+            mobileSidebar.classList.toggle("-translate-x-full");
+            mobileSidebar.setAttribute("aria-hidden", isExpanded);
+            sidebarOverlay.classList.toggle("hidden");
+            document.body.classList.toggle("overflow-hidden");
+        }
+
+        if (sidebarToggle && mobileSidebar && sidebarOverlay) {
+            sidebarToggle.addEventListener("click", toggleSidebar);
+            sidebarOverlay.addEventListener("click", toggleSidebar);
+
+            // Close sidebar when clicking outside
+            document.addEventListener("click", function (event) {
+                if (!mobileSidebar.contains(event.target) && 
+                    !sidebarToggle.contains(event.target) && 
+                    !mobileSidebar.classList.contains("-translate-x-full")) {
+                    toggleSidebar();
+                }
+            });
+
+            // Handle escape key
+            document.addEventListener("keydown", function (event) {
+                if (event.key === "Escape" && 
+                    !mobileSidebar.classList.contains("-translate-x-full")) {
+                    toggleSidebar();
+                }
+            });
+        }
     });
-  </script>
+</script>
