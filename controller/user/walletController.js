@@ -82,6 +82,17 @@ const walletController = {
                 throw new Error('Invalid amount');
             }
 
+            // Convert amount to rupees and check limit
+            const amountInRupees = Number(amount) / 100;
+            const MAX_AMOUNT = 100000; // Maximum amount limit of ₹1,00,000
+
+            if (amountInRupees > MAX_AMOUNT) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Amount exceeds the maximum limit of ₹${MAX_AMOUNT.toLocaleString('en-IN')}`
+                });
+            }
+
             const options = {
                 amount: Math.round(Number(amount)), // Ensure amount is a rounded number
                 currency: "INR",
