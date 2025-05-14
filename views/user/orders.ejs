@@ -127,6 +127,14 @@ const createOrderCard = (order) => `
                         Payment: ${order.paymentMethod.toUpperCase()}
                     </span>
                 </div>
+                ${order.paymentMethod === 'online' && order.paymentStatus === 'pending' ? `
+                    <div class="mt-2 flex justify-end">
+                        <button onclick="retryPayment('${order.orderId}')" 
+                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-300 font-serif shadow-lg hover:shadow-xl">
+                            Retry Payment
+                        </button>
+                    </div>
+                ` : ''}
             </div>
             <i class="fas fa-chevron-down text-gray-400 ml-8 mr-4 transform transition-transform duration-300" 
                id="arrow-${order.orderId}"></i>

@@ -119,28 +119,28 @@
                             <div class="space-y-3">
                                 <div class="flex justify-between">
                                     <span>Original Subtotal</span>
-                                    <span>₹<%= originalSubtotal %></span>
+                                    <span>₹<%= Number(originalSubtotal).toFixed(2) %></span>
                                 </div>
                                 <div class="flex justify-between text-green-600">
                                     <span>Offer Discount</span>
-                                    <span>-₹<%= totalOfferDiscount %></span>
+                                    <span>-₹<%= Number(totalOfferDiscount).toFixed(2) %></span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Subtotal After Offer</span>
-                                    <span>₹<%= subtotal %></span>
+                                    <span>₹<%= Number(subtotal).toFixed(2) %></span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span>GST (18% of subtotal)</span>
-                                    <span>₹<%= Math.round(subtotal * 0.18) %></span>
+                                    <span>₹<%= Number(subtotal * 0.18).toFixed(2) %></span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Shipping (2% of subtotal)</span>
-                                    <span>₹<%= shippingCost %></span>
+                                    <span>₹<%= Number(subtotal * 0.02).toFixed(2) %></span>
                                 </div>
                                 <div class="border-t pt-3">
                                     <div class="flex justify-between font-bold">
                                         <span>Total</span>
-                                        <span>₹<%= total %></span>
+                                        <span>₹<%= Number(subtotal + (subtotal * 0.18) + (subtotal * 0.02)).toFixed(2) %></span>
                                     </div>
                                 </div>
                             </div>
@@ -247,4 +247,47 @@ async function removeFromCart(productId, variantType) {
 function proceedToCheckout() {
     window.location.href = '/checkout';
 }
+
+// Update the cart items data to include correct calculations
+const cartItemsData = <%- JSON.stringify(cartItems.map(item => {
+    // Get the original price from the product model
+    const variant = item.productId.variants.find(v => v.type === item.variantType);
+    const originalPrice = Number(variant ? variant.price : 0).toFixed(2);
+    const priceAfterOffer = Number(item.priceAfterOffer).toFixed(2);
+    const offerDiscount = Number((originalPrice - priceAfterOffer)).toFixed(2);
+    
+    // Calculate GST and shipping for this item
+    const itemGstAmount = Number(priceAfterOffer * 0.18).toFixed(2);
+    const itemShippingCost = Number(priceAfterOffer * 0.02).toFixed(2);
+    
+    return {
+        productId: item.productId._id,
+        name: item.productId.name,
+        brand: item.productId.brand,
+        category: item.productId.category ? item.productId.category.name || "Category" : "Category",
+        images: item.productId.images.map(img => ({ path: img.path, filename: img.filename })),
+        quantity: Number(item.quantity),
+        originalPrice: Number(originalPrice),
+        variantType: item.variantType,
+        status: 'pending',
+        priceAfterOffer: Number(priceAfterOffer),
+        offerDiscount: Number(offerDiscount),
+        subtotalforproduct: Number((originalPrice * item.quantity)).toFixed(2),
+        finalPrice: Number(priceAfterOffer),
+        finalAmount: Number((priceAfterOffer * item.quantity)).toFixed(2),
+        gstAmount: Number((itemGstAmount * item.quantity)).toFixed(2),
+        shippingCost: Number((itemShippingCost * item.quantity)).toFixed(2),
+        couponDiscount: 0,
+        couponForProduct: {
+            code: null,
+            discount: 0,
+            type: null
+        },
+        offer: item.offer ? {
+            name: item.offer.name || '',
+            type: item.offer.type || 'product',
+            discount: Number(item.offer.discount || 0).toFixed(2)
+        } : null
+    };
+})) %>;
 </script>

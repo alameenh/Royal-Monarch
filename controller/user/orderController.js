@@ -1514,6 +1514,18 @@ let a = clientOriginalSubtotal;
                             throw new Error('User not found');
                         }
 
+                        // Prepare shipping address data
+                        const shippingAddress = {
+                            name: address.name,
+                            houseName: address.houseName,
+                            localityStreet: address.localityStreet,
+                            city: address.city,
+                            state: address.state,
+                            pincode: address.pincode,
+                            phone: address.phone,
+                            alternatePhone: address.alternatePhone
+                        };
+
                         const options = {
                             amount: Math.round(clientTotalAmount * 100),
                             currency: "INR",
@@ -1521,15 +1533,16 @@ let a = clientOriginalSubtotal;
                             payment_capture: 1,
                             notes: {
                                 userId: userId.toString(),
-                                subtotal: clientSubtotal,
-                                originalSubtotal: clientOriginalSubtotal,
-                                offerDiscount: totalOfferDiscount,
-                                couponDiscount: totalCouponDiscount,
-                                gst: clientGstAmount,
-                                shipping: clientShippingCost,
-                                finalAmount: clientTotalAmount,
-                                addressId: addressId,
+                                subtotal: clientSubtotal.toString(),
+                                originalSubtotal: clientOriginalSubtotal.toString(),
+                                offerDiscount: totalOfferDiscount.toString(),
+                                couponDiscount: totalCouponDiscount.toString(),
+                                gst: clientGstAmount.toString(),
+                                shipping: clientShippingCost.toString(),
+                                finalAmount: clientTotalAmount.toString(),
+                                addressId: addressId.toString(),
                                 items: JSON.stringify(orderItems),
+                                shippingAddress: JSON.stringify(shippingAddress),
                                 coupon: coupon ? JSON.stringify(coupon) : null
                             }
                         };
@@ -1654,7 +1667,16 @@ let a = clientOriginalSubtotal;
                 receipt: order.orderId,
                 notes: {
                     orderId: order.orderId,
-                    userId: userId.toString()
+                    userId: userId.toString(),
+                    items: JSON.stringify(order.items),
+                    originalSubtotal: order.originalSubtotal.toString(),
+                    offerDiscount: order.totalOfferDiscount.toString(),
+                    couponDiscount: order.totalCouponDiscount.toString(),
+                    subtotal: order.subtotal.toString(),
+                    gst: order.gstAmount.toString(),
+                    shipping: order.shippingCost.toString(),
+                    coupon: order.coupon ? JSON.stringify(order.coupon) : null,
+                    shippingAddress: JSON.stringify(order.shippingAddress)
                 }
             };
 
@@ -1665,8 +1687,18 @@ let a = clientOriginalSubtotal;
             }
 
             // Update order with new Razorpay order ID
-            order.paymentDetails.razorpayOrderId = razorpayOrder.id;
+            order.paymentDetails = {
+                razorpayOrderId: razorpayOrder.id,
+                status: 'pending',
+                createdAt: new Date()
+            };
             await order.save();
+
+            // Get user details for prefill
+            const user = await User.findById(userId);
+            if (!user) {
+                throw new Error('User not found');
+            }
 
             res.json({
                 success: true,
@@ -1674,9 +1706,9 @@ let a = clientOriginalSubtotal;
                 amount: Math.round(order.totalAmount * 100),
                 currency: "INR",
                 order_id: razorpayOrder.id,
-                customerName: req.session.user.name,
-                customerEmail: req.session.user.email,
-                customerPhone: req.session.user.phone
+                customerName: `${user.firstname} ${user.lastname || ''}`,
+                customerEmail: user.email,
+                customerPhone: user.phone
             });
 
         } catch (error) {
@@ -1731,15 +1763,81 @@ let a = clientOriginalSubtotal;
                 const razorpayOrder = await razorpay.orders.fetch(razorpay_order_id);
                 
                 // Extract order data from Razorpay notes
-                const notes = razorpayOrder.notes;
-                console.log("notes from razorpay",notes);
-                const userId = new mongoose.Types.ObjectId(notes.userId);
-                const addressId = new mongoose.Types.ObjectId(notes.addressId);
-                const items = JSON.parse(notes.items);
-                const coupon = notes.coupon ? JSON.parse(notes.coupon) : null;
+                const notes = razorpayOrder.notes || {};
+                console.log("notes from razorpay", notes);
 
-                // Check if this is a modal dismissal (no payment_id or signature)
-                const isModalDismissed = !razorpay_payment_id || !razorpay_signature;
+                // Validate required notes data
+                if (!notes.userId || !notes.items || !notes.shippingAddress) {
+                    throw new Error('Missing required order data in Razorpay notes');
+                }
+
+                // Check if this is a retry payment
+                const existingOrder = await Order.findOne({ 
+                    'paymentDetails.razorpayOrderId': razorpay_order_id 
+                });
+
+                if (existingOrder) {
+                    // This is a retry payment
+                    console.log('Processing retry payment for order:', existingOrder.orderId);
+
+                    // Verify the payment signature
+                    const body = razorpay_order_id + "|" + razorpay_payment_id;
+                    const expectedSignature = crypto
+                        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+                        .update(body.toString())
+                        .digest('hex');
+
+                    console.log('Verifying payment signature...');
+                    console.log('Expected signature:', expectedSignature);
+                    console.log('Received signature:', razorpay_signature);
+
+                    if (expectedSignature === razorpay_signature) {
+                        // Update existing order status
+                        await Order.findByIdAndUpdate(
+                            existingOrder._id,
+                            {
+                                paymentStatus: 'paid',
+                                'paymentDetails.status': 'paid',
+                                'paymentDetails.razorpayPaymentId': razorpay_payment_id,
+                                'paymentDetails.razorpaySignature': razorpay_signature,
+                                'paymentDetails.updatedAt': new Date()
+                            },
+                            { session }
+                        );
+
+                        await session.commitTransaction();
+                        console.log('Retry payment verified successfully');
+
+                        return res.json({
+                            success: true,
+                            orderId: existingOrder.orderId,
+                            redirect: `/order/success/${existingOrder.orderId}`
+                        });
+                    } else {
+                        await session.commitTransaction();
+                        console.log('Retry payment verification failed');
+
+                        return res.json({
+                            success: false,
+                            orderId: existingOrder.orderId,
+                            redirect: `/payment/failed/${existingOrder.orderId}`
+                        });
+                    }
+                }
+
+                // If not a retry payment, process as a new payment
+                const userId = new mongoose.Types.ObjectId(notes.userId);
+                
+                // Safely parse JSON data with error handling
+                let items, coupon, shippingAddress;
+                try {
+                    items = JSON.parse(notes.items);
+                    shippingAddress = JSON.parse(notes.shippingAddress);
+                    coupon = notes.coupon ? JSON.parse(notes.coupon) : null;
+                } catch (parseError) {
+                    console.error('Error parsing JSON data:', parseError);
+                    throw new Error('Invalid order data format');
+                }
 
                 // Create the order - always set paymentStatus as pending initially
                 const newOrderId = uuidv4();
@@ -1748,7 +1846,7 @@ let a = clientOriginalSubtotal;
                     userId,
                     items: items.map(item => {
                         // Find the corresponding item from the client data
-                        const clientItem = JSON.parse(notes.items).find(ci => 
+                        const clientItem = items.find(ci => 
                             ci.productId === item.productId.toString() && 
                             ci.variantType === item.variantType
                         );
@@ -1764,31 +1862,31 @@ let a = clientOriginalSubtotal;
                         };
                     }),
                     totalAmount: razorpayOrder.amount / 100,
-                    originalSubtotal: Number(notes.originalSubtotal),
-                    totalOfferDiscount: notes.offerDiscount,
-                    totalCouponDiscount: notes.couponDiscount,
-                    subtotal: notes.subtotal,
-                    gstAmount: notes.gst,
-                    shippingCost: notes.shipping,
+                    originalSubtotal: Number(notes.originalSubtotal || 0),
+                    totalOfferDiscount: Number(notes.offerDiscount || 0),
+                    totalCouponDiscount: Number(notes.couponDiscount || 0),
+                    subtotal: Number(notes.subtotal || 0),
+                    gstAmount: Number(notes.gst || 0),
+                    shippingCost: Number(notes.shipping || 0),
                     paymentMethod: 'online',
                     paymentStatus: 'pending',
-                    shippingAddress: await Address.findById(addressId).select('name houseName localityStreet city state pincode phone alternatePhone'),
+                    shippingAddress: shippingAddress,
                     expectedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
                     coupon: coupon ? {
                         code: coupon.code,
-                        discount: notes.couponDiscount,
+                        discount: Number(notes.couponDiscount || 0),
                         type: coupon.type
                     } : null,
                     paymentDetails: {
                         razorpayOrderId: razorpay_order_id,
                         razorpayPaymentId: razorpay_payment_id || '',
                         razorpaySignature: razorpay_signature || '',
-                        status: isModalDismissed ? 'cancelled' : 'failed',
+                        status: 'pending',
                         createdAt: new Date()
                     }
                 });
 
-                // Save the order
+                // Save the order first
                 await order.save({ session });
                 console.log('verifyPayment Order saved');
 
@@ -1829,32 +1927,28 @@ let a = clientOriginalSubtotal;
                 // Clear the cart
                 await CartItem.deleteMany({ userId }).session(session);
 
-                // Commit the transaction
-                await session.commitTransaction();
-
-                // If this is a modal dismissal, return failed response
-                if (isModalDismissed) {
-                    return res.json({
-                        success: false,
-                        orderId: newOrderId,
-                        redirect: `/payment/failed/${newOrderId}`
-                    });
-                }
-
-                // Verify the payment signature for actual payment attempts
+                // Verify the payment signature
                 const body = razorpay_order_id + "|" + razorpay_payment_id;
                 const expectedSignature = crypto
                     .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
                     .update(body.toString())
                     .digest('hex');
 
-                // Return response based on verification status
                 if (expectedSignature === razorpay_signature) {
                     // Update order status to paid if verification succeeds
-                    await Order.findByIdAndUpdate(order._id, {
+                    await Order.findByIdAndUpdate(
+                        order._id,
+                        {
                         paymentStatus: 'paid',
-                        'paymentDetails.status': 'paid'
-                    });
+                            'paymentDetails.status': 'paid',
+                            'paymentDetails.razorpayPaymentId': razorpay_payment_id,
+                            'paymentDetails.razorpaySignature': razorpay_signature
+                        },
+                        { session }
+                    );
+                    
+                    await session.commitTransaction();
+                    console.log('Payment verified successfully');
                     
                     return res.json({
                         success: true,
@@ -1862,6 +1956,10 @@ let a = clientOriginalSubtotal;
                         redirect: `/order/success/${newOrderId}`
                     });
                 } else {
+                    // Keep the order but mark it as pending payment
+                    await session.commitTransaction();
+                    console.log('Payment verification failed');
+                    
                     return res.json({
                         success: false,
                         orderId: newOrderId,

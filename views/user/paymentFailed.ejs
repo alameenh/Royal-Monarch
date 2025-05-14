@@ -34,9 +34,18 @@
     </div>
 </div>
 
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
+const orderId = '<%= orderId %>';
+
 async function retryPayment() {
     try {
+        // Show loading state
+        const retryButton = document.querySelector('button[onclick="retryPayment()"]');
+        const originalText = retryButton.innerHTML;
+        retryButton.innerHTML = 'Processing...';
+        retryButton.disabled = true;
+
         const response = await fetch(`/order/${orderId}/retry-payment`, {
             method: 'POST',
             headers: {
@@ -79,10 +88,25 @@ async function retryPayment() {
                         });
 
                         const verifyData = await verifyResponse.json();
-                        window.location.href = verifyData.redirect;
+                        
+                        if (verifyData.success) {
+                            window.location.href = verifyData.redirect;
+                        } else {
+                            window.location.href = verifyData.redirect;
+                        }
                     } catch (error) {
                         console.error('Payment verification error:', error);
                         alert('Error verifying payment. Please try again.');
+                        // Reset button state
+                        retryButton.innerHTML = originalText;
+                        retryButton.disabled = false;
+                    }
+                },
+                modal: {
+                    ondismiss: function() {
+                        // Reset button state when modal is dismissed
+                        retryButton.innerHTML = originalText;
+                        retryButton.disabled = false;
                     }
                 }
             };
@@ -90,11 +114,18 @@ async function retryPayment() {
             const rzp = new Razorpay(options);
             rzp.open();
         } else {
-            alert('Failed to initialize payment. Please try again.');
+            alert(data.message || 'Failed to initialize payment. Please try again.');
+            // Reset button state
+            retryButton.innerHTML = originalText;
+            retryButton.disabled = false;
         }
     } catch (error) {
         console.error('Retry payment error:', error);
         alert('Error processing payment. Please try again.');
+        // Reset button state
+        const retryButton = document.querySelector('button[onclick="retryPayment()"]');
+        retryButton.innerHTML = originalText;
+        retryButton.disabled = false;
     }
 }
 </script>
