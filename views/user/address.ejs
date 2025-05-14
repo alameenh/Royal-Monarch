@@ -391,41 +391,49 @@
                     </button>
                 </div>
             </div>
-            <form id="addAddressForm" action="/address/add" method="POST" class="modal-body">
+            <form id="addAddressForm" action="/address/add" method="POST" class="modal-body" novalidate>
                 <div class="space-y-4">
                     <div class="form-group">
                         <label for="name" class="form-label">Full Name</label>
                         <input type="text" id="name" name="name" class="form-input" required>
+                        <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                     </div>
                     <div class="form-group">
                         <label for="houseName" class="form-label">House Name/Number</label>
                         <input type="text" id="houseName" name="houseName" class="form-input" required>
+                        <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                     </div>
                     <div class="form-group">
                         <label for="localityStreet" class="form-label">Street/Locality</label>
                         <input type="text" id="localityStreet" name="localityStreet" class="form-input" required>
+                        <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="form-group">
                             <label for="city" class="form-label">City</label>
                             <input type="text" id="city" name="city" class="form-input" required>
+                            <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                         </div>
                         <div class="form-group">
                             <label for="state" class="form-label">State</label>
                             <input type="text" id="state" name="state" class="form-input" required>
+                            <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="pincode" class="form-label">Pincode</label>
                         <input type="text" id="pincode" name="pincode" class="form-input" required>
+                        <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                     </div>
                     <div class="form-group">
                         <label for="phone" class="form-label">Phone Number</label>
                         <input type="tel" id="phone" name="phone" class="form-input" required>
+                        <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                     </div>
                     <div class="form-group">
                         <label for="alternatePhone" class="form-label">Alternate Phone (Optional)</label>
                         <input type="tel" id="alternatePhone" name="alternatePhone" class="form-input">
+                        <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -454,42 +462,50 @@
                     </button>
                 </div>
             </div>
-            <form id="editAddressForm" action="/address/update" method="POST" class="modal-body">
+            <form id="editAddressForm" action="/address/update" method="POST" class="modal-body" novalidate>
                 <input type="hidden" id="editAddressId" name="addressId">
                 <div class="space-y-4">
                     <div class="form-group">
                         <label for="editName" class="form-label">Full Name</label>
                         <input type="text" id="editName" name="name" class="form-input" required>
+                        <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                     </div>
                     <div class="form-group">
                         <label for="editHouseName" class="form-label">House Name/Number</label>
                         <input type="text" id="editHouseName" name="houseName" class="form-input" required>
+                        <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                     </div>
                     <div class="form-group">
                         <label for="editLocalityStreet" class="form-label">Street/Locality</label>
                         <input type="text" id="editLocalityStreet" name="localityStreet" class="form-input" required>
+                        <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="form-group">
                             <label for="editCity" class="form-label">City</label>
                             <input type="text" id="editCity" name="city" class="form-input" required>
+                            <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                         </div>
                         <div class="form-group">
                             <label for="editState" class="form-label">State</label>
                             <input type="text" id="editState" name="state" class="form-input" required>
+                            <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="editPincode" class="form-label">Pincode</label>
                         <input type="text" id="editPincode" name="pincode" class="form-input" required>
+                        <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                     </div>
                     <div class="form-group">
                         <label for="editPhone" class="form-label">Phone Number</label>
                         <input type="tel" id="editPhone" name="phone" class="form-input" required>
+                        <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                     </div>
                     <div class="form-group">
                         <label for="editAlternatePhone" class="form-label">Alternate Phone (Optional)</label>
                         <input type="tel" id="editAlternatePhone" name="alternatePhone" class="form-input">
+                        <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -585,49 +601,282 @@
     function closeAddModal() {
         hideModal('addAddressModal');
         document.getElementById('addAddressForm').reset();
+        document.querySelectorAll('#addAddressForm .error-message').forEach(el => {
+            el.textContent = '';
+            el.classList.add('hidden');
+        });
+        document.querySelectorAll('#addAddressForm .form-input').forEach(el => {
+            el.classList.remove('border-red-500');
+        });
     }
     
-    // Add form submission handler with validation
+    // Add custom validation functions
+    function validateName(name) {
+        const trimmedName = name.trim();
+        if (!trimmedName) {
+            return 'Name is required';
+        }
+        if (trimmedName.length < 3) {
+            return 'Name must be at least 3 characters long';
+        }
+        if (!/^[a-zA-Z\s]+$/.test(trimmedName)) {
+            return 'Name can only contain letters and spaces';
+        }
+        return '';
+    }
+
+    function validateAddress(address) {
+        const trimmedAddress = address.trim();
+        if (!trimmedAddress) {
+            return 'Address is required';
+        }
+        if (trimmedAddress.length < 5) {
+            return 'Address must be at least 5 characters long';
+        }
+        return '';
+    }
+
+    function validateCityState(value) {
+        const trimmedValue = value.trim();
+        if (!trimmedValue) {
+            return 'This field is required';
+        }
+        if (trimmedValue.length < 2) {
+            return 'Must be at least 2 characters long';
+        }
+        if (!/^[a-zA-Z\s]+$/.test(trimmedValue)) {
+            return 'Can only contain letters and spaces';
+        }
+        return '';
+    }
+
+    function validatePhone(phone) {
+        const trimmedPhone = phone.trim();
+        if (!trimmedPhone) {
+            return 'Phone number is required';
+        }
+        if (!/^\d{10}$/.test(trimmedPhone)) {
+            return 'Phone number must be 10 digits';
+        }
+        return '';
+    }
+
+    function validatePincode(pincode) {
+        const trimmedPincode = pincode.trim();
+        if (!trimmedPincode) {
+            return 'Pincode is required';
+        }
+        if (!/^\d{6}$/.test(trimmedPincode)) {
+            return 'Pincode must be 6 digits';
+        }
+        return '';
+    }
+
+    function validateAlternatePhone(phone) {
+        if (!phone) return ''; // Optional field
+        const trimmedPhone = phone.trim();
+        if (trimmedPhone && !/^\d{10}$/.test(trimmedPhone)) {
+            return 'Alternate phone number must be 10 digits';
+        }
+        return '';
+    }
+
+    function showError(inputElement, message) {
+        const errorDiv = inputElement.nextElementSibling;
+        errorDiv.textContent = message;
+        errorDiv.classList.remove('hidden');
+        inputElement.classList.add('border-red-500');
+    }
+
+    function clearError(inputElement) {
+        const errorDiv = inputElement.nextElementSibling;
+        errorDiv.textContent = '';
+        errorDiv.classList.add('hidden');
+        inputElement.classList.remove('border-red-500');
+    }
+
+    // Add input event listeners for real-time validation
+    function addInputValidation(formId) {
+        const form = document.getElementById(formId);
+        const inputs = form.querySelectorAll('input[required]');
+        
+        inputs.forEach(input => {
+            input.addEventListener('input', function() {
+                let error = '';
+                
+                switch(this.name) {
+                    case 'name':
+                        error = validateName(this.value);
+                        break;
+                    case 'houseName':
+                    case 'localityStreet':
+                        error = validateAddress(this.value);
+                        break;
+                    case 'city':
+                    case 'state':
+                        error = validateCityState(this.value);
+                        break;
+                    case 'phone':
+                        error = validatePhone(this.value);
+                        break;
+                    case 'pincode':
+                        error = validatePincode(this.value);
+                        break;
+                    case 'alternatePhone':
+                        error = validateAlternatePhone(this.value);
+                        break;
+                }
+                
+                if (error) {
+                    showError(this, error);
+                } else {
+                    clearError(this);
+                }
+            });
+        });
+    }
+
+    // Initialize validation for both forms
+    document.addEventListener('DOMContentLoaded', function() {
+        addInputValidation('addAddressForm');
+        addInputValidation('editAddressForm');
+    });
+
+    // Update form submission handlers
     document.getElementById('addAddressForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
+        const name = document.getElementById('name').value;
+        const houseName = document.getElementById('houseName').value;
+        const localityStreet = document.getElementById('localityStreet').value;
+        const city = document.getElementById('city').value;
+        const state = document.getElementById('state').value;
+        const pincode = document.getElementById('pincode').value;
         const phone = document.getElementById('phone').value;
         const alternatePhone = document.getElementById('alternatePhone').value;
-        const pincode = document.getElementById('pincode').value;
         
-        // Validation
-        if (!/^\d{10}$/.test(phone)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid Phone Number',
-                text: 'Phone number must be 10 digits',
-                confirmButtonColor: '#3b82f6'
-            });
-            return;
+        let hasError = false;
+        
+        // Validate all fields
+        const nameError = validateName(name);
+        if (nameError) {
+            showError(document.getElementById('name'), nameError);
+            hasError = true;
         }
         
-        if (alternatePhone && !/^\d{10}$/.test(alternatePhone)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid Alternate Phone',
-                text: 'Alternate phone number must be 10 digits',
-                confirmButtonColor: '#3b82f6'
-            });
-            return;
+        const houseNameError = validateAddress(houseName);
+        if (houseNameError) {
+            showError(document.getElementById('houseName'), houseNameError);
+            hasError = true;
         }
         
-        if (!/^\d{6}$/.test(pincode)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid Pincode',
-                text: 'Pincode must be 6 digits',
-                confirmButtonColor: '#3b82f6'
-            });
-            return;
+        const localityError = validateAddress(localityStreet);
+        if (localityError) {
+            showError(document.getElementById('localityStreet'), localityError);
+            hasError = true;
         }
         
-        // If validation passes, submit the form
-        this.submit();
+        const cityError = validateCityState(city);
+        if (cityError) {
+            showError(document.getElementById('city'), cityError);
+            hasError = true;
+        }
+        
+        const stateError = validateCityState(state);
+        if (stateError) {
+            showError(document.getElementById('state'), stateError);
+            hasError = true;
+        }
+        
+        const pincodeError = validatePincode(pincode);
+        if (pincodeError) {
+            showError(document.getElementById('pincode'), pincodeError);
+            hasError = true;
+        }
+        
+        const phoneError = validatePhone(phone);
+        if (phoneError) {
+            showError(document.getElementById('phone'), phoneError);
+            hasError = true;
+        }
+        
+        const alternatePhoneError = validateAlternatePhone(alternatePhone);
+        if (alternatePhoneError) {
+            showError(document.getElementById('alternatePhone'), alternatePhoneError);
+            hasError = true;
+        }
+        
+        if (!hasError) {
+            this.submit();
+        }
+    });
+
+    document.getElementById('editAddressForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('editName').value.trim();
+        const houseName = document.getElementById('editHouseName').value.trim();
+        const localityStreet = document.getElementById('editLocalityStreet').value.trim();
+        const city = document.getElementById('editCity').value.trim();
+        const state = document.getElementById('editState').value.trim();
+        const pincode = document.getElementById('editPincode').value.trim();
+        const phone = document.getElementById('editPhone').value.trim();
+        const alternatePhone = document.getElementById('editAlternatePhone').value.trim();
+        
+        let hasError = false;
+        
+        // Validate all fields
+        const nameError = validateName(name);
+        if (nameError) {
+            showError(document.getElementById('editName'), nameError);
+            hasError = true;
+        }
+        
+        const houseNameError = validateAddress(houseName);
+        if (houseNameError) {
+            showError(document.getElementById('editHouseName'), houseNameError);
+            hasError = true;
+        }
+        
+        const localityError = validateAddress(localityStreet);
+        if (localityError) {
+            showError(document.getElementById('editLocalityStreet'), localityError);
+            hasError = true;
+        }
+        
+        const cityError = validateCityState(city);
+        if (cityError) {
+            showError(document.getElementById('editCity'), cityError);
+            hasError = true;
+        }
+        
+        const stateError = validateCityState(state);
+        if (stateError) {
+            showError(document.getElementById('editState'), stateError);
+            hasError = true;
+        }
+        
+        const pincodeError = validatePincode(pincode);
+        if (pincodeError) {
+            showError(document.getElementById('editPincode'), pincodeError);
+            hasError = true;
+        }
+        
+        const phoneError = validatePhone(phone);
+        if (phoneError) {
+            showError(document.getElementById('editPhone'), phoneError);
+            hasError = true;
+        }
+        
+        const alternatePhoneError = validateAlternatePhone(alternatePhone);
+        if (alternatePhoneError) {
+            showError(document.getElementById('editAlternatePhone'), alternatePhoneError);
+            hasError = true;
+        }
+        
+        if (!hasError) {
+            this.submit();
+        }
     });
     
     // Edit Address Modal Functions
@@ -650,6 +899,15 @@
                 document.getElementById('editPhone').value = address.phone;
                 document.getElementById('editAlternatePhone').value = address.alternatePhone || '';
                 
+                // Clear any existing errors
+                document.querySelectorAll('#editAddressForm .error-message').forEach(el => {
+                    el.textContent = '';
+                    el.classList.add('hidden');
+                });
+                document.querySelectorAll('#editAddressForm .form-input').forEach(el => {
+                    el.classList.remove('border-red-500');
+                });
+                
                 showModal('editAddressModal');
             })
             .catch(error => {
@@ -666,50 +924,15 @@
     function closeEditModal() {
         hideModal('editAddressModal');
         document.getElementById('editAddressForm').reset();
+        // Clear all error messages and styles
+        document.querySelectorAll('#editAddressForm .error-message').forEach(el => {
+            el.textContent = '';
+            el.classList.add('hidden');
+        });
+        document.querySelectorAll('#editAddressForm .form-input').forEach(el => {
+            el.classList.remove('border-red-500');
+        });
     }
-    
-    // Edit form submission handler with validation
-    document.getElementById('editAddressForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const phone = document.getElementById('editPhone').value;
-        const alternatePhone = document.getElementById('editAlternatePhone').value;
-        const pincode = document.getElementById('editPincode').value;
-        
-        // Validation
-        if (!/^\d{10}$/.test(phone)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid Phone Number',
-                text: 'Phone number must be 10 digits',
-                confirmButtonColor: '#3b82f6'
-            });
-            return;
-        }
-        
-        if (alternatePhone && !/^\d{10}$/.test(alternatePhone)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid Alternate Phone',
-                text: 'Alternate phone number must be 10 digits',
-                confirmButtonColor: '#3b82f6'
-            });
-            return;
-        }
-        
-        if (!/^\d{6}$/.test(pincode)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid Pincode',
-                text: 'Pincode must be 6 digits',
-                confirmButtonColor: '#3b82f6'
-            });
-            return;
-        }
-        
-        // If validation passes, submit the form
-        this.submit();
-    });
     
     // Delete Address Functions
     function deleteAddress(addressId) {

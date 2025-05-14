@@ -28,7 +28,62 @@ const addressController = {
     addAddress: async (req, res) => {
         try {
             const userId = req.session.userId;
-            const { phone, alternatePhone, pincode } = req.body;
+            
+            // Trim all input values
+            const name = req.body.name.trim();
+            const houseName = req.body.houseName.trim();
+            const localityStreet = req.body.localityStreet.trim();
+            const city = req.body.city.trim();
+            const state = req.body.state.trim();
+            const pincode = req.body.pincode.trim();
+            const phone = req.body.phone.trim();
+            const alternatePhone = req.body.alternatePhone ? req.body.alternatePhone.trim() : null;
+            
+            // Check for empty strings after trimming
+            if (!name || !houseName || !localityStreet || !city || !state || !pincode || !phone) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'All required fields must not be empty' 
+                });
+            }
+            
+            // Name validation
+            if (name.length < 3 || !/^[a-zA-Z\s]+$/.test(name)) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Name must be at least 3 characters long and contain only letters and spaces' 
+                });
+            }
+            
+            // Address validation
+            if (houseName.length < 5) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'House name/number must be at least 5 characters long' 
+                });
+            }
+            
+            if (localityStreet.length < 5) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Street/Locality must be at least 5 characters long' 
+                });
+            }
+            
+            // City and State validation
+            if (city.length < 2 || !/^[a-zA-Z\s]+$/.test(city)) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'City must be at least 2 characters long and contain only letters and spaces' 
+                });
+            }
+            
+            if (state.length < 2 || !/^[a-zA-Z\s]+$/.test(state)) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'State must be at least 2 characters long and contain only letters and spaces' 
+                });
+            }
             
             // Phone number validation
             if (!phone.match(/^\d{10}$/)) {
@@ -39,7 +94,7 @@ const addressController = {
             }
             
             // Alternate phone validation (if provided)
-            if (alternatePhone && alternatePhone.trim() !== '' && !alternatePhone.match(/^\d{10}$/)) {
+            if (alternatePhone && !alternatePhone.match(/^\d{10}$/)) {
                 return res.status(400).json({ 
                     success: false, 
                     message: 'Alternate phone number must be 10 digits' 
@@ -65,14 +120,14 @@ const addressController = {
             
             const newAddress = new Address({
                 userId,
-                name: req.body.name,
-                houseName: req.body.houseName,
-                localityStreet: req.body.localityStreet,
-                city: req.body.city,
-                state: req.body.state,
-                pincode: req.body.pincode,
-                phone: req.body.phone,
-                alternatePhone: req.body.alternatePhone || null
+                name,
+                houseName,
+                localityStreet,
+                city,
+                state,
+                pincode,
+                phone,
+                alternatePhone
             });
             
             await newAddress.save();
@@ -121,7 +176,62 @@ const addressController = {
         try {
             const userId = req.session.userId;
             const addressId = req.body.addressId;
-            const { phone, alternatePhone, pincode } = req.body;
+            
+            // Trim all input values
+            const name = req.body.name.trim();
+            const houseName = req.body.houseName.trim();
+            const localityStreet = req.body.localityStreet.trim();
+            const city = req.body.city.trim();
+            const state = req.body.state.trim();
+            const pincode = req.body.pincode.trim();
+            const phone = req.body.phone.trim();
+            const alternatePhone = req.body.alternatePhone ? req.body.alternatePhone.trim() : null;
+            
+            // Check for empty strings after trimming
+            if (!name || !houseName || !localityStreet || !city || !state || !pincode || !phone) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'All required fields must not be empty' 
+                });
+            }
+            
+            // Name validation
+            if (name.length < 3 || !/^[a-zA-Z\s]+$/.test(name)) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Name must be at least 3 characters long and contain only letters and spaces' 
+                });
+            }
+            
+            // Address validation
+            if (houseName.length < 5) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'House name/number must be at least 5 characters long' 
+                });
+            }
+            
+            if (localityStreet.length < 5) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Street/Locality must be at least 5 characters long' 
+                });
+            }
+            
+            // City and State validation
+            if (city.length < 2 || !/^[a-zA-Z\s]+$/.test(city)) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'City must be at least 2 characters long and contain only letters and spaces' 
+                });
+            }
+            
+            if (state.length < 2 || !/^[a-zA-Z\s]+$/.test(state)) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'State must be at least 2 characters long and contain only letters and spaces' 
+                });
+            }
             
             // Phone number validation
             if (!phone.match(/^\d{10}$/)) {
@@ -132,7 +242,7 @@ const addressController = {
             }
             
             // Alternate phone validation (if provided)
-            if (alternatePhone && alternatePhone.trim() !== '' && !alternatePhone.match(/^\d{10}$/)) {
+            if (alternatePhone && !alternatePhone.match(/^\d{10}$/)) {
                 return res.status(400).json({ 
                     success: false, 
                     message: 'Alternate phone number must be 10 digits' 
@@ -156,14 +266,14 @@ const addressController = {
                 });
             }
             
-            address.name = req.body.name;
-            address.houseName = req.body.houseName;
-            address.localityStreet = req.body.localityStreet;
-            address.city = req.body.city;
-            address.state = req.body.state;
-            address.pincode = req.body.pincode;
-            address.phone = req.body.phone;
-            address.alternatePhone = req.body.alternatePhone || null;
+            address.name = name;
+            address.houseName = houseName;
+            address.localityStreet = localityStreet;
+            address.city = city;
+            address.state = state;
+            address.pincode = pincode;
+            address.phone = phone;
+            address.alternatePhone = alternatePhone;
             
             await address.save();
             

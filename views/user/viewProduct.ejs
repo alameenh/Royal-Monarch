@@ -234,51 +234,51 @@
 <style>
 .image-zoom-container {
     position: relative;
+    width: 100%;
+    height: 550px;
     overflow: hidden;
     cursor: zoom-in;
 }
 
 .image-zoom-container img {
-    transition: transform 0.3s ease;
-    transform-origin: center center;
-}
-
-.zoomed {
-    position: relative;
-    transform: scale(2);
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .zoom-lens {
     position: absolute;
-    border: 2px solid #d1d5db;
+    border: 2px solid #8B4513;
     width: 150px;
     height: 150px;
     cursor: none;
-    background-color: rgba(255, 255, 255, 0.4);
+    background-color: rgba(139, 69, 19, 0.1);
     display: none;
     z-index: 10;
+    pointer-events: none;
 }
 
 .zoom-result {
     position: absolute;
-    border: 2px solid #d1d5db;
-    width: 300px;
-    height: 300px;
-    overflow: hidden;
-    display: none;
-    z-index: 20;
-    background-color: white;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    right: -320px;
     top: 0;
+    left: 100%;
+    margin-left: 20px;
+    width: 450px;
+    height: 450px;
+    border: 2px solid #8B4513;
+    background-color: white;
+    display: none;
+    z-index: 10;
+    overflow: hidden;
 }
 
 .zoom-result img {
     position: absolute;
-    max-width: none;
-    max-height: none;
-    width: 1000px;
-    height: 1000px;
+    width: 900px;
+    height: 900px;
+    object-fit: cover;
+    pointer-events: none;
 }
 
 .thumbnail-img {
@@ -422,15 +422,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const zoomLens = document.createElement('div');
         zoomLens.className = 'zoom-lens';
         container.appendChild(zoomLens);
-        
-        // Create zoom result
+
+        // Create zoom result container
         const zoomResult = document.createElement('div');
         zoomResult.className = 'zoom-result';
+        container.appendChild(zoomResult);
+
+        // Create zoomed image
         const zoomedImg = document.createElement('img');
         zoomedImg.src = mainImage.src;
         zoomResult.appendChild(zoomedImg);
-        container.appendChild(zoomResult);
-        
+
         // Handle mouse movement
         container.addEventListener('mousemove', function(e) {
             const rect = container.getBoundingClientRect();
@@ -438,22 +440,27 @@ document.addEventListener('DOMContentLoaded', function() {
             const y = e.clientY - rect.top;
             
             // Calculate lens position
-            const lensX = x - zoomLens.offsetWidth / 2;
-            const lensY = y - zoomLens.offsetHeight / 2;
+            let lensX = x - zoomLens.offsetWidth / 2;
+            let lensY = y - zoomLens.offsetHeight / 2;
             
             // Keep lens within bounds
             const maxX = rect.width - zoomLens.offsetWidth;
             const maxY = rect.height - zoomLens.offsetHeight;
             
-            zoomLens.style.left = Math.min(Math.max(0, lensX), maxX) + 'px';
-            zoomLens.style.top = Math.min(Math.max(0, lensY), maxY) + 'px';
+            lensX = Math.min(Math.max(0, lensX), maxX);
+            lensY = Math.min(Math.max(0, lensY), maxY);
+            
+            // Update lens position
+            zoomLens.style.left = lensX + 'px';
+            zoomLens.style.top = lensY + 'px';
+            
+            // Calculate zoomed image position
+            const zoomRatio = 6; // Increased zoom ratio for better visibility
+            const zoomedX = -(lensX * zoomRatio);
+            const zoomedY = -(lensY * zoomRatio);
             
             // Update zoomed image position
-            const ratioX = zoomedImg.width / rect.width;
-            const ratioY = zoomedImg.height / rect.height;
-            
-            zoomedImg.style.left = -lensX * ratioX + 'px';
-            zoomedImg.style.top = -lensY * ratioY + 'px';
+            zoomedImg.style.transform = `translate(${zoomedX}px, ${zoomedY}px)`;
         });
         
         // Show/hide zoom elements
@@ -465,6 +472,38 @@ document.addEventListener('DOMContentLoaded', function() {
         container.addEventListener('mouseleave', function() {
             zoomLens.style.display = 'none';
             zoomResult.style.display = 'none';
+        });
+
+        // Update zoom image when main image changes
+        function updateZoomImage(src) {
+            mainImage.src = src;
+            zoomedImg.src = src;
+            zoomedImg.style.transform = 'translate(0, 0)';
+        }
+
+        // Add click event to thumbnails
+        const thumbnails = document.querySelectorAll('.thumbnail-img');
+        thumbnails.forEach(thumb => {
+            thumb.addEventListener('click', function() {
+                updateZoomImage(this.src);
+            });
+        });
+
+        // Update zoom on window resize
+        window.addEventListener('resize', function() {
+            if (zoomLens.style.display === 'block') {
+                const rect = container.getBoundingClientRect();
+                const x = parseFloat(zoomLens.style.left);
+                const y = parseFloat(zoomLens.style.top);
+                
+                // Recalculate bounds
+                const maxX = rect.width - zoomLens.offsetWidth;
+                const maxY = rect.height - zoomLens.offsetHeight;
+                
+                // Update lens position if needed
+                zoomLens.style.left = Math.min(Math.max(0, x), maxX) + 'px';
+                zoomLens.style.top = Math.min(Math.max(0, y), maxY) + 'px';
+            }
         });
     }
 });
@@ -481,15 +520,9 @@ function updateMainImage(src) {
             zoomedImg.src = src;
         }
         
-        // Reset zoom state
-        mainImage.classList.remove('zoomed');
-        mainImage.style.transformOrigin = 'center center';
-        
         // Hide zoom elements
         const zoomLens = document.querySelector('.zoom-lens');
-        const zoomResult = document.querySelector('.zoom-result');
         if (zoomLens) zoomLens.style.display = 'none';
-        if (zoomResult) zoomResult.style.display = 'none';
     }
 }
 
@@ -575,6 +608,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
-
-<%- scripts %>
 </script>
+<%- scripts %>

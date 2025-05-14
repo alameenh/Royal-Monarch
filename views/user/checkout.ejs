@@ -248,41 +248,49 @@
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <form id="addAddressForm" onsubmit="handleAddAddress(event)">
+        <form id="addAddressForm" onsubmit="handleAddAddress(event)" novalidate>
             <div class="space-y-3">
                 <div>
                     <label class="checkout-label">Full Name</label>
                     <input type="text" name="name" required class="checkout-input">
+                    <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                 </div>
                 <div>
                     <label class="checkout-label">House Name/Number</label>
                     <input type="text" name="houseName" required class="checkout-input">
+                    <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                 </div>
                 <div>
                     <label class="checkout-label">Street/Locality</label>
                     <input type="text" name="localityStreet" required class="checkout-input">
+                    <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="checkout-label">City</label>
                         <input type="text" name="city" required class="checkout-input">
+                        <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                     </div>
                     <div>
                         <label class="checkout-label">State</label>
                         <input type="text" name="state" required class="checkout-input">
+                        <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                     </div>
                 </div>
                 <div>
                     <label class="checkout-label">Pincode</label>
-                    <input type="text" name="pincode" required pattern="[0-9]{6}" class="checkout-input">
+                    <input type="text" name="pincode" required class="checkout-input">
+                    <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                 </div>
                 <div>
                     <label class="checkout-label">Phone Number</label>
-                    <input type="tel" name="phone" required pattern="[0-9]{10}" class="checkout-input">
+                    <input type="tel" name="phone" required class="checkout-input">
+                    <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                 </div>
                 <div>
                     <label class="checkout-label">Alternate Phone (Optional)</label>
-                    <input type="tel" name="alternatePhone" pattern="[0-9]{10}" class="checkout-input">
+                    <input type="tel" name="alternatePhone" class="checkout-input">
+                    <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
                 </div>
             </div>
             <div class="mt-4 flex justify-end space-x-2">
@@ -932,12 +940,197 @@ function closeAddAddressModal() {
     document.getElementById('addAddressForm').reset();
 }
 
+// Add validation functions
+function validateName(name) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+        return 'Name is required';
+    }
+    if (trimmedName.length < 3) {
+        return 'Name must be at least 3 characters long';
+    }
+    if (!/^[a-zA-Z\s]+$/.test(trimmedName)) {
+        return 'Name can only contain letters and spaces';
+    }
+    return '';
+}
+
+function validateAddress(address) {
+    const trimmedAddress = address.trim();
+    if (!trimmedAddress) {
+        return 'Address is required';
+    }
+    if (trimmedAddress.length < 5) {
+        return 'Address must be at least 5 characters long';
+    }
+    return '';
+}
+
+function validateCityState(value) {
+    const trimmedValue = value.trim();
+    if (!trimmedValue) {
+        return 'This field is required';
+    }
+    if (trimmedValue.length < 2) {
+        return 'Must be at least 2 characters long';
+    }
+    if (!/^[a-zA-Z\s]+$/.test(trimmedValue)) {
+        return 'Can only contain letters and spaces';
+    }
+    return '';
+}
+
+function validatePhone(phone) {
+    const trimmedPhone = phone.trim();
+    if (!trimmedPhone) {
+        return 'Phone number is required';
+    }
+    if (!/^\d{10}$/.test(trimmedPhone)) {
+        return 'Phone number must be 10 digits';
+    }
+    return '';
+}
+
+function validatePincode(pincode) {
+    const trimmedPincode = pincode.trim();
+    if (!trimmedPincode) {
+        return 'Pincode is required';
+    }
+    if (!/^\d{6}$/.test(trimmedPincode)) {
+        return 'Pincode must be 6 digits';
+    }
+    return '';
+}
+
+function validateAlternatePhone(phone) {
+    if (!phone) return ''; // Optional field
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone && !/^\d{10}$/.test(trimmedPhone)) {
+        return 'Alternate phone number must be 10 digits';
+    }
+    return '';
+}
+
+function showError(inputElement, message) {
+    const errorDiv = inputElement.nextElementSibling;
+    errorDiv.textContent = message;
+    errorDiv.classList.remove('hidden');
+    inputElement.classList.add('border-red-500');
+}
+
+function clearError(inputElement) {
+    const errorDiv = inputElement.nextElementSibling;
+    errorDiv.textContent = '';
+    errorDiv.classList.add('hidden');
+    inputElement.classList.remove('border-red-500');
+}
+
+// Add input validation for the add address form
+document.addEventListener('DOMContentLoaded', function() {
+    const addAddressForm = document.getElementById('addAddressForm');
+    if (addAddressForm) {
+        const inputs = addAddressForm.querySelectorAll('input[required]');
+        
+        inputs.forEach(input => {
+            input.addEventListener('input', function() {
+                let error = '';
+                
+                switch(this.name) {
+                    case 'name':
+                        error = validateName(this.value);
+                        break;
+                    case 'houseName':
+                    case 'localityStreet':
+                        error = validateAddress(this.value);
+                        break;
+                    case 'city':
+                    case 'state':
+                        error = validateCityState(this.value);
+                        break;
+                    case 'phone':
+                        error = validatePhone(this.value);
+                        break;
+                    case 'pincode':
+                        error = validatePincode(this.value);
+                        break;
+                    case 'alternatePhone':
+                        error = validateAlternatePhone(this.value);
+                        break;
+                }
+                
+                if (error) {
+                    showError(this, error);
+                } else {
+                    clearError(this);
+                }
+            });
+        });
+    }
+});
+
+// Update the handleAddAddress function to include validation
 async function handleAddAddress(event) {
     event.preventDefault();
     
     try {
-        const formData = new FormData(event.target);
+        const form = event.target;
+        const formData = new FormData(form);
         const addressData = Object.fromEntries(formData.entries());
+        
+        // Validate all fields
+        let hasError = false;
+        
+        const nameError = validateName(addressData.name);
+        if (nameError) {
+            showError(form.querySelector('[name="name"]'), nameError);
+            hasError = true;
+        }
+        
+        const houseNameError = validateAddress(addressData.houseName);
+        if (houseNameError) {
+            showError(form.querySelector('[name="houseName"]'), houseNameError);
+            hasError = true;
+        }
+        
+        const localityError = validateAddress(addressData.localityStreet);
+        if (localityError) {
+            showError(form.querySelector('[name="localityStreet"]'), localityError);
+            hasError = true;
+        }
+        
+        const cityError = validateCityState(addressData.city);
+        if (cityError) {
+            showError(form.querySelector('[name="city"]'), cityError);
+            hasError = true;
+        }
+        
+        const stateError = validateCityState(addressData.state);
+        if (stateError) {
+            showError(form.querySelector('[name="state"]'), stateError);
+            hasError = true;
+        }
+        
+        const pincodeError = validatePincode(addressData.pincode);
+        if (pincodeError) {
+            showError(form.querySelector('[name="pincode"]'), pincodeError);
+            hasError = true;
+        }
+        
+        const phoneError = validatePhone(addressData.phone);
+        if (phoneError) {
+            showError(form.querySelector('[name="phone"]'), phoneError);
+            hasError = true;
+        }
+        
+        const alternatePhoneError = validateAlternatePhone(addressData.alternatePhone);
+        if (alternatePhoneError) {
+            showError(form.querySelector('[name="alternatePhone"]'), alternatePhoneError);
+            hasError = true;
+        }
+        
+        if (hasError) {
+            return;
+        }
         
         const response = await fetch('/address/add', {
             method: 'POST',
@@ -947,15 +1140,12 @@ async function handleAddAddress(event) {
             body: JSON.stringify(addressData)
         });
         
-        // Check if the response is a redirect
         if (response.redirected) {
-            // Close modal and refresh the page
             closeAddAddressModal();
             window.location.reload();
             return;
         }
 
-        // Try to parse JSON response
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
             const data = await response.json();
@@ -966,7 +1156,6 @@ async function handleAddAddress(event) {
                 throw new Error(data.message || 'Failed to add address');
             }
         } else {
-            // If not JSON, assume success and reload
             closeAddAddressModal();
             window.location.reload();
         }
@@ -978,6 +1167,21 @@ async function handleAddAddress(event) {
             text: error.message || 'Failed to add address. Please try again.'
         });
     }
+}
+
+// Update closeAddAddressModal to clear errors
+function closeAddAddressModal() {
+    document.getElementById('addAddressModal').classList.add('hidden');
+    document.getElementById('addAddressModal').classList.remove('flex');
+    document.getElementById('addAddressForm').reset();
+    // Clear all error messages and styles
+    document.querySelectorAll('#addAddressForm .error-message').forEach(el => {
+        el.textContent = '';
+        el.classList.add('hidden');
+    });
+    document.querySelectorAll('#addAddressForm .checkout-input').forEach(el => {
+        el.classList.remove('border-red-500');
+    });
 }
 </script>
 
