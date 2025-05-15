@@ -87,8 +87,46 @@ const getCounts = async (req, res, next) => {
     }
 };
 
+const checkBlockedStatus = async (req, res, next) => {
+    try {
+        // Skip check for public routes and admin routes
+        if (!req.session.userId || req.path.startsWith('/admin')) {
+            return next();
+        }
+
+        const user = await userModel.findById(req.session.userId);
+        if (user && user.status === "Blocked") {
+            // Clear the session
+            req.session.destroy();
+            
+            // Check if it's an API request
+            if (req.path.startsWith('/api/') || req.xhr) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Your account has been blocked. Please contact support.'
+                });
+            }
+            
+            return res.redirect('/?error=account_blocked');
+        }
+        next();
+    } catch (error) {
+        console.error('Blocked Status Check Error:', error);
+        if (req.path.startsWith('/api/') || req.xhr) {
+            return res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
+        res.status(500).render('error', {
+            message: 'Internal server error'
+        });
+    }
+};
+
 export default { 
     isLogin, 
     checkSession,
-    getCounts
+    getCounts,
+    checkBlockedStatus
 }

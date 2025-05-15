@@ -387,14 +387,7 @@
                                    value="${variant?.stock || ''}" 
                                    min="0" required>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Discount (%)</label>
-                            <input type="number" name="variant_discount_${type}" 
-                                   class="w-full p-2 bg-zinc-600 rounded" 
-                                   value="${variant?.discount || ''}" 
-                                   min="0" max="100">
-                        </div>
-                        <div>
+                        <div class="col-span-2">
                             <label class="block text-sm font-medium mb-1">Specifications</label>
                             <input type="text" name="variant_specs_${type}" 
                                    class="w-full p-2 bg-zinc-600 rounded" 

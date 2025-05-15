@@ -29,6 +29,7 @@ router.post('/reset-password', userController.postResetPassword);
 
 // Protected routes (authentication required)
 router.use(userMiddleware.checkSession);
+router.use(userMiddleware.checkBlockedStatus);
 router.use(userMiddleware.getCounts);
 
 // User routes
