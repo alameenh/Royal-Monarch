@@ -406,12 +406,22 @@
             try {
                 const formData = new FormData(event.target);
                 const data = {
-                    name: formData.get('name'),
+                    name: formData.get('name').trim(),
                     type: formData.get('type'),
                     discount: Number(formData.get('discount')),
                     startDate: formData.get('startDate'),
                     endDate: formData.get('endDate')
                 };
+
+                if(!data.name || !data.type || !data.discount || !data.startDate || !data.endDate){
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: 'All fields are required',
+                    })
+
+                    return;
+                }
 
                 if (data.type === 'product') {
                     if (selectedProducts.size === 0) {
