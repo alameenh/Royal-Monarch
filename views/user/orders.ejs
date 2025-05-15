@@ -163,12 +163,21 @@ const createOrderCard = (order) => `
                                     <span class="text-sm px-3 py-1 rounded-full ${getItemStatusClass(item)} item-status font-serif">
                                         ${item.status}
                                     </span>
-                                    ${item.status === 'pending' || item.status === 'processing' ? `
-                                        <button onclick="cancelItem('${order.orderId}', '${item._id}')" 
-                                                class="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-all duration-300 font-serif shadow-md hover:shadow-lg cancel-item-button">
-                                            Cancel Item
-                                        </button>
-                                    ` : ''}
+                                    <div class="flex gap-2">
+                                        ${item.status === 'pending' || item.status === 'processing' ? `
+                                            <button onclick="cancelItem('${order.orderId}', '${item._id}')" 
+                                                    class="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-all duration-300 font-serif shadow-md hover:shadow-lg cancel-item-button">
+                                                Cancel Item
+                                            </button>
+                                        ` : ''}
+                                        ${['delivered', 'return requested', 'returned', 'refunded'].includes(item.status) ? `
+                                            <a href="/order/${order.orderId}/invoice/${item._id}" 
+                                               target="_blank"
+                                               class="px-3 py-1.5 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition-all duration-300 font-serif shadow-md hover:shadow-lg">
+                                                <i class="fas fa-download mr-1"></i> Invoice
+                                            </a>
+                                        ` : ''}
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -199,36 +199,42 @@
                                                                             </span>
 
                                                                             <!-- Status Update Dropdown -->
-                                                                            <select 
-                                                                                onchange="updateOrderStatus('<%= order.orderId %>', '<%= item._id %>', this.value)"
-                                                                                class="bg-zinc-700 text-sm rounded border border-zinc-600 px-2 py-1 
-                                                                                    <%= ['delivered', 'cancelled', 'rejected', 'returned', 'return rejected'].includes(item.status) ? 'opacity-50 cursor-not-allowed' : '' %>"
-                                                                                <%= ['delivered', 'cancelled', 'rejected', 'returned', 'return rejected'].includes(item.status) ? 'disabled' : '' %>
-                                                                            >
-                                                                                <option value="" disabled>Update Status</option>
-                                                                                
-                                                                                <% if (item.status === 'pending') { %>
-                                                                                    <option value="pending" selected>Pending</option>
-                                                                                    <option value="processing">Process Order</option>
-                                                                                    <option value="rejected">Reject Order</option>
-                                                                                <% } else if (item.status === 'processing') { %>
-                                                                                    <option value="processing" selected>Processing</option>
-                                                                                    <option value="shipped">Ship Order</option>
-                                                                                    <option value="rejected">Reject Order</option>
-                                                                                <% } else if (item.status === 'shipped') { %>
-                                                                                    <option value="shipped" selected>Shipped</option>
-                                                                                    <option value="delivered">Mark Delivered</option>
-                                                                                    <option value="rejected">Reject Order</option>
-                                                                                <% } else if (item.status === 'return requested') { %>
-                                                                                    <option value="return requested" selected>Return Requested</option>
-                                                                                    <option value="returned">Accept Return</option>
-                                                                                    <option value="return rejected">Reject Return</option>
-                                                                                <% } else { %>
-                                                                                    <option value="<%= item.status %>" selected>
-                                                                                        <%= item.status.charAt(0).toUpperCase() + item.status.slice(1).replace('_', ' ') %>
-                                                                                    </option>
-                                                                                <% } %>
-                                                                            </select>
+                                                                            <% if (!(order.paymentMethod === 'online' && order.paymentStatus === 'pending')) { %>
+                                                                                <select 
+                                                                                    onchange="updateOrderStatus('<%= order.orderId %>', '<%= item._id %>', this.value)"
+                                                                                    class="bg-zinc-700 text-sm rounded border border-zinc-600 px-2 py-1 
+                                                                                        <%= ['delivered', 'cancelled', 'rejected', 'returned', 'return rejected'].includes(item.status) ? 'opacity-50 cursor-not-allowed' : '' %>"
+                                                                                    <%= ['delivered', 'cancelled', 'rejected', 'returned', 'return rejected'].includes(item.status) ? 'disabled' : '' %>
+                                                                                >
+                                                                                    <option value="" disabled>Update Status</option>
+                                                                                    
+                                                                                    <% if (item.status === 'pending') { %>
+                                                                                        <option value="pending" selected>Pending</option>
+                                                                                        <option value="processing">Process Order</option>
+                                                                                        <option value="rejected">Reject Order</option>
+                                                                                    <% } else if (item.status === 'processing') { %>
+                                                                                        <option value="processing" selected>Processing</option>
+                                                                                        <option value="shipped">Ship Order</option>
+                                                                                        <option value="rejected">Reject Order</option>
+                                                                                    <% } else if (item.status === 'shipped') { %>
+                                                                                        <option value="shipped" selected>Shipped</option>
+                                                                                        <option value="delivered">Mark Delivered</option>
+                                                                                        <option value="rejected">Reject Order</option>
+                                                                                    <% } else if (item.status === 'return requested') { %>
+                                                                                        <option value="return requested" selected>Return Requested</option>
+                                                                                        <option value="returned">Accept Return</option>
+                                                                                        <option value="return rejected">Reject Return</option>
+                                                                                    <% } else { %>
+                                                                                        <option value="<%= item.status %>" selected>
+                                                                                            <%= item.status.charAt(0).toUpperCase() + item.status.slice(1).replace('_', ' ') %>
+                                                                                        </option>
+                                                                                    <% } %>
+                                                                                </select>
+                                                                            <% } else { %>
+                                                                                <div class="text-xs text-yellow-400 mt-2">
+                                                                                    Payment pending - Cannot update status
+                                                                                </div>
+                                                                            <% } %>
 
                                                                             <!-- Status Info Messages -->
                                                                             <% if (item.status === 'shipped') { %>
@@ -387,6 +393,8 @@
                         background: '#18181B',
                         color: '#FFFFFF'
                     });
+                    // Reload the page after successful update
+                    window.location.reload();
                 } else {
                     await Swal.fire({
                         title: 'Error!',
