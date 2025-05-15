@@ -398,7 +398,7 @@ const orderController = {
             const pageWidth = doc.page.width - 100; // Accounting for margins
             
             // Add company logo or name
-            doc.fontSize(22).text('Your E-Commerce Store', { align: 'center' });
+            doc.fontSize(22).text('Royal Monarch', { align: 'center' });
             doc.moveDown(0.5);
             doc.fontSize(16).text('Tax Invoice / Receipt', { align: 'center' });
             doc.moveDown(1.5);
