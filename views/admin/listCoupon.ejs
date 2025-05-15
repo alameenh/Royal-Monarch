@@ -31,7 +31,7 @@
                             <th class="py-3 px-4">Code</th>
                             <th class="py-3 px-4">Description</th>
                             <th class="py-3 px-4">Discount</th>
-                            <th class="py-3 px-4">Usage/Limit</th>
+                            <th class="py-3 px-4">Usage Limit</th>
                             <th class="py-3 px-4">Validity</th>
                             <th class="py-3 px-4">Status</th>
                             <th class="py-3 px-4">Actions</th>
@@ -47,7 +47,7 @@
                                         <%= coupon.discountType === 'PERCENTAGE' ? coupon.discountValue + '%' : '₹' + coupon.discountValue %>
                                     </td>
                                     <td class="py-3 px-4">
-                                        <%= coupon.usageCount %>/<%= coupon.usageLimit %>
+                                        <%= coupon.usageLimit %>
                                     </td>
                                     <td class="py-3 px-4">
                                         <div class="text-sm">
@@ -189,8 +189,8 @@
             try {
                 const form = event.target;
                 const formData = {
-                    code: form.code.value,
-                    description: form.description.value,
+                    code: form.code.value.trim(),
+                    description: form.description.value.trim(),
                     discountType: form.discountType.value,
                     discountValue: Number(form.discountValue.value),
                     minPurchase: Number(form.minPurchase.value),
@@ -199,6 +199,17 @@
                     expiryDate: form.expiryDate.value,
                     usageLimit: Number(form.usageLimit.value)
                 };
+
+                if(!formData.code || !formData.description){
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: 'Coupon code and description are required',
+                        background: '#18181B',
+                        color: '#FFFFFF'
+                    });
+                    return;
+                }
 
                 const couponId = document.getElementById('couponId').value;
                 const url = couponId ? `/admin/coupons/${couponId}` : '/admin/coupons';

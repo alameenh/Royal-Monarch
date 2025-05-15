@@ -97,7 +97,10 @@ const checkBlockedStatus = async (req, res, next) => {
         const user = await userModel.findById(req.session.userId);
         if (user && user.status === "Blocked") {
             // Clear the session
-            req.session.destroy();
+        delete req.session.userId;
+        delete req.session.email;
+        delete req.session.isLoggedIn;
+        delete req.session.user;
             
             // Check if it's an API request
             if (req.path.startsWith('/api/') || req.xhr) {
