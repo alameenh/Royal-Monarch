@@ -3,6 +3,7 @@ import User from '../../model/userModel.js';
 import Order from '../../model/orderModel.js';
 import Product from '../../model/productModel.js';
 import Category from '../../model/categoryModel.js';
+import PDFDocument from 'pdfkit';
 
 config()
 
@@ -365,10 +366,158 @@ const getChartData = async (req, res) => {
     }
 };
 
+const generateInvoice = async (req, res) => {
+    try {
+        const { userId, orderId, itemId } = req.params;
+
+        // Get user details
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).send('User not found');
+        }
+
+        // Get order details
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).send('Order not found');
+        }
+
+        // Create a shortened version of the order ID
+        const shortenedOrderId = orderId.substring(0, 6);
+
+        // Create a PDF document
+        const doc = new PDFDocument({ margin: 50 });
+        
+        // Set response headers for PDF download
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=invoice-${shortenedOrderId}-${itemId}.pdf`);
+        
+        // Pipe the PDF to the response
+        doc.pipe(res);
+        
+        // Define document width for easier alignment
+        const pageWidth = doc.page.width - 100; // Accounting for margins
+        
+        // Add company logo or name
+        doc.fontSize(22).text('Royal Monarch', { align: 'center' });
+        doc.moveDown(0.5);
+        doc.fontSize(16).text('Tax Invoice / Receipt', { align: 'center' });
+        doc.moveDown(1.5);
+        
+        // Add a horizontal line
+        doc.moveTo(50, doc.y)
+           .lineTo(doc.page.width - 50, doc.y)
+           .stroke();
+        doc.moveDown(1);
+        
+        // Order details section with better alignment
+        doc.font('Helvetica-Bold').fontSize(14).text('Order Details', { continued: false });
+        doc.moveDown(0.5);
+        
+        // Create a grid layout for order details
+        const leftColumnX = 50;
+        const rightColumnX = 300;
+        let currentY = doc.y;
+        
+        doc.font('Helvetica').fontSize(10);
+        
+        // Left column of order details
+        doc.text('Invoice Date:', leftColumnX, currentY);
+        doc.text(`${new Date().toLocaleDateString()}`, leftColumnX + 100, currentY);
+        
+        currentY += 20;
+        doc.text('Order ID:', leftColumnX, currentY);
+        doc.text(`${shortenedOrderId}`, leftColumnX + 100, currentY);
+        
+        currentY += 20;
+        doc.text('Order Date:', leftColumnX, currentY);
+        doc.text(`${new Date(order.orderDate).toLocaleDateString()}`, leftColumnX + 100, currentY);
+        
+        // Reset Y position for right column
+        currentY = doc.y - 40;
+        
+        // Right column of order details
+        doc.text('Payment Method:', rightColumnX, currentY);
+        doc.text(`${order.paymentMethod.toUpperCase()}`, rightColumnX + 100, currentY);
+        
+        currentY += 20;
+        doc.text('Payment Status:', rightColumnX, currentY);
+        doc.text(`${order.paymentStatus.toUpperCase()}`, rightColumnX + 100, currentY);
+        
+        // Move to next section - Customer & Shipping Details
+        doc.moveDown(2);
+        
+        // Two column layout for customer and shipping details
+        doc.font('Helvetica-Bold').fontSize(14).text('Customer Details', leftColumnX);
+        doc.moveDown(0.5);
+        
+        const customerY = doc.y;
+        
+        doc.font('Helvetica').fontSize(10);
+        doc.text(`Name: ${user.firstname} ${user.lastname || ''}`, leftColumnX, customerY);
+        doc.text(`Email: ${user.email}`, leftColumnX, customerY + 15);
+        doc.text(`Phone: ${user.phone || 'N/A'}`, leftColumnX, customerY + 30);
+        
+        // Move to next section - Shipping Details
+        doc.moveDown(2);
+        
+        doc.font('Helvetica-Bold').fontSize(14).text('Shipping Details', leftColumnX);
+        doc.moveDown(0.5);
+        
+        doc.font('Helvetica').fontSize(10);
+        doc.text(`Address: ${order.shippingAddress.street}, ${order.shippingAddress.city}, ${order.shippingAddress.state}, ${order.shippingAddress.zip}`, leftColumnX, doc.y);
+        doc.text(`Country: ${order.shippingAddress.country}`, leftColumnX, doc.y + 15);
+        
+        // Move to next section - Item Details
+        doc.moveDown(2);
+        
+        doc.font('Helvetica-Bold').fontSize(14).text('Item Details', leftColumnX);
+        doc.moveDown(0.5);
+        
+        doc.font('Helvetica').fontSize(10);
+        const item = order.items.find(i => i._id.toString() === itemId);
+        if (item) {
+            doc.text(`Name: ${item.product.name}`, leftColumnX, doc.y);
+            doc.text(`Quantity: ${item.quantity}`, leftColumnX, doc.y + 15);
+            doc.text(`Price: $${item.finalAmount.toFixed(2)}`, leftColumnX, doc.y + 30);
+            doc.text(`Total: $${(item.finalAmount * item.quantity).toFixed(2)}`, leftColumnX, doc.y + 45);
+        }
+        
+        // Move to next section - Total Details
+        doc.moveDown(2);
+        
+        doc.font('Helvetica-Bold').fontSize(14).text('Total Details', leftColumnX);
+        doc.moveDown(0.5);
+        
+        doc.font('Helvetica').fontSize(10);
+        doc.text(`Subtotal: $${order.subtotal.toFixed(2)}`, leftColumnX, doc.y);
+        doc.text(`GST: $${order.gstAmount.toFixed(2)}`, leftColumnX, doc.y + 15);
+        doc.text(`Shipping: $${order.shippingCost.toFixed(2)}`, leftColumnX, doc.y + 30);
+        doc.text(`Total: $${order.total.toFixed(2)}`, leftColumnX, doc.y + 45);
+        
+        // Move to next section - Payment Details
+        doc.moveDown(2);
+        
+        doc.font('Helvetica-Bold').fontSize(14).text('Payment Details', leftColumnX);
+        doc.moveDown(0.5);
+        
+        doc.font('Helvetica').fontSize(10);
+        doc.text(`Payment ID: ${order.paymentId}`, leftColumnX, doc.y);
+        doc.text(`Transaction ID: ${order.transactionId}`, leftColumnX, doc.y + 15);
+        
+        // Finalize the PDF
+        doc.end();
+    } catch (error) {
+        console.error('Invoice Generation Error:', error);
+        res.status(500).json({ error: 'Error generating invoice', details: error.message });
+    }
+};
+
 export default { 
     getAdmin, 
     postAdmin, 
     getLogout, 
     getDashboard,
-    getChartData 
+    getChartData,
+    generateInvoice
 };

@@ -382,7 +382,7 @@ const orderController = {
             }
 
             // Create a shortened version of the order ID
-            const shortenedOrderId = orderId.substring(0, 6);
+            const shortenedOrderId = orderId.slice(-6);
 
             // Create a PDF document
             const doc = new PDFDocument({ margin: 50 });
@@ -453,7 +453,10 @@ const orderController = {
             const customerY = doc.y;
             
             doc.font('Helvetica').fontSize(10);
-            doc.text(`Name: ${user.firstName} ${user.lastName || ''}`, leftColumnX, customerY);
+            // Use the correct case for user name fields and add fallback
+            const userName = user.firstname || user.firstName || '';
+            const userLastName = user.lastname || user.lastName || '';
+            doc.text(`Name: ${userName} ${userLastName}`, leftColumnX, customerY);
             doc.text(`Email: ${user.email}`, leftColumnX, customerY + 15);
             doc.text(`Phone: ${user.phone || 'N/A'}`, leftColumnX, customerY + 30);
             
