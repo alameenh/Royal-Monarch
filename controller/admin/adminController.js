@@ -301,6 +301,11 @@ const getChartData = async (req, res) => {
                 }
             },
             {
+                $addFields: {
+                    itemCount: { $size: '$items' }
+                }
+            },
+            {
                 $unwind: '$items'
             },
             {
@@ -312,7 +317,15 @@ const getChartData = async (req, res) => {
                 $group: {
                     _id: { $dateToString: { format: "%Y-%m-%d", date: "$orderDate" } },
                     count: { $sum: '$items.quantity' },
-                    revenue: { $sum: { $multiply: ['$items.finalPrice', '$items.quantity'] } }
+                    revenue: {
+                        $sum: {
+                            $add: [
+                                { $multiply: ['$items.finalAmount', '$items.quantity'] }, // Final amount per item
+                                { $multiply: ['$items.gstAmount', '$items.quantity'] }, // GST per item
+                                { $divide: ['$shippingCost', '$itemCount'] } // Shipping cost per item
+                            ]
+                        }
+                    }
                 }
             },
             {
