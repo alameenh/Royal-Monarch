@@ -47,9 +47,36 @@ connectDb();
 app.use((err, req, res, next) => {
     console.error('Global error handler:', err);
     console.error('Error stack:', err.stack);
-    res.status(500).json({
-        success: false,
-        message: 'An internal server error occurred'
+    
+    // Check if the request expects JSON
+    if (req.xhr || req.headers.accept?.includes('application/json')) {
+        return res.status(500).json({
+            success: false,
+            message: 'An internal server error occurred'
+        });
+    }
+    
+    // For regular requests, render the error page
+    res.status(500).render('error', {
+        message: 'An internal server error occurred',
+        currentPage: ''
+    });
+});
+
+// Add 404 handler for undefined routes
+app.use((req, res) => {
+    // Check if the request expects JSON
+    if (req.xhr || req.headers.accept?.includes('application/json')) {
+        return res.status(404).json({
+            success: false,
+            message: 'Page not found'
+        });
+    }
+    
+    // For regular requests, render the error page
+    res.status(404).render('error', {
+        message: 'Page not found',
+        currentPage: ''
     });
 });
 

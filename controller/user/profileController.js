@@ -103,8 +103,8 @@ export const getProfile = async (req, res) => {
             return res.redirect('/login');
         }
 
-        // Check if user has a password
-        const hasPassword = userData.password && userData.password.trim() !== '';
+        // Check if user has a valid password
+        const hasPassword = userData.password && userData.password.trim() !== '' && userData.password !== null && userData.password !== undefined;
 
         res.render('user/profile', {
             user: userData,

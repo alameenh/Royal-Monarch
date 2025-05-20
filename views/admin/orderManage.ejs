@@ -164,8 +164,9 @@
                                                         <thead>
                                                             <tr>
                                                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-400">Product</th>
-                                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-400">Price</th>
+                                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-400">Unit Price</th>
                                                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-400">Quantity</th>
+                                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-400">Total</th>
                                                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-400">Status</th>
                                                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-400">Action</th>
                                                             </tr>
@@ -179,12 +180,29 @@
                                                                             <div class="ml-3">
                                                                                 <p class="text-sm font-medium text-gray-200"><%= item.name %></p>
                                                                                 <p class="text-xs text-gray-400">Brand: <%= item.brand %></p>
-                                                                                <p class="text-xs text-gray-400">Variant: <%= item.variant %></p>
+                                                                                <p class="text-xs text-gray-400">Variant: <%= item.variantType %></p>
                                                                             </div>
                                                                         </div>
                                                                     </td>
-                                                                    <td class="px-4 py-2 text-sm">₹<%= item.price %></td>
+                                                                    <td class="px-4 py-2">
+                                                                        <div class="text-sm">
+                                                                            <p class="text-gray-200">₹<%= (item.finalAmount / item.quantity).toFixed(2) %></p>
+                                                                            <% if (item.offerDiscount > 0) { %>
+                                                                                <p class="text-xs text-green-400">Offer: -₹<%= (item.offerDiscount / item.quantity).toFixed(2) %></p>
+                                                                            <% } %>
+                                                                            <% if (item.couponDiscount > 0) { %>
+                                                                                <p class="text-xs text-blue-400">Coupon: -₹<%= (item.couponDiscount / item.quantity).toFixed(2) %></p>
+                                                                            <% } %>
+                                                                        </div>
+                                                                    </td>
                                                                     <td class="px-4 py-2 text-sm"><%= item.quantity %></td>
+                                                                    <td class="px-4 py-2">
+                                                                        <div class="text-sm">
+                                                                            <p class="text-gray-200">₹<%= item.finalAmount.toFixed(2) %></p>
+                                                                            <p class="text-xs text-gray-400">GST: ₹<%= item.gstAmount.toFixed(2) %></p>
+                                                                            <p class="text-xs text-gray-400">Total: ₹<%= (Number(item.finalAmount) + Number(item.gstAmount)).toFixed(2) %></p>
+                                                                        </div>
+                                                                    </td>
                                                                     <td class="px-4 py-2">
                                                                         <div class="flex flex-col gap-2">
                                                                             <!-- Status Badge -->

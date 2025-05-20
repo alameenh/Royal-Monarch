@@ -144,8 +144,8 @@ document.getElementById('changePasswordForm').addEventListener('submit', async (
                     title: 'text-lg font-serif'
                 }
             }).then(() => {
-                // Clear form
-                e.target.reset();
+                // Redirect to profile page
+                window.location.href = '/profile';
             });
         } else {
             throw new Error(data.message);
