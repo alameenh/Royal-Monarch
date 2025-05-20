@@ -203,6 +203,12 @@ const getOtpPage = async (req, res) => {
             return res.redirect('/signup');
         }
 
+        // Check if OTP exists
+        if (!user.otp) {
+            req.session.destroy();
+            return res.redirect('/signup');
+        }
+
         // Check if OTP is already expired
         if (new Date() > user.otp.otpExpiresAt) {
             // Clear the expired OTP
