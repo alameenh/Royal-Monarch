@@ -50,6 +50,8 @@
         const timeLeft = otpExpiresAt - now;
         
         if (timeLeft <= 0) {
+            // Clear the interval to prevent repeated alerts
+            clearInterval(timerInterval);
             // Handle OTP expiration
             Swal.fire({
                 icon: 'error',
@@ -96,7 +98,7 @@
     }
 
     // Start initial timers
-    setInterval(updateTimer, 1000);
+    const timerInterval = setInterval(updateTimer, 1000);
     updateTimer();
     startResendTimer();
 
@@ -121,6 +123,7 @@
             }
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'An error occurred during OTP verification';
+            console.log("err msg frm frontend",errorMessage);
             await Swal.fire({
                 icon: 'error',
                 title: 'Oops...',

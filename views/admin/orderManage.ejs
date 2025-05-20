@@ -87,7 +87,7 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-200"><%= order.shippingAddress.name %></div>
-                                        <div class="text-sm text-gray-400"><%= order.userId.email %></div>
+                                        <div class="text-sm text-gray-400"><%= order.userId ? order.userId.email : 'N/A' %></div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-200">
