@@ -124,20 +124,15 @@
             }
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'An error occurred during OTP verification';
-            console.log("err msg frm frontend",errorMessage);
-            await Swal.fire({
-                icon: 'error',
-                title: 'Oops...',
-                text: errorMessage,
-                confirmButtonColor: '#000'
-            }).then(() => {
-                if (errorMessage.includes('Too many attempts')) {
-                    window.location.href = '/signup';
-                } else {
-                    otpInputs.forEach(input => input.value = '');
-                    otpInputs[0].focus();
-                }
-            });
+            if (errorMessage.includes('OTP expired')) {
+                timerElement.textContent = 'OTP expired';
+                enableResend();
+            } else if (errorMessage.includes('Too many attempts')) {
+                window.location.href = '/signup';
+            } else {
+                otpInputs.forEach(input => input.value = '');
+                otpInputs[0].focus();
+            }
         }
     });
 

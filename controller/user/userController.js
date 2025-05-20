@@ -203,6 +203,15 @@ const getOtpPage = async (req, res) => {
             return res.redirect('/signup');
         }
 
+        // Check if OTP is already expired
+        if (new Date() > user.otp.otpExpiresAt) {
+            // Clear the expired OTP
+            user.otp = null;
+            await user.save();
+            req.session.destroy();
+            return res.redirect('/signup');
+        }
+
         res.render('user/otp', { 
             otpExpiresAt: user.otp.otpExpiresAt.toISOString(),
             email: req.session.email
