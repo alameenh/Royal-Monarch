@@ -52,15 +52,8 @@
         if (timeLeft <= 0) {
             // Clear the interval to prevent repeated alerts
             clearInterval(timerInterval);
-            // Handle OTP expiration
-            Swal.fire({
-                icon: 'error',
-                title: 'Oops...',
-                text: 'OTP expired. Please request a new one.',
-                confirmButtonColor: '#000'
-            }).then(() => {
-                enableResend();
-            });
+            timerElement.textContent = 'OTP expired';
+            enableResend();
             return;
         }
         
@@ -86,8 +79,9 @@
                 return;
             }
             
-            const seconds = Math.ceil(timeLeft / 1000);
-            resendTimerElement.textContent = `(${seconds}s)`;
+            const minutes = Math.floor(timeLeft / 60000);
+            const seconds = Math.ceil((timeLeft % 60000) / 1000);
+            resendTimerElement.textContent = `(${minutes}:${seconds < 10 ? '0' : ''}${seconds})`;
         }, 1000);
     }
 
@@ -97,10 +91,17 @@
         resendTimerElement.textContent = '';
     }
 
-    // Start initial timers
-    const timerInterval = setInterval(updateTimer, 1000);
-    updateTimer();
-    startResendTimer();
+    // Check if OTP is already expired on page load
+    const now = new Date();
+    if (otpExpiresAt <= now) {
+        timerElement.textContent = 'OTP expired';
+        enableResend();
+    } else {
+        // Start initial timers only if OTP is not expired
+        const timerInterval = setInterval(updateTimer, 1000);
+        updateTimer();
+        startResendTimer();
+    }
 
     // Handle OTP submission
     document.getElementById('submitOtp').addEventListener('click', async function() {
