@@ -2,6 +2,7 @@ import Wishlist from '../../model/wishlistModel.js';
 import Product from '../../model/productModel.js';
 import User from '../../model/userModel.js';
 import Offer from '../../model/offerModel.js';
+import Cart from '../../model/cartModel.js';
 
 const wishlistController = {
     getWishlist: async (req, res) => {

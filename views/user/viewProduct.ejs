@@ -319,19 +319,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get the variant select element
     const variantSelect = document.getElementById('variantSelect');
     
+    // Store all variants' specifications
+    const variantsSpecs = {};
+    Array.from(variantSelect.options).forEach(option => {
+        const index = option.value;
+        variantsSpecs[index] = JSON.parse(option.getAttribute('data-specs') || '[]');
+    });
+    
     // Function to update product details when variant changes
     function updateVariantDetails() {
         const selectedOption = variantSelect.options[variantSelect.selectedIndex];
+        const selectedIndex = selectedOption.value;
         
         // Get variant data from data attributes
         const price = parseFloat(selectedOption.getAttribute('data-price'));
         const discount = parseFloat(selectedOption.getAttribute('data-discount'));
         const stock = parseInt(selectedOption.getAttribute('data-stock'));
         const inCart = selectedOption.getAttribute('data-in-cart') === 'true';
-        const specs = JSON.parse(selectedOption.getAttribute('data-specs') || '[]');
         
         // Calculate discounted price
-    const discountedPrice = Math.round(price * (1 - discount/100));
+        const discountedPrice = Math.round(price * (1 - discount/100));
 
         // Update price display
         const currentPriceElement = document.getElementById('currentPrice');
@@ -341,29 +348,29 @@ document.addEventListener('DOMContentLoaded', function() {
         currentPriceElement.textContent = '₹' + discountedPrice;
         originalPriceElement.textContent = '₹' + price;
     
-    // Update discount badge
-    if (discount > 0) {
+        // Update discount badge
+        if (discount > 0) {
             discountBadge.textContent = discount + '% OFF';
-        discountBadge.style.display = 'block';
-    } else {
-        discountBadge.style.display = 'none';
-    }
+            discountBadge.style.display = 'block';
+        } else {
+            discountBadge.style.display = 'none';
+        }
     
-    // Update stock status
-    const stockStatus = document.getElementById('stockStatus');
+        // Update stock status
+        const stockStatus = document.getElementById('stockStatus');
         const cartBtn = document.getElementById('cartBtn');
         const buyNowBtn = document.getElementById('buyNowBtn');
         
-    if (stock > 0) {
+        if (stock > 0) {
             stockStatus.innerHTML = '<span class="text-green-600">In Stock (' + stock + ' available)</span>';
-        cartBtn.disabled = false;
-        buyNowBtn.disabled = false;
+            cartBtn.disabled = false;
+            buyNowBtn.disabled = false;
             cartBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
             cartBtn.classList.add(inCart ? 'bg-red-600 hover:bg-red-700' : 'bg-[#8B4513] hover:bg-[#6B3513]');
-    } else {
-        stockStatus.innerHTML = '<span class="text-red-600">Out of Stock</span>';
-        cartBtn.disabled = true;
-        buyNowBtn.disabled = true;
+        } else {
+            stockStatus.innerHTML = '<span class="text-red-600">Out of Stock</span>';
+            cartBtn.disabled = true;
+            buyNowBtn.disabled = true;
             cartBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
             cartBtn.classList.remove('bg-red-600', 'bg-[#8B4513]');
         }
@@ -379,22 +386,23 @@ document.addEventListener('DOMContentLoaded', function() {
             if (inCart) {
                 cartBtn.classList.remove('bg-[#8B4513]', 'hover:bg-[#6B3513]');
                 cartBtn.classList.add('bg-red-600', 'hover:bg-red-700');
-    } else {
+            } else {
                 cartBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
                 cartBtn.classList.add('bg-[#8B4513]', 'hover:bg-[#6B3513]');
             }
-                } else {
+        } else {
             cartBtn.disabled = true;
             cartBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
             cartBtn.classList.remove('bg-[#8B4513]', 'hover:bg-[#6B3513]', 'bg-red-600', 'hover:bg-red-700');
         }
         
-        // Update specifications
+        // Update specifications using stored specs
         const specsList = document.getElementById('specsList');
-        specsList.innerHTML = ''; // Clear existing specs
+        specsList.innerHTML = ''; // Clear existing specifications
         
-        if (specs && specs.length > 0) {
-            specs.forEach(spec => {
+        const currentSpecs = variantsSpecs[selectedIndex];
+        if (currentSpecs && currentSpecs.length > 0) {
+            currentSpecs.forEach(spec => {
                 const li = document.createElement('li');
                 li.className = 'spec-item text-gray-600';
                 li.textContent = spec;
@@ -609,4 +617,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-<%- scripts %>
+

@@ -229,7 +229,26 @@ async function addToCart(productId, variantType) {
                 throw new Error(wishlistData.message);
             }
         } else {
-            throw new Error(cartData.message);
+            // Handle different error scenarios
+            if (cartData.isCartLimit) {
+                await Swal.fire({
+                    icon: 'warning',
+                    title: 'Cart Limit Reached',
+                    html: `You already have ${cartData.currentQuantity} of this item in your cart.<br>The maximum available stock is ${cartData.maxStock}.`,
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#8B4513'
+                });
+            } else if (cartData.isOutOfStock) {
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Out of Stock',
+                    text: cartData.message || 'This item is currently out of stock',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#8B4513'
+                });
+            } else {
+                throw new Error(cartData.message || 'Failed to add item to cart');
+            }
         }
     } catch (error) {
         // Close loading state
@@ -239,7 +258,9 @@ async function addToCart(productId, variantType) {
         await Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: error.message || 'Failed to process request'
+            text: error.message || 'Failed to process request',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#8B4513'
         });
     }
 }

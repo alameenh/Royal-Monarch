@@ -192,6 +192,15 @@ const updateProduct = async (req, res) => {
                     const variantsData = Array.isArray(req.body.variants) ? 
                         req.body.variants[0] : req.body.variants;
                     variants = JSON.parse(variantsData);
+
+                    // Check if any variant has zero stock
+                    const hasZeroStock = variants.some(variant => variant.stock === 0);
+                    if (hasZeroStock) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'Cannot update product with zero stock. Please set a stock value greater than 0.'
+                        });
+                    }
                 }
 
                 // Handle images

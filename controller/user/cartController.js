@@ -34,11 +34,12 @@ const cartController = {
                 });
             }
 
-            // Check stock
+            // Check if product is out of stock
             if (variant.stock <= 0) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Product is out of stock'
+                    message: 'Product is out of stock',
+                    isOutOfStock: true
                 });
             }
 
@@ -49,12 +50,38 @@ const cartController = {
                 variantType
             });
 
+            // Check cart limits and stock availability
             if (cartItem) {
                 // Check if adding one more would exceed stock
                 if (cartItem.quantity >= variant.stock) {
                     return res.status(400).json({
                         success: false,
-                        message: 'Maximum stock limit reached'
+                        message: 'Maximum stock limit reached',
+                        isCartLimit: true,
+                        currentQuantity: cartItem.quantity,
+                        maxStock: variant.stock
+                    });
+                }
+
+                // Check if adding one more would exceed maximum cart limit (4)
+                if (cartItem.quantity >= 4) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Maximum cart limit reached (4 items)',
+                        isCartLimit: true,
+                        currentQuantity: cartItem.quantity,
+                        maxStock: 4
+                    });
+                }
+
+                // Check if adding one more would exceed available stock
+                if (cartItem.quantity + 1 > variant.stock) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Not enough stock available',
+                        isOutOfStock: true,
+                        currentQuantity: cartItem.quantity,
+                        availableStock: variant.stock
                     });
                 }
 
@@ -62,6 +89,15 @@ const cartController = {
                 cartItem.quantity += 1;
                 await cartItem.save();
             } else {
+                // For new items, check if stock is available
+                if (variant.stock < 1) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Product is out of stock',
+                        isOutOfStock: true
+                    });
+                }
+
                 // Create new cart item
                 cartItem = new CartItem({
                     userId,
@@ -85,7 +121,8 @@ const cartController = {
             console.error('Add to Cart Error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Error adding to cart'
+                message: 'Error adding to cart',
+                error: error.message
             });
         }
     },

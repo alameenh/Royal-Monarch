@@ -58,7 +58,7 @@
                                             <div class="text-sm mb-1">
                                                 <span class="font-medium text-gray-300"><%= variant.type %>:</span>
                                                 ₹<%= variant.price %> 
-                                                (Stock: <%= variant.stock %> 
+                                                (Stock: <%= variant.stock  %> 
                                                 <% if (variant.stock === 0) { %>
                                                     <span class="text-red-500 font-bold">*</span>
                                                 <% } %>)
@@ -380,14 +380,14 @@
                             <label class="block text-sm font-medium mb-1">Price</label>
                             <input type="number" name="variant_price_${type}" 
                                    class="w-full p-2 bg-zinc-600 rounded" 
-                                   value="${variant?.price || ''}" 
+                                   value="${variant?.price }" 
                                    min="0" step="0.01" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Stock</label>
                             <input type="number" name="variant_stock_${type}" 
                                    class="w-full p-2 bg-zinc-600 rounded" 
-                                   value="${variant?.stock || ''}" 
+                                   value="${variant?.stock }" 
                                    min="0" required>
                         </div>
                         <div class="col-span-2">
