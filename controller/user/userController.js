@@ -149,12 +149,78 @@ const postSignup = async (req, res) => {
 
         // Check if user already exists
         let existingUser = await userModel.findOne({ email: trimmedEmail });
+        
+        // If user exists and is pending, delete it
         if (existingUser && existingUser.status === 'Pending') {
             await userModel.deleteOne({ email: trimmedEmail });
             existingUser = null;
         }
 
+        // If user exists and is active
         if (existingUser) {
+            // If user has Google ID, update with password
+            if (existingUser.googleId) {
+                const salt = await bcrypt.genSalt(10);
+                const hashedPassword = await bcrypt.hash(password, salt);
+                
+                await userModel.findByIdAndUpdate(existingUser._id, {
+                    password: hashedPassword
+                });
+
+                // Generate OTP for verification
+                const otpValue = Math.floor(100000 + Math.random() * 900000).toString();
+                const twoMinutes = 2 * 60 * 1000;
+                const thirtySeconds = 30 * 1000;
+                const otpExpiryTime = new Date(Date.now() + twoMinutes);
+                const resendTimer = new Date(Date.now() + thirtySeconds);
+
+                await userModel.findByIdAndUpdate(existingUser._id, {
+                    otp: {
+                        otpValue,
+                        otpExpiresAt: otpExpiryTime,
+                        otpAttempts: 0,
+                        resendTimer: resendTimer
+                    }
+                });
+
+                // Send OTP email
+                const transporter = nodemailer.createTransport({
+                    service: 'gmail',
+                    auth: {
+                        user: process.env.EMAIL_USER,
+                        pass: process.env.EMAIL_PASS,
+                    },
+                    tls: {
+                        rejectUnauthorized: false,
+                    },
+                });
+
+                const mailOptions = {
+                    from: process.env.EMAIL_USER,
+                    to: trimmedEmail,
+                    subject: 'Your OTP Code',
+                    text: `Your OTP code is ${otpValue}`,
+                    html: `
+                        <h2>Welcome to Royal Monarch!</h2>
+                        <p>Your OTP code is: <strong>${otpValue}</strong></p>
+                        <p>This OTP will expire in 2 minutes.</p>
+                        <p>If you didn't request this, please ignore this email.</p>
+                    `
+                };
+
+                await transporter.sendMail(mailOptions);
+
+                // Set session data for OTP verification
+                req.session.email = trimmedEmail;
+                req.session.otpExpiresAt = otpExpiryTime;
+
+                return res.json({ 
+                    success: true, 
+                    message: 'Password added to your account! Please verify with OTP.',
+                    redirect: '/otpPage'
+                });
+            }
+
             return res.status(400).json({ 
                 success: false, 
                 message: 'This email is already registered. Please use a different email or try logging in.' 
@@ -623,6 +689,7 @@ const getGoogleCallback = (req, res) => {
                     return res.redirect("/?message=Your account has been blocked&alertType=error");
                 }
 
+                // Update user with Google ID and ensure status is Active
                 await userModel.findByIdAndUpdate(existingUser._id, {
                     $set: { 
                         googleId: profile.id,
@@ -637,25 +704,31 @@ const getGoogleCallback = (req, res) => {
                 return res.redirect("/home");
             }
 
+            // Check if user exists with Google ID
+            const existingGoogleUser = await userModel.findOne({ googleId: profile.id });
+            if (existingGoogleUser) {
+                if (existingGoogleUser.status === 'Blocked') {
+                    return res.redirect("/?message=Your account has been blocked&alertType=error");
+                }
+
+                req.session.userId = existingGoogleUser._id;
+                req.session.email = existingGoogleUser.email;
+                req.session.isLoggedIn = true;
+                
+                return res.redirect("/home");
+            }
+
             // Create new user with required fields
             const newUser = new userModel({
                 firstname,
                 lastname,
-                email,  
-                googleId: profile.id,
-                status: 'Active',
-                password: 'google-auth-' + Date.now() 
-            });
-
-            console.log("Creating new user:", {
-                firstname,
-                lastname,
                 email,
-                googleId: profile.id
+                googleId: profile.id,
+                status: 'Active'
             });
 
             await newUser.save();
-            
+
             req.session.userId = newUser._id;
             req.session.email = newUser.email;
             req.session.isLoggedIn = true;
@@ -663,7 +736,7 @@ const getGoogleCallback = (req, res) => {
             return res.redirect("/home");
 
         } catch (error) {
-            console.error("Google authentication error:", error);
+            console.error('Google Authentication Error:', error);
             return res.redirect("/?message=Authentication failed&alertType=error");
         }
     })(req, res);
