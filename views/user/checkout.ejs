@@ -636,6 +636,24 @@ async function applyCoupon() {
 // Update the placeOrder function
 async function placeOrder() {
     try {
+        // Check if there are any addresses
+        const addresses = document.querySelectorAll('input[name="selectedAddress"]');
+        if (addresses.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Address Found',
+                text: 'Please add a delivery address before placing your order.',
+                confirmButtonText: 'Add Address',
+                showCancelButton: true,
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    openAddAddressModal();
+                }
+            });
+            return;
+        }
+
         // Validate address
         const selectedAddress = document.querySelector('input[name="selectedAddress"]:checked');
         if (!selectedAddress) {

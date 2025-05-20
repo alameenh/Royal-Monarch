@@ -153,18 +153,33 @@ const viewProduct = async (req, res) => {
                 );
                 const inWishlist = wishlistStatus[similarProduct._id.toString()]?.[variant.type] || false;
 
+                // Calculate prices with offer
+                const originalPrice = variant.price;
+                const discount = applicableOffer ? applicableOffer.discount : 0;
+                const discountedPrice = Math.round(originalPrice * (1 - discount/100));
+
                 return {
                     ...variant,
                     inCart,
                     inWishlist,
-                    offerName: applicableOffer ? applicableOffer.name : null,
-                    discount: applicableOffer ? applicableOffer.discount : 0
+                    originalPrice,
+                    discountedPrice,
+                    discount,
+                    offer: applicableOffer ? {
+                        type: applicableOffer.type,
+                        name: applicableOffer.name,
+                        discount: applicableOffer.discount
+                    } : null
                 };
             });
 
             return {
                 ...similarProduct,
-                offer: applicableOffer
+                offer: applicableOffer ? {
+                    type: applicableOffer.type,
+                    name: applicableOffer.name,
+                    discount: applicableOffer.discount
+                } : null
             };
         });
 

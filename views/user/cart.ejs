@@ -53,12 +53,12 @@
                                             </p>
                                             
                                             <div class="flex items-center gap-2">
-                                                <span class="text-lg font-bold">₹<%= item.priceAfterOffer %></span>
+                                                <span class="text-lg font-bold">₹<%= Number(item.priceAfterOffer).toFixed(2) %></span>
                                                 <% if (item.originalPrice !== item.priceAfterOffer) { %>
-                                                    <span class="text-sm text-gray-500 line-through">₹<%= item.originalPrice %></span>
+                                                    <span class="text-sm text-gray-500 line-through">₹<%= Number(item.originalPrice).toFixed(2) %></span>
                                                     <% if (item.offer) { %>
                                                         <span class="text-sm text-red-600">
-                                                            (<%= item.offer.discount %>% OFF - <%= item.offer.name %>)
+                                                            (<%= Number(item.offer.discount).toFixed(2) %>% OFF - <%= item.offer.name %>)
                                                         </span>
                                                     <% } %>
                                                 <% } %>
@@ -90,10 +90,10 @@
                                             <div class="flex flex-col">
                                                 <% if (item.offerDiscountforproduct > 0) { %>
                                                     <p class="text-sm text-green-600">
-                                                        Offer Discount: -₹<%= item.offerDiscountforproduct %>
+                                                        Offer Discount: -₹<%= Number(item.offerDiscountforproduct).toFixed(2) %>
                                                     </p>
                                                 <% } %>
-                                                <p class="font-semibold">Total: ₹<%= item.subtotalAfterOffer %></p>
+                                                <p class="font-semibold">Total: ₹<%= Number(item.subtotalAfterOffer).toFixed(2) %></p>
                                             </div>
                                         </div>
                                     </div>
@@ -331,8 +331,8 @@ const cartItemsData = <%- JSON.stringify(cartItems.map(item => {
     const offerDiscount = Number((originalPrice - priceAfterOffer)).toFixed(2);
     
     // Calculate GST and shipping for this item
-    const itemGstAmount = Number(priceAfterOffer * 0.18).toFixed(2);
-    const itemShippingCost = Number(priceAfterOffer * 0.02).toFixed(2);
+    const itemGstAmount = Number((Math.round(priceAfterOffer * 0.18 * 100) / 100).toFixed(2));
+    const itemShippingCost = Number((Math.round(priceAfterOffer * 0.02 * 100) / 100).toFixed(2));
     
     return {
         productId: item.productId._id,
@@ -346,11 +346,11 @@ const cartItemsData = <%- JSON.stringify(cartItems.map(item => {
         status: 'pending',
         priceAfterOffer: Number(priceAfterOffer),
         offerDiscount: Number(offerDiscount),
-        subtotalforproduct: Number((originalPrice * item.quantity)).toFixed(2),
+        subtotalforproduct: Number((originalPrice * item.quantity).toFixed(2)),
         finalPrice: Number(priceAfterOffer),
-        finalAmount: Number((priceAfterOffer * item.quantity)).toFixed(2),
-        gstAmount: Number((itemGstAmount * item.quantity)).toFixed(2),
-        shippingCost: Number((itemShippingCost * item.quantity)).toFixed(2),
+        finalAmount: Number((priceAfterOffer * item.quantity).toFixed(2)),
+        gstAmount: Number((itemGstAmount * item.quantity).toFixed(2)),
+        shippingCost: Number((itemShippingCost * item.quantity).toFixed(2)),
         couponDiscount: 0,
         couponForProduct: {
             code: null,
@@ -364,4 +364,73 @@ const cartItemsData = <%- JSON.stringify(cartItems.map(item => {
         } : null
     };
 })) %>;
+
+// Function to calculate all amounts
+function calculateAmounts(subtotal, offerDiscount = 0, couponDiscount = 0) {
+    // Original subtotal is the sum of original product prices
+    const originalSubtotal = Number(subtotal.toFixed(2));
+    
+    // Calculate subtotal after offers (this should remain constant)
+    const subtotalAfterOffers = Number((originalSubtotal - offerDiscount).toFixed(2));
+    
+    // Calculate subtotal after coupon by deducting coupon discount from subtotal after offers
+    const subtotalAfterCoupon = Number((subtotalAfterOffers - couponDiscount).toFixed(2));
+
+    // Calculate GST and shipping based on subtotal after coupon
+    const totalGstAmount = Number((Math.round(subtotalAfterCoupon * 18) / 100).toFixed(2)); // 18% GST
+    const totalShippingCost = Number((Math.round(subtotalAfterCoupon * 2) / 100).toFixed(2)); // 2% Shipping
+
+    // Calculate final total
+    const finalTotal = Number((subtotalAfterCoupon + totalGstAmount + totalShippingCost).toFixed(2));
+
+    return {
+        originalSubtotal,
+        subtotalAfterOffers,
+        subtotalAfterCoupon,
+        gstAmount: totalGstAmount,
+        shippingCost: totalShippingCost,
+        finalTotal
+    };
+}
+
+// Function to update displayed amounts
+function updateDisplayedAmounts(amounts) {
+    // Keep subtotal after offer constant
+    const subtotalAfterOfferElement = document.getElementById('subtotalAfterOffer');
+    if (subtotalAfterOfferElement) {
+        subtotalAfterOfferElement.textContent = Number('<%= subtotal %>').toFixed(2);
+    }
+
+    // Update subtotal after coupon by deducting coupon discount from subtotal after offer
+    const subtotalAfterCouponElement = document.getElementById('subtotalAfterCoupon');
+    if (subtotalAfterCouponElement) {
+        const subtotalAfterOffer = Number('<%= subtotal %>');
+        const couponDiscount = Number(document.getElementById('couponDiscountAmount').textContent || '0');
+        const subtotalAfterCoupon = Number((subtotalAfterOffer - couponDiscount).toFixed(2));
+        subtotalAfterCouponElement.textContent = subtotalAfterCoupon.toFixed(2);
+
+        // Calculate GST and shipping based on subtotal after coupon
+        const gstAmount = Number((Math.round(subtotalAfterCoupon * 0.18 * 100) / 100).toFixed(2)); // 18% GST
+        const shippingCost = Number((Math.round(subtotalAfterCoupon * 0.02 * 100) / 100).toFixed(2)); // 2% Shipping
+        const finalTotal = Number((subtotalAfterCoupon + gstAmount + shippingCost).toFixed(2));
+
+        // Update GST amount
+        const gstAmountElement = document.getElementById('gstAmount');
+        if (gstAmountElement) {
+            gstAmountElement.textContent = gstAmount.toFixed(2);
+        }
+
+        // Update shipping cost
+        const shippingCostElement = document.getElementById('shippingCost');
+        if (shippingCostElement) {
+            shippingCostElement.textContent = shippingCost.toFixed(2);
+        }
+
+        // Update final total
+        const finalTotalElement = document.getElementById('finalTotal');
+        if (finalTotalElement) {
+            finalTotalElement.textContent = finalTotal.toFixed(2);
+        }
+    }
+}
 </script>
