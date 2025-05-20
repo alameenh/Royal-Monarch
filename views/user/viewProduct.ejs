@@ -527,6 +527,49 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Initialize similar products cart buttons
+    document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+        const productId = button.getAttribute('data-product-id');
+        const variantSelect = document.querySelector(`.variant-select[data-product-id="${productId}"]`);
+        const option = variantSelect.options[variantSelect.selectedIndex];
+        const inCart = option.getAttribute('data-in-cart') === 'true';
+        
+        button.textContent = inCart ? 'Remove from Cart' : 'Add to Cart';
+        button.setAttribute('data-action', inCart ? 'remove' : 'add');
+    });
+
+    // Add event listeners for variant changes in similar products
+    document.querySelectorAll('.variant-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const productId = this.getAttribute('data-product-id');
+            const option = this.options[this.selectedIndex];
+            const inCart = option.getAttribute('data-in-cart') === 'true';
+            const inWishlist = option.getAttribute('data-in-wishlist') === 'true';
+            
+            // Update cart button
+            const cartBtn = document.querySelector(`.add-to-cart-btn[data-product-id="${productId}"]`);
+            if (cartBtn) {
+                cartBtn.textContent = inCart ? 'Remove from Cart' : 'Add to Cart';
+                cartBtn.setAttribute('data-action', inCart ? 'remove' : 'add');
+            }
+
+            // Update wishlist button
+            const wishlistBtn = document.querySelector(`.wishlist-toggle[data-product-id="${productId}"]`);
+            if (wishlistBtn) {
+                wishlistBtn.setAttribute('data-variant-type', option.value);
+                wishlistBtn.setAttribute('data-in-wishlist', inWishlist.toString());
+                const icon = wishlistBtn.querySelector('i');
+                if (inWishlist) {
+                    icon.classList.remove('far', 'text-gray-400');
+                    icon.classList.add('fas', 'text-red-500');
+                } else {
+                    icon.classList.remove('fas', 'text-red-500');
+                    icon.classList.add('far', 'text-gray-400');
+                }
+            }
+        });
+    });
 });
 
 // Function to update main image
@@ -547,88 +590,110 @@ function updateMainImage(src) {
     }
 }
 
-function handleCart(productId, button) {
-    const cartBtn = button || document.getElementById('cartBtn');
-    const action = cartBtn.getAttribute('data-action');
-    const variantSelect = document.getElementById('variantSelect');
-    const selectedOption = variantSelect.options[variantSelect.selectedIndex];
+async function handleCart(productId, button = null) {
+    let variantSelect;
+    let selectedOption;
+    let variantType;
+    let stock;
+    let cartBtn;
+    let action;
+
+    if (button) {
+        // For similar products
+        cartBtn = button;
+        variantSelect = document.querySelector(`.variant-select[data-product-id="${productId}"]`);
+        selectedOption = variantSelect.options[variantSelect.selectedIndex];
+        variantType = selectedOption.value;
+        stock = parseInt(selectedOption.getAttribute('data-stock'));
+        action = cartBtn.getAttribute('data-action');
+    } else {
+        // For main product
+        cartBtn = document.getElementById('cartBtn');
+        variantSelect = document.getElementById('variantSelect');
+        selectedOption = variantSelect.options[variantSelect.selectedIndex];
+        variantType = selectedOption.getAttribute('data-type');
+        stock = parseInt(selectedOption.getAttribute('data-stock'));
+        action = cartBtn.textContent.trim() === 'Add to Cart' ? 'add' : 'remove';
+    }
     
-    fetch('/cart/add', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            productId: productId,
-            action: action,
-            variantType: selectedOption.getAttribute('data-type')
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
+    if (action === 'add' && stock <= 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Out of Stock',
+            text: 'This variant is currently out of stock'
+        });
+        return;
+    }
+    
+    try {
+        Swal.fire({
+            title: action === 'add' ? 'Adding to Cart...' : 'Removing from Cart...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        const response = await fetch(action === 'add' ? '/cart/add' : '/cart/remove', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                productId,
+                variantType
+            })
+        });
+
+        const data = await response.json();
+
         if (data.success) {
-            // Update cart count in navbar
-            const cartCount = document.getElementById('cartCount');
-            if (cartCount) {
-                cartCount.textContent = data.cartCount;
+            Swal.close();
+
+            if (typeof window.updateCartCount === 'function' && data.cartCount !== undefined) {
+                window.updateCartCount(data.cartCount);
             }
-            
-            // Update button state and colors
-            if (action === 'add') {
-                // Change to Remove from Cart state
-                cartBtn.textContent = 'Remove from Cart';
-                cartBtn.setAttribute('data-action', 'remove');
-                cartBtn.classList.remove('bg-[#8B4513]', 'hover:bg-[#6B3513]');
-                cartBtn.classList.add('bg-red-500', 'hover:bg-red-600');
-                selectedOption.setAttribute('data-in-cart', 'true');
+
+            if (button) {
+                // For similar products
+                if (action === 'add') {
+                    cartBtn.textContent = 'Remove from Cart';
+                    cartBtn.setAttribute('data-action', 'remove');
+                    selectedOption.setAttribute('data-in-cart', 'true');
+                } else {
+                    cartBtn.textContent = 'Add to Cart';
+                    cartBtn.setAttribute('data-action', 'add');
+                    selectedOption.setAttribute('data-in-cart', 'false');
+                }
             } else {
-                // Change to Add to Cart state
-                cartBtn.textContent = 'Add to Cart';
-                cartBtn.setAttribute('data-action', 'add');
-                cartBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
-                cartBtn.classList.add('bg-[#8B4513]', 'hover:bg-[#6B3513]');
-                selectedOption.setAttribute('data-in-cart', 'false');
+                // For main product
+                updateCartButtonState(cartBtn, action === 'add');
+                selectedOption.setAttribute('data-in-cart', (action === 'add').toString());
             }
-            
-            // Show success message
-            Swal.fire({
+
+            await Swal.fire({
                 icon: 'success',
                 title: action === 'add' ? 'Added to Cart!' : 'Removed from Cart!',
+                text: action === 'add' ? 
+                    `${variantType} added to cart successfully` : 
+                    `${variantType} removed from cart successfully`,
                 showConfirmButton: false,
                 timer: 1500
             });
         } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.message || 'Something went wrong!'
-            });
+            throw new Error(data.message);
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Something went wrong!'
-        });
-    });
-}
+    } catch (error) {
+        console.error('Cart operation error:', error);
+        Swal.close();
 
-// Add event listener for cart button
-document.addEventListener('DOMContentLoaded', function() {
-    const cartBtn = document.getElementById('cartBtn');
-    if (cartBtn) {
-        const initialAction = cartBtn.getAttribute('data-action');
-        if (initialAction === 'remove') {
-            cartBtn.classList.remove('bg-[#8B4513]', 'hover:bg-[#6B3513]');
-            cartBtn.classList.add('bg-red-500', 'hover:bg-red-600');
-        } else {
-            cartBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
-            cartBtn.classList.add('bg-[#8B4513]', 'hover:bg-[#6B3513]');
-        }
+        await Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: error.message || `Failed to ${action} from cart`
+        });
     }
-});
+}
 
 async function toggleWishlist(productId, button = null) {
     let variantType;
