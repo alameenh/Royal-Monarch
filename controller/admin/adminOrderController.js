@@ -212,6 +212,15 @@ const updateOrderStatus = async (req, res) => {
         if (status === 'delivered') {
             item.deliveredDate = new Date();
             
+            // For COD orders, update payment status to paid when delivered
+            if (order.paymentMethod === 'cod' && order.paymentStatus === 'pending') {
+                order.paymentStatus = 'paid';
+                order.paymentDetails = {
+                    status: 'paid',
+                    updatedAt: new Date()
+                };
+            }
+            
             // Update product soldcount when status is changed to delivered
             try {
                 const product = await Product.findById(item.productId);

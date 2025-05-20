@@ -505,6 +505,103 @@ const generateInvoice = async (req, res) => {
         doc.text(`Payment ID: ${order.paymentId}`, leftColumnX, doc.y);
         doc.text(`Transaction ID: ${order.transactionId}`, leftColumnX, doc.y + 15);
         
+        // Product details
+        doc.moveDown(2);
+        doc.font('Helvetica-Bold').fontSize(14).text('Product Details');
+        doc.moveDown(0.5);
+        
+        // Table header
+        const colPositions = {
+            item: 50,
+            variant: 250,
+            qty: 350,
+            price: 410,
+            total: 470
+        };
+        
+        doc.font('Helvetica-Bold').fontSize(10);
+        doc.text('Item', colPositions.item);
+        doc.text('Variant', colPositions.variant, doc.y - 12);
+        doc.text('Qty', colPositions.qty, doc.y - 12);
+        doc.text('Price', colPositions.price, doc.y - 12);
+        doc.text('Total', colPositions.total, doc.y - 12);
+        
+        doc.moveDown(0.5);
+        
+        // Horizontal line
+        doc.moveTo(50, doc.y)
+           .lineTo(doc.page.width - 50, doc.y)
+           .stroke();
+        doc.moveDown(0.5);
+        
+        // Item details
+        doc.font('Helvetica').fontSize(10);
+        
+        // Calculate prices exactly as in cancelOrderItem
+        const finalAmount = Number(item.finalAmount);
+        const gstAmount = Number(item.gstAmount);
+        const itemTotal = finalAmount + gstAmount;
+        
+        // Calculate proportional shipping cost
+        const itemCount = order.items.length;
+        const itemShippingCost = Number((order.shippingCost / itemCount).toFixed(2));
+        
+        // Item row
+        doc.text(item.name, colPositions.item);
+        doc.text(item.variantType || 'Standard', colPositions.variant, doc.y - 12);
+        doc.text(item.quantity.toString(), colPositions.qty, doc.y - 12);
+        doc.text(`₹${(finalAmount / item.quantity).toFixed(2)}`, colPositions.price, doc.y - 12);
+        doc.text(`₹${finalAmount.toFixed(2)}`, colPositions.total, doc.y - 12);
+        
+        // Price breakdown
+        doc.moveDown(0.5);
+        doc.font('Helvetica').fontSize(9);
+        doc.text('Price Breakdown:', colPositions.item);
+        doc.moveDown(0.3);
+        doc.text(`Final Amount (${item.quantity} items): ₹${finalAmount.toFixed(2)}`, colPositions.item + 20);
+        doc.text(`GST: ₹${gstAmount.toFixed(2)}`, colPositions.item + 20, doc.y + 2);
+        doc.text(`Item Total: ₹${itemTotal.toFixed(2)}`, colPositions.item + 20, doc.y + 2);
+        
+        doc.moveDown(2);
+        
+        // Total section with proper alignment
+        doc.moveTo(50, doc.y)
+           .lineTo(doc.page.width - 50, doc.y)
+           .stroke();
+        doc.moveDown(1);
+        
+        // Set up explicit positions for better alignment
+        const totalLabelX = doc.page.width - 300; // Label column
+        const totalValueX = doc.page.width - 150;  // Value column
+        
+        // Ensure proper alignment of totals
+        doc.font('Helvetica-Bold').fontSize(10);
+        
+        const subtotalY = doc.y;
+        doc.text('Final Amount:', totalLabelX, subtotalY, { align: 'left' });
+        doc.text(`₹${finalAmount.toFixed(2)}`, totalValueX, subtotalY, { align: 'right' });
+        
+        const gstY = subtotalY + 20;
+        doc.text('GST:', totalLabelX, gstY, { align: 'left' });
+        doc.text(`₹${gstAmount.toFixed(2)}`, totalValueX, gstY, { align: 'right' });
+        
+        const shippingY = gstY + 20;
+        doc.text('Shipping (Non-refundable):', totalLabelX, shippingY, { align: 'left' });
+        doc.text(`₹${itemShippingCost.toFixed(2)}`, totalValueX, shippingY, { align: 'right' });
+        
+        // Add a note about shipping cost
+        doc.font('Helvetica').fontSize(8);
+        doc.text('Note: Shipping cost is non-refundable and will not be included in returns or cancellations.', 50, shippingY + 15);
+        
+        // Total with background highlight
+        const grandTotalY = shippingY + 35;
+        doc.rect(totalLabelX - 10, grandTotalY - 5, 180, 25).fill('#f0f0f0');
+        doc.fill('black');
+        
+        doc.fontSize(12).font('Helvetica-Bold');
+        doc.text('Grand Total:', totalLabelX, grandTotalY, { align: 'left' });
+        doc.text(`₹${(itemTotal + itemShippingCost).toFixed(2)}`, totalValueX, grandTotalY, { align: 'right' });
+        
         // Finalize the PDF
         doc.end();
     } catch (error) {

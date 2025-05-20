@@ -499,80 +499,30 @@ const orderController = {
             // Item details
             doc.font('Helvetica').fontSize(10);
             
-            // Calculate prices - handle both new and old model structures
-            let originalPrice, discountedPrice, totalPrice;
-            let hasOffer = false;  // Track if there's an offer applied
+            // Calculate prices exactly as in cancelOrderItem
+            const finalAmount = Number(item.finalAmount);
+            const gstAmount = Number(item.gstAmount);
+            const itemTotal = finalAmount + gstAmount;
             
-            if (item.originalPrice !== undefined) {
-                // New model structure
-                originalPrice = parseFloat(item.originalPrice) || 0;         
-                
-                if (item.finalPrice !== undefined) {
-                    discountedPrice = parseFloat(item.finalPrice) || originalPrice;
-                    totalPrice = parseFloat(item.finalAmount) || (discountedPrice * item.quantity);
-                    hasOffer = item.offerDiscount > 0 || item.couponDiscount > 0;
-                } else if (item.priceAfterOffer !== undefined) {
-                    discountedPrice = parseFloat(item.priceAfterOffer) || originalPrice;
-                    totalPrice = discountedPrice * item.quantity;
-                    hasOffer = originalPrice !== discountedPrice || (item.offer && item.offer.discount > 0);
-                } else {
-                    discountedPrice = originalPrice;
-                    totalPrice = originalPrice * item.quantity;
-                }
-            } else {
-                // Old model structure
-                originalPrice = parseFloat(item.price) || 0;
-                const discount = parseFloat(item.discount) || 0;
-                const discountAmount = originalPrice * (discount / 100);
-                discountedPrice = originalPrice - discountAmount;
-                totalPrice = discountedPrice * item.quantity;
-                hasOffer = discount > 0;
-            }
+            // Calculate proportional shipping cost
+            const itemCount = order.items.length;
+            const itemShippingCost = Number((order.shippingCost / itemCount).toFixed(2));
             
+            // Item row
             doc.text(item.name, colPositions.item);
             doc.text(item.variantType || 'Standard', colPositions.variant, doc.y - 12);
             doc.text(item.quantity.toString(), colPositions.qty, doc.y - 12);
-            doc.text(`₹${discountedPrice.toFixed(2)}`, colPositions.price, doc.y - 12);
-            doc.text(`₹${totalPrice.toFixed(2)}`, colPositions.total, doc.y - 12);
+            doc.text(`₹${(finalAmount / item.quantity).toFixed(2)}`, colPositions.price, doc.y - 12);
+            doc.text(`₹${finalAmount.toFixed(2)}`, colPositions.total, doc.y - 12);
             
-            // Determine if there's a discount to show, using a more reliable approach
-            // Use a small epsilon value (0.01) to account for floating-point comparison issues
-            const EPSILON = 0.01;
-            const priceDifference = Math.abs(originalPrice - discountedPrice);
-            const hasDiscount = hasOffer || 
-                                priceDifference > EPSILON || 
-                                (item.discount !== undefined && item.discount > 0) ||
-                                (item.offerDiscount !== undefined && item.offerDiscount > 0) ||
-                                (item.couponDiscount !== undefined && item.couponDiscount > 0);
-            
-            if (hasDiscount) {
-                doc.moveDown(0.5);
-                doc.text(`Original Price: ₹${originalPrice.toFixed(2)}`, colPositions.item);
-                
-                // Show the right discount message based on available fields
-                let discountText = '';
-                if (item.offer && item.offer.discount) {
-                    discountText = `${item.offer.discount}% off (₹${(originalPrice * item.offer.discount / 100).toFixed(2)})`;
-                } else if (item.discount !== undefined && item.discount > 0) {
-                    discountText = `${item.discount}% off (₹${(originalPrice * item.discount / 100).toFixed(2)})`;
-                } else if (item.offerDiscount !== undefined && item.offerDiscount > 0) {
-                    discountText = `Discount: ₹${item.offerDiscount.toFixed(2)}`;
-                } else {
-                    const discountAmount = originalPrice - discountedPrice;
-                    discountText = `Discount: ₹${discountAmount.toFixed(2)}`;
-                }
-                
-                doc.text(discountText, colPositions.variant, doc.y - 12);
-            }
-            
-            // If there's a coupon discount, show it - ensure it's actually greater than zero
-            if (item.couponDiscount !== undefined && parseFloat(item.couponDiscount) > 0) {
-                doc.moveDown(0.5);
-                doc.text(`Coupon Discount: ₹${parseFloat(item.couponDiscount).toFixed(2)}`, colPositions.item);
-                if (item.couponForProduct && item.couponForProduct.code) {
-                    doc.text(`Coupon: ${item.couponForProduct.code}`, colPositions.variant, doc.y - 12);
-                }
-            }
+            // Price breakdown
+            doc.moveDown(0.5);
+            doc.font('Helvetica').fontSize(9);
+            doc.text('Price Breakdown:', colPositions.item);
+            doc.moveDown(0.3);
+            doc.text(`Final Amount (${item.quantity} items): ₹${finalAmount.toFixed(2)}`, colPositions.item + 20);
+            doc.text(`GST: ₹${gstAmount.toFixed(2)}`, colPositions.item + 20, doc.y + 2);
+            doc.text(`Item Total: ₹${itemTotal.toFixed(2)}`, colPositions.item + 20, doc.y + 2);
             
             doc.moveDown(2);
             
@@ -590,22 +540,29 @@ const orderController = {
             doc.font('Helvetica-Bold').fontSize(10);
             
             const subtotalY = doc.y;
-            doc.text('Subtotal:', totalLabelX, subtotalY, { align: 'left' });
-            doc.text(`₹${totalPrice.toFixed(2)}`, totalValueX, subtotalY, { align: 'right' });
+            doc.text('Final Amount:', totalLabelX, subtotalY, { align: 'left' });
+            doc.text(`₹${finalAmount.toFixed(2)}`, totalValueX, subtotalY, { align: 'right' });
             
-            const shippingY = subtotalY + 20;
-            doc.text('Shipping:', totalLabelX, shippingY, { align: 'left' });
-            const shipping = 40; // Fixed value for simplicity
-            doc.text(`₹${shipping.toFixed(2)}`, totalValueX, shippingY, { align: 'right' });
+            const gstY = subtotalY + 20;
+            doc.text('GST:', totalLabelX, gstY, { align: 'left' });
+            doc.text(`₹${gstAmount.toFixed(2)}`, totalValueX, gstY, { align: 'right' });
+            
+            const shippingY = gstY + 20;
+            doc.text('Shipping (Non-refundable):', totalLabelX, shippingY, { align: 'left' });
+            doc.text(`₹${itemShippingCost.toFixed(2)}`, totalValueX, shippingY, { align: 'right' });
+            
+            // Add a note about shipping cost
+            doc.font('Helvetica').fontSize(8);
+            doc.text('Note: Shipping cost is non-refundable and will not be included in returns or cancellations.', 50, shippingY + 15);
             
             // Total with background highlight
-            const grandTotalY = shippingY + 25;
+            const grandTotalY = shippingY + 35;
             doc.rect(totalLabelX - 10, grandTotalY - 5, 180, 25).fill('#f0f0f0');
             doc.fill('black');
             
-            doc.fontSize(12);
+            doc.fontSize(12).font('Helvetica-Bold');
             doc.text('Grand Total:', totalLabelX, grandTotalY, { align: 'left' });
-            doc.text(`₹${(totalPrice + shipping).toFixed(2)}`, totalValueX, grandTotalY, { align: 'right' });
+            doc.text(`₹${(itemTotal + itemShippingCost).toFixed(2)}`, totalValueX, grandTotalY, { align: 'right' });
             
             // Continue with the rest of the invoice
             doc.y = grandTotalY + 25;
