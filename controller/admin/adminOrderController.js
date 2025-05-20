@@ -105,81 +105,19 @@ const updateOrderStatus = async (req, res) => {
         }
 
         // Handle refunds for online payments
-        if ((status === 'order rejected' || status === 'cancelled') && 
+        if ((status === 'rejected' || status === 'cancelled') && 
             order.paymentMethod === 'online' && 
             order.paymentStatus === 'paid') {
             
-            // Calculate refund amount using the new field structure
-            // Use the final amount which already includes all discounts
-            let refundAmount = 0;
+            // Calculate refund amount using the same logic as cancelOrder
+            const itemRefundAmount = Number(item.finalAmount) + Number(item.gstAmount);
+            const refundDetails = {
+                finalAmount: Number(item.finalAmount),
+                gstAmount: Number(item.gstAmount),
+                shippingCost: 0
+            };
             
-            // Calculate base refund - use finalAmount if available, otherwise calculate from price
-            if (item.finalAmount && !isNaN(item.finalAmount)) {
-                // Modern order item structure with finalAmount field
-                refundAmount = parseFloat(item.finalAmount);
-                
-                // Add GST if available
-                // if (item.gstAmount && !isNaN(item.gstAmount)) {
-                //     refundAmount += parseFloat(item.gstAmount);
-                // }
-                
-                // // Add shipping if available
-                // if (item.shippingCost && !isNaN(item.shippingCost)) {
-                //     refundAmount += parseFloat(item.shippingCost);
-                // }
-            } else {
-                // Fallback to old calculation method
-                // Calculate base refund amount from price and discount
-                const itemPrice = parseFloat(item.price) || 0;
-                const itemDiscount = parseFloat(item.discount) || 0;
-                const itemQuantity = parseInt(item.quantity) || 1;
-                
-                const discountAmount = (itemPrice * itemDiscount) / 100;
-                const priceAfterDiscount = itemPrice - discountAmount;
-                const itemBasePrice = priceAfterDiscount * itemQuantity;
-                
-                refundAmount = itemBasePrice;
-
-                // If order has coupon, calculate proportional coupon discount
-                if (order.coupon && order.coupon.discount > 0) {
-                    // Calculate total order value before coupon
-                    let orderTotalBeforeCoupon = 0;
-                    
-                    for (const orderItem of order.items) {
-                        const orderItemPrice = parseFloat(orderItem.price) || 0;
-                        const orderItemDiscount = parseFloat(orderItem.discount) || 0;
-                        const orderItemQuantity = parseInt(orderItem.quantity) || 1;
-                        
-                        const orderItemDiscountAmount = (orderItemPrice * orderItemDiscount) / 100;
-                        const orderItemPriceAfterDiscount = orderItemPrice - orderItemDiscountAmount;
-                        
-                        orderTotalBeforeCoupon += orderItemPriceAfterDiscount * orderItemQuantity;
-                    }
-                    
-                    if (orderTotalBeforeCoupon > 0) {
-                        const itemProportion = itemBasePrice / orderTotalBeforeCoupon;
-                        const couponDiscount = parseFloat(order.coupon.discount) || 0;
-                        const itemCouponDiscount = couponDiscount * itemProportion;
-                        
-                        refundAmount += itemCouponDiscount;
-                    }
-                }
-                
-                // Add proportional GST and shipping
-                const orderSubtotal = parseFloat(order.subtotal) || 0;
-                if (orderSubtotal > 0) {
-                    const itemProportion = itemBasePrice / orderSubtotal;
-                    const gstAmount = parseFloat(order.gstAmount) || 0;
-                    const shippingCost = parseFloat(order.shippingCost) || 0;
-                    
-                    refundAmount += itemProportion;
-                }
-            }
-            
-            // Ensure refund amount is a valid number and greater than zero
-            refundAmount = Math.max(parseFloat(refundAmount) || 0, 0);
-            
-            console.log(`Processing refund for item ${item.name}, amount: ${refundAmount}`);
+            console.log(`Processing refund for item ${item.name}, amount: ${itemRefundAmount}`);
 
             // Find or create user's wallet
             let wallet = await Wallet.findOne({ userId: order.userId });
@@ -191,16 +129,14 @@ const updateOrderStatus = async (req, res) => {
                 });
             }
 
-            // Ensure wallet balance is a valid number
-            wallet.balance = parseFloat(wallet.balance) || 0;
-            
             // Add refund to wallet
-            wallet.balance += refundAmount;
+            wallet.balance += itemRefundAmount;
             wallet.transactions.push({
                 transactionId: uuidv4(),
                 type: 'CREDIT',
-                amount: refundAmount,
-                description: `Refund for cancelled order ${order.orderId} (${item.name})`,
+                amount: itemRefundAmount,
+                description: `Refund for ${status === 'rejected' ? 'rejected' : 'cancelled'} order ${order.orderId} (${item.name})`,
+                refundDetails: refundDetails,
                 date: new Date()
             });
 

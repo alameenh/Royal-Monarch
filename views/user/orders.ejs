@@ -170,6 +170,12 @@ const createOrderCard = (order) => `
                                                 Cancel Item
                                             </button>
                                         ` : ''}
+                                        ${item.status === 'delivered' ? `
+                                            <button onclick="requestReturn('${order.orderId}', '${item._id}')" 
+                                                    class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-all duration-300 font-serif shadow-md hover:shadow-lg return-item-button">
+                                                Return Item
+                                            </button>
+                                        ` : ''}
                                         ${['delivered', 'return requested', 'returned', 'refunded'].includes(item.status) ? `
                                             <a href="/order/${order.orderId}/invoice/${item._id}" 
                                                target="_blank"
