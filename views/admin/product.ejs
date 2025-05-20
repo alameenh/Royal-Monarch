@@ -187,6 +187,9 @@
                 <button onclick="rotateCropper(90)" class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">
                     <i class="material-icons">rotate_right</i>
                 </button>
+                <button onclick="closeCropperModal()" class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">
+                    <i class="material-icons">close</i>
+                </button>
                 <button onclick="saveCroppedImage()" class="px-4 py-2 bg-emerald-600 rounded hover:bg-emerald-500">
                     Save
                 </button>
@@ -430,8 +433,8 @@
                 }
 
                 // Image validation
-                if (!productImages.some(img => img !== null)) {
-                    throw new Error('At least one product image is required');
+                if (!productImages.every(img => img !== null)) {
+                    throw new Error('Every product image is required');
                 }
 
                 // Add form data
@@ -440,7 +443,7 @@
                 formData.append('description', description);
                 formData.append('color', color);
                 formData.append('category', category);
-                formData.append('discount', form.querySelector('[name="discount"]')?.value || '0');
+                // formData.append('discount', form.querySelector('[name="discount"]')?.value || '0');
 
                 // Add images
                 productImages.forEach((image, index) => {
@@ -455,7 +458,6 @@
                     type,
                     price: parseFloat(form.querySelector(`[name="variant_price_${type}"]`).value),
                     stock: parseInt(form.querySelector(`[name="variant_stock_${type}"]`).value),
-                    discount: parseInt(form.querySelector(`[name="variant_discount_${type}"]`).value || '0'),
                     specifications: form.querySelector(`[name="variant_specs_${type}"]`).value
                         ? form.querySelector(`[name="variant_specs_${type}"]`).value
                             .split(',')
@@ -469,6 +471,13 @@
                     if (!variant.price || !variant.stock) {
                         throw new Error(`Please fill in all required fields for ${variant.type} variant`);
                     }
+                    if(variant.specifications.length === 0){
+                        throw new Error("Please add specifications for all variants")
+                    }
+                    if(!variant.specifications.every(spec => spec.trim().length >= 10)){
+                        throw new Error("Specification must be atleast 10 characters long")
+                    }
+                    
                 });
 
                 formData.append('variants', JSON.stringify(variants));
@@ -536,6 +545,14 @@
         // Utility functions
         function closeModal() {
             document.getElementById('productModal').classList.add('hidden');
+            document.getElementById('cropperModal').classList.add('hidden');
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+        }
+
+        function closeCropperModal() {
             document.getElementById('cropperModal').classList.add('hidden');
             if (cropper) {
                 cropper.destroy();
