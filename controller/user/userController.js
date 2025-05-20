@@ -615,7 +615,7 @@ const getGoogleCallback = (req, res) => {
             // Split the display name into first and last name
             const names = profile.displayName.split(' ');
             const firstname = names[0];
-            const lastname = names.slice(1).join(' ') || ''; // Provide fallback
+            const lastname = names.slice(1).join(' ') || '   '; // Provide fallback
 
             // If user exists, update and login
             if (existingUser) {
