@@ -414,6 +414,19 @@ document.addEventListener('DOMContentLoaded', function() {
             li.textContent = 'No specifications available';
             specsList.appendChild(li);
         }
+
+        // Update wishlist button state
+        const wishlistBtn = document.getElementById('wishlistBtn');
+        const wishlistIcon = wishlistBtn.querySelector('i');
+        const inWishlist = selectedOption.getAttribute('data-in-wishlist') === 'true';
+        
+        if (inWishlist) {
+            wishlistIcon.classList.remove('far', 'text-gray-400');
+            wishlistIcon.classList.add('fas', 'text-red-500');
+        } else {
+            wishlistIcon.classList.remove('fas', 'text-red-500');
+            wishlistIcon.classList.add('far', 'text-gray-400');
+        }
     }
     
     // Add change event listener to variant select
@@ -616,5 +629,110 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+async function toggleWishlist(productId, button = null) {
+    let variantType;
+    let selectedVariant;
+    
+    if (button) {
+        // For similar products
+        variantType = button.getAttribute('data-variant-type');
+        const variantSelect = document.querySelector(`.variant-select[data-product-id="${productId}"]`);
+        selectedVariant = variantSelect.options[variantSelect.selectedIndex];
+    } else {
+        // For main product
+        const variantSelect = document.getElementById('variantSelect');
+        selectedVariant = variantSelect.options[variantSelect.selectedIndex];
+        variantType = selectedVariant.getAttribute('data-type');
+    }
+
+    if (!variantType) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Please select a variant first',
+            confirmButtonColor: '#000',
+            showConfirmButton: false,
+            timer: 2000
+        });
+        return;
+    }
+
+    try {
+        const response = await fetch(`/wishlist/toggle/${productId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                variantType
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            let wishlistBtn;
+            let wishlistIcon;
+            
+            if (button) {
+                wishlistBtn = button;
+                wishlistIcon = button.querySelector('i');
+            } else {
+                wishlistBtn = document.getElementById('wishlistBtn');
+                wishlistIcon = wishlistBtn.querySelector('i');
+            }
+            
+            if (data.added) {
+                wishlistIcon.classList.remove('far', 'text-gray-400');
+                wishlistIcon.classList.add('fas', 'text-red-500');
+            } else {
+                wishlistIcon.classList.remove('fas', 'text-red-500');
+                wishlistIcon.classList.add('far', 'text-gray-400');
+            }
+
+            // Update variant's wishlist status
+            if (selectedVariant) {
+                selectedVariant.setAttribute('data-in-wishlist', data.added.toString());
+            }
+
+            // Update wishlist count in navbar
+            const navbarWishlistIcon = document.querySelector('.fa-heart').parentElement;
+            let wishlistBadge = navbarWishlistIcon.querySelector('.cart-badge');
+            
+            if (data.wishlistCount > 0) {
+                if (!wishlistBadge) {
+                    wishlistBadge = document.createElement('span');
+                    wishlistBadge.className = 'cart-badge absolute -top-1 -right-1 rounded-full flex items-center justify-center';
+                    navbarWishlistIcon.appendChild(wishlistBadge);
+                }
+                wishlistBadge.textContent = data.wishlistCount;
+            } else if (wishlistBadge) {
+                wishlistBadge.remove();
+            }
+
+            await Swal.fire({
+                icon: data.added ? 'success' : 'info',
+                title: data.added ? 'Added to Wishlist' : 'Removed from Wishlist',
+                text: data.added ? 'This product has been added to your wishlist' : 'This product has been removed from your wishlist',
+                confirmButtonColor: '#000',
+                showConfirmButton: false,
+                timer: 2000
+            });
+        } else {
+            throw new Error(data.message || 'Something went wrong');
+        }
+    } catch (error) {
+        console.error('Error toggling wishlist:', error);
+        await Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to update wishlist. Please try again.',
+            confirmButtonColor: '#000',
+            showConfirmButton: false,
+            timer: 2000
+        });
+    }
+}
 </script>
 
