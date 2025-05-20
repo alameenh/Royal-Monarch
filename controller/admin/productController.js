@@ -124,6 +124,17 @@ const addProduct = async (req, res) => {
                     status: 'Active'
                 });
 
+                // Validate both variants are filled
+                variants.forEach(variant => {
+                    if (!variant.price || variant.stock === undefined) {
+                        throw new Error(`Please fill in all required fields for ${variant.type} variant`);
+                    }
+                    if(variant.specifications.length === 0){
+                        throw new Error("Please add specifications for all variants")
+                    }
+                 
+                });
+
                 await newProduct.save();
 
                 res.json({
@@ -194,13 +205,13 @@ const updateProduct = async (req, res) => {
                     variants = JSON.parse(variantsData);
 
                     // Check if any variant has zero stock
-                    const hasZeroStock = variants.some(variant => variant.stock === 0);
-                    if (hasZeroStock) {
-                        return res.status(400).json({
-                            success: false,
-                            message: 'Cannot update product with zero stock. Please set a stock value greater than 0.'
-                        });
-                    }
+                    // const hasZeroStock = variants.some(variant => variant.stock === 0);
+                    // if (hasZeroStock) {
+                    //     return res.status(400).json({
+                    //         success: false,
+                    //         message: 'Cannot update product with zero stock. Please set a stock value greater than 0.'
+                    //     });
+                    // }
                 }
 
                 // Handle images

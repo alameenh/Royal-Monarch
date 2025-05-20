@@ -468,14 +468,11 @@
 
                 // Validate both variants are filled
                 variants.forEach(variant => {
-                    if (!variant.price || !variant.stock) {
+                    if (!variant.price ) {
                         throw new Error(`Please fill in all required fields for ${variant.type} variant`);
                     }
                     if(variant.specifications.length === 0){
                         throw new Error("Please add specifications for all variants")
-                    }
-                    if(!variant.specifications.every(spec => spec.trim().length >= 10)){
-                        throw new Error("Specification must be atleast 10 characters long")
                     }
                     
                 });
