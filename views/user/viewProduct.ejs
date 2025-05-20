@@ -98,6 +98,7 @@
                         </div>
                     </div>
 
+
                     <!-- Specifications -->
                     <div class="bg-white p-4 rounded-xl shadow-sm">
                         <h3 class="font-serif text-lg font-bold text-[#2c2c2c] mb-3">Specifications</h3>
@@ -365,53 +366,42 @@ document.addEventListener('DOMContentLoaded', function() {
             stockStatus.innerHTML = '<span class="text-green-600">In Stock (' + stock + ' available)</span>';
             cartBtn.disabled = false;
             buyNowBtn.disabled = false;
-            cartBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
-            cartBtn.classList.add(inCart ? 'bg-red-600 hover:bg-red-700' : 'bg-[#8B4513] hover:bg-[#6B3513]');
         } else {
             stockStatus.innerHTML = '<span class="text-red-600">Out of Stock</span>';
             cartBtn.disabled = true;
             buyNowBtn.disabled = true;
-            cartBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
-            cartBtn.classList.remove('bg-red-600', 'bg-[#8B4513]');
         }
-        
-        // Update cart button
+
+        // Update cart button text
         cartBtn.textContent = inCart ? 'Remove from Cart' : 'Add to Cart';
-        cartBtn.setAttribute('data-action', inCart ? 'remove' : 'add');
-        
-        // Update cart button colors
-        if (stock > 0) {
-            cartBtn.disabled = false;
-            cartBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
-            if (inCart) {
-                cartBtn.classList.remove('bg-[#8B4513]', 'hover:bg-[#6B3513]');
-                cartBtn.classList.add('bg-red-600', 'hover:bg-red-700');
-            } else {
-                cartBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
-                cartBtn.classList.add('bg-[#8B4513]', 'hover:bg-[#6B3513]');
-            }
-        } else {
-            cartBtn.disabled = true;
-            cartBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
-            cartBtn.classList.remove('bg-[#8B4513]', 'hover:bg-[#6B3513]', 'bg-red-600', 'hover:bg-red-700');
-        }
-        
-        // Update specifications using stored specs
+        cartBtn.className = `w-full text-white py-3 rounded-lg transition-colors duration-300 font-serif text-base disabled:bg-gray-400 shadow-lg hover:shadow-xl ${stock <= 0 ? 'bg-gray-400 cursor-not-allowed' : (inCart ? 'bg-red-600 hover:bg-red-700' : 'bg-[#8B4513] hover:bg-[#6B3513]')}`;
+
+        // Update specifications
         const specsList = document.getElementById('specsList');
         specsList.innerHTML = ''; // Clear existing specifications
         
-        const currentSpecs = variantsSpecs[selectedIndex];
-        if (currentSpecs && currentSpecs.length > 0) {
-            currentSpecs.forEach(spec => {
+        try {
+            const specsData = selectedOption.getAttribute('data-specs');
+            const specs = JSON.parse(specsData || '[]');
+            
+            if (specs && specs.length > 0) {
+                specs.forEach(spec => {
+                    const li = document.createElement('li');
+                    li.className = 'spec-item text-gray-600';
+                    li.textContent = spec;
+                    specsList.appendChild(li);
+                });
+            } else {
                 const li = document.createElement('li');
                 li.className = 'spec-item text-gray-600';
-                li.textContent = spec;
+                li.textContent = 'No specifications available';
                 specsList.appendChild(li);
-            });
-        } else {
+            }
+        } catch (error) {
+            console.error('Error updating specifications:', error);
             const li = document.createElement('li');
             li.className = 'spec-item text-gray-600';
-            li.textContent = 'No specifications available';
+            li.textContent = 'Error loading specifications';
             specsList.appendChild(li);
         }
 
@@ -693,6 +683,22 @@ async function handleCart(productId, button = null) {
             text: error.message || `Failed to ${action} from cart`
         });
     }
+}
+
+// Add the updateCartButtonState function
+function updateCartButtonState(button, isInCart) {
+    if (!button) return;
+    
+    // Get the variant select element directly
+    const variantSelect = document.getElementById('variantSelect');
+    if (!variantSelect) return;
+    
+    const selectedOption = variantSelect.options[variantSelect.selectedIndex];
+    const stock = parseInt(selectedOption.getAttribute('data-stock'));
+    
+    button.textContent = isInCart ? 'Remove from Cart' : 'Add to Cart';
+    button.className = `w-full text-white py-3 rounded-lg transition-colors duration-300 font-serif text-base disabled:bg-gray-400 shadow-lg hover:shadow-xl ${stock <= 0 ? 'bg-gray-400 cursor-not-allowed' : (isInCart ? 'bg-red-600 hover:bg-red-700' : 'bg-[#8B4513] hover:bg-[#6B3513]')}`;
+    button.disabled = stock <= 0;
 }
 
 async function toggleWishlist(productId, button = null) {
