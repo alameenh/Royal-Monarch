@@ -58,11 +58,11 @@ const wishlistController = {
                 const originalPrice = variant.price;
 
                 // Calculate price after offer
-                let priceAfterOffer = originalPrice;
+                let finalPrice = originalPrice;
                 let offerDiscount = 0;
                 if (applicableOffer) {
                     offerDiscount = (originalPrice * applicableOffer.discount) / 100;
-                    priceAfterOffer = originalPrice - offerDiscount;
+                    finalPrice = originalPrice - offerDiscount;
                 }
 
                 // Ensure product has required fields
@@ -80,7 +80,7 @@ const wishlistController = {
                     ...item.toObject(),
                     productId: product,
                     originalPrice,
-                    priceAfterOffer,
+                    finalPrice,
                     offer: applicableOffer,
                     offerDiscount,
                     stock: variant.stock
