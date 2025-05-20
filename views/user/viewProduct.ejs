@@ -180,10 +180,10 @@
                                             Math.round(similarVariant.price * (1 - similar.offer.discount/100)) : 
                                             similarVariant.price; 
                                         %>
-                                        <span class="text-base font-serif text-[#8B4513]">₹<%= similarDiscountedPrice %></span>
+                                        <span class="text-base font-serif text-[#8B4513] price-display">₹<%= similarDiscountedPrice %></span>
                                         <% if (hasOffer) { %>
-                                            <span class="text-xs text-gray-500 line-through">₹<%= similarVariant.price %></span>
-                                            <span class="text-xs text-[#8B4513] font-serif ml-1"><%= similar.offer.discount %>% OFF</span>
+                                            <span class="text-xs text-gray-500 line-through original-price">₹<%= similarVariant.price %></span>
+                                            <span class="text-xs text-[#8B4513] font-serif ml-1 discount-badge"><%= similar.offer.discount %>% OFF</span>
                                         <% } %>
                                     </div>
                                     <button class="wishlist-toggle text-gray-600 hover:text-red-500 transition-colors" 
@@ -536,16 +536,32 @@ document.addEventListener('DOMContentLoaded', function() {
             const option = this.options[this.selectedIndex];
             const inCart = option.getAttribute('data-in-cart') === 'true';
             const inWishlist = option.getAttribute('data-in-wishlist') === 'true';
+            const price = parseFloat(option.getAttribute('data-price'));
+            const stock = parseInt(option.getAttribute('data-stock'));
+            
+            // Find the parent product card
+            const productCard = this.closest('.bg-white.rounded-xl');
+            
+            // Update price display
+            const priceDisplay = productCard.querySelector('.price-display');
+            const originalPrice = productCard.querySelector('.original-price');
+            const discountBadge = productCard.querySelector('.discount-badge');
+            
+            if (priceDisplay) {
+                priceDisplay.textContent = '₹' + price;
+            }
             
             // Update cart button
-            const cartBtn = document.querySelector(`.add-to-cart-btn[data-product-id="${productId}"]`);
+            const cartBtn = productCard.querySelector('.add-to-cart-btn');
             if (cartBtn) {
                 cartBtn.textContent = inCart ? 'Remove from Cart' : 'Add to Cart';
                 cartBtn.setAttribute('data-action', inCart ? 'remove' : 'add');
+                cartBtn.disabled = stock <= 0;
+                cartBtn.className = `add-to-cart-btn w-full ${stock <= 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700'} text-white py-2 text-xs uppercase transition-all duration-300 font-serif rounded-lg group`;
             }
 
             // Update wishlist button
-            const wishlistBtn = document.querySelector(`.wishlist-toggle[data-product-id="${productId}"]`);
+            const wishlistBtn = productCard.querySelector('.wishlist-toggle');
             if (wishlistBtn) {
                 wishlistBtn.setAttribute('data-variant-type', option.value);
                 wishlistBtn.setAttribute('data-in-wishlist', inWishlist.toString());
