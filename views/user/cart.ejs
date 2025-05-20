@@ -244,8 +244,82 @@ async function removeFromCart(productId, variantType) {
     }
 }
 
-function proceedToCheckout() {
-    window.location.href = '/checkout';
+async function proceedToCheckout() {
+    try {
+        // Show loading state
+        Swal.fire({
+            title: 'Checking stock availability...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Make API call to check stock
+        const response = await fetch('/checkout', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        // Check if the response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // If not JSON, redirect to checkout page
+            window.location.href = '/checkout';
+            return;
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            // If stock check passes, proceed to checkout
+            window.location.href = '/checkout';
+        } else if (data.stockMismatches) {
+            // If there are stock mismatches, show detailed error message
+            let errorMessage = '<div class="text-left">';
+            errorMessage += '<p class="mb-2">Some items in your cart have stock issues:</p>';
+            errorMessage += '<ul class="list-disc pl-4">';
+            
+            data.stockMismatches.forEach(mismatch => {
+                errorMessage += `<li class="mb-1">`;
+                if (mismatch.reason === 'unavailable') {
+                    errorMessage += `${mismatch.productName} (${mismatch.variantType}) is no longer available`;
+                } else if (mismatch.reason === 'insufficient') {
+                    errorMessage += `${mismatch.productName} (${mismatch.variantType}): Only ${mismatch.availableStock} units available (requested ${mismatch.requestedQuantity})`;
+                }
+                errorMessage += `</li>`;
+            });
+            
+            errorMessage += '</ul>';
+            errorMessage += '<p class="mt-2">Please adjust your cart quantities and try again.</p>';
+            errorMessage += '</div>';
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Stock Availability Issue',
+                html: errorMessage,
+                confirmButtonText: 'OK'
+            });
+        } else {
+            // Handle other errors
+            throw new Error(data.message || 'Failed to proceed to checkout');
+        }
+    } catch (error) {
+        console.error('Checkout Error:', error);
+        // If there's an error parsing JSON, redirect to checkout page
+        if (error instanceof SyntaxError) {
+            window.location.href = '/checkout';
+            return;
+        }
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to proceed to checkout'
+        });
+    }
 }
 
 // Update the cart items data to include correct calculations

@@ -1133,6 +1133,69 @@ const orderController = {
                 })
                 .lean();
 
+            // Check stock availability for each item
+            const stockMismatches = [];
+            for (const item of cartItems) {
+                if (!item.productId || item.productId.status !== 'Active') {
+                    stockMismatches.push({
+                        productName: item.productId?.name || 'Unknown Product',
+                        variantType: item.variantType,
+                        reason: 'unavailable',
+                        message: 'Product is no longer available'
+                    });
+                    continue;
+                }
+
+                const variant = item.productId.variants.find(v => v.type === item.variantType);
+                if (!variant) {
+                    stockMismatches.push({
+                        productName: item.productId.name,
+                        variantType: item.variantType,
+                        reason: 'unavailable',
+                        message: 'Variant is no longer available'
+                    });
+                    continue;
+                }
+
+                if (variant.stock < item.quantity) {
+                    stockMismatches.push({
+                        productName: item.productId.name,
+                        variantType: item.variantType,
+                        reason: 'insufficient',
+                        availableStock: variant.stock,
+                        requestedQuantity: item.quantity,
+                        message: `Only ${variant.stock} units available`
+                    });
+                }
+            }
+
+            // Check if this is an AJAX request
+            const isAjaxRequest = req.xhr || 
+                                req.headers.accept?.includes('application/json') || 
+                                req.headers['x-requested-with'] === 'XMLHttpRequest';
+
+            // If there are stock mismatches and this is an API request, return them
+            if (stockMismatches.length > 0 && isAjaxRequest) {
+                return res.status(400).json({
+                    success: false,
+                    stockMismatches
+                });
+            }
+
+            // If there are stock mismatches and this is a regular request, show error page
+            if (stockMismatches.length > 0) {
+                return res.status(400).render('error', {
+                    message: 'Some items in your cart have stock issues. Please check your cart and try again.'
+                });
+            }
+
+            // If this is an AJAX request and no stock issues, return success
+            if (isAjaxRequest) {
+                return res.json({
+                    success: true
+                });
+            }
+
             // Fetch all active offers
             const activeOffers = await Offer.find({
                 isActive: true,

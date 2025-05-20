@@ -331,15 +331,18 @@ const cartController = {
                 });
             }
 
-            // Check product stock
-            const product = await Product.findById(productId);
-            const variant = product.variants.find(v => v.type === variantType);
-            
-            if (!variant || variant.stock < quantity) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Requested quantity not available in stock'
-                });
+            // Only check stock if quantity is being increased
+            if (quantity > cartItem.quantity) {
+                // Check product stock
+                const product = await Product.findById(productId);
+                const variant = product.variants.find(v => v.type === variantType);
+                
+                if (!variant || variant.stock < quantity) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Requested quantity not available in stock'
+                    });
+                }
             }
 
             // Update quantity
