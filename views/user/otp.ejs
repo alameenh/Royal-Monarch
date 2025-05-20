@@ -30,30 +30,74 @@
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    document.querySelectorAll('.otp-input').forEach((input, index, inputs) => {
-        input.addEventListener('input', () => {
-            if (input.value.length === 1 && index < inputs.length - 1) {
-                inputs[index + 1].focus();
+    // Function to handle OTP input navigation and validation
+    function handleOtpInput(e) {
+        const input = e.target;
+        const inputs = document.querySelectorAll('.otp-input');
+        const currentIndex = Array.from(inputs).indexOf(input);
+
+        // Handle input
+        if (e.type === 'input') {
+            // Only allow numbers
+            input.value = input.value.replace(/[^0-9]/g, '');
+            
+            // If a number was entered, move to next input
+            if (input.value.length === 1 && currentIndex < inputs.length - 1) {
+                inputs[currentIndex + 1].focus();
             }
-        });
+        }
+
+        // Handle arrow keys
+        if (e.type === 'keydown') {
+            if (e.key === 'ArrowRight' && currentIndex < inputs.length - 1) {
+                e.preventDefault();
+                inputs[currentIndex + 1].focus();
+            } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                e.preventDefault();
+                inputs[currentIndex - 1].focus();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('submitOtp').click();
+            }
+        }
+
+        // Handle backspace
+        if (e.type === 'keydown' && e.key === 'Backspace') {
+            if (input.value.length === 0 && currentIndex > 0) {
+                e.preventDefault();
+                inputs[currentIndex - 1].focus();
+            }
+        }
+    }
+
+    // Add event listeners to all OTP inputs
+    document.querySelectorAll('.otp-input').forEach(input => {
+        input.addEventListener('input', handleOtpInput);
+        input.addEventListener('keydown', handleOtpInput);
     });
 
-    const otpExpiresAt = new Date('<%= otpExpiresAt %>');
+    // Add enter key handler to submit button
+    document.getElementById('submitOtp').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            this.click();
+        }
+    });
+
+    let otpExpiresAt = new Date('<%= otpExpiresAt %>');
     const timerElement = document.getElementById('timer');
     const resendButton = document.getElementById('resendOtpBtn');
     const resendTimerElement = document.getElementById('resendTimer');
+    let timerInterval;
     let resendTimerInterval;
-    let canResend = false;
 
     function updateTimer() {
         const now = new Date();
         const timeLeft = otpExpiresAt - now;
         
         if (timeLeft <= 0) {
-            // Clear the interval to prevent repeated alerts
             clearInterval(timerInterval);
             timerElement.textContent = 'OTP expired';
-            enableResend();
             return;
         }
         
@@ -62,45 +106,36 @@
         timerElement.textContent = `Time left: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
     }
 
-    function startResendTimer() {
-        const twoMinutes = 2 * 60 * 1000;
-        const endTime = Date.now() + twoMinutes;
-        
-        resendButton.disabled = true;
-        canResend = false;
-        
-        clearInterval(resendTimerInterval);
-        resendTimerInterval = setInterval(() => {
-            const timeLeft = endTime - Date.now();
-            
-            if (timeLeft <= 0) {
-                clearInterval(resendTimerInterval);
-                enableResend();
-                return;
+    async function updateResendTimer() {
+        try {
+            const response = await axios.get('/checkResendTimer');
+            if (response.data.success) {
+                const { secondsLeft, canResend } = response.data;
+                
+                if (canResend) {
+                    clearInterval(resendTimerInterval);
+                    resendButton.disabled = false;
+                    resendTimerElement.textContent = '';
+                } else {
+                    resendButton.disabled = true;
+                    resendTimerElement.textContent = `(${secondsLeft}s)`;
+                }
             }
-            
-            const minutes = Math.floor(timeLeft / 60000);
-            const seconds = Math.ceil((timeLeft % 60000) / 1000);
-            resendTimerElement.textContent = `(${minutes}:${seconds < 10 ? '0' : ''}${seconds})`;
-        }, 1000);
-    }
-
-    function enableResend() {
-        resendButton.disabled = false;
-        canResend = true;
-        resendTimerElement.textContent = '';
+        } catch (error) {
+            console.error('Error checking resend timer:', error);
+        }
     }
 
     // Check if OTP is already expired on page load
     const now = new Date();
     if (otpExpiresAt <= now) {
         timerElement.textContent = 'OTP expired';
-        enableResend();
     } else {
         // Start initial timers only if OTP is not expired
-        const timerInterval = setInterval(updateTimer, 1000);
+        timerInterval = setInterval(updateTimer, 1000);
+        resendTimerInterval = setInterval(updateResendTimer, 1000);
         updateTimer();
-        startResendTimer();
+        updateResendTimer();
     }
 
     // Handle OTP submission
@@ -110,6 +145,17 @@
         otpInputs.forEach(input => {
             otp += input.value;
         });
+
+        // Check if all fields are filled
+        if (otp.length !== 6) {
+            await Swal.fire({
+                icon: 'error',
+                title: 'Invalid OTP',
+                text: 'Please enter all 6 digits of the OTP',
+                confirmButtonColor: '#000'
+            });
+            return;
+        }
 
         try {
             const response = await axios.post('/verifyOtp', { otp });
@@ -124,45 +170,100 @@
             }
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'An error occurred during OTP verification';
+            
             if (errorMessage.includes('OTP expired')) {
                 timerElement.textContent = 'OTP expired';
-                enableResend();
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'OTP Expired',
+                    text: 'Your OTP has expired. Please request a new one.',
+                    confirmButtonColor: '#000'
+                });
             } else if (errorMessage.includes('Too many attempts')) {
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Too Many Attempts',
+                    text: 'You have exceeded the maximum number of attempts. Please sign up again.',
+                    confirmButtonColor: '#000'
+                });
                 window.location.href = '/signup';
             } else {
-                otpInputs.forEach(input => input.value = '');
-                otpInputs[0].focus();
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid OTP',
+                    text: errorMessage,
+                    confirmButtonColor: '#000'
+                });
+                // Only clear fields if it's an invalid OTP error
+                if (errorMessage.includes('Invalid OTP')) {
+                    otpInputs.forEach(input => input.value = '');
+                    otpInputs[0].focus();
+                }
             }
         }
     });
 
     // Handle OTP resend
     document.getElementById('resendOtpBtn').addEventListener('click', async function() {
-        if (!canResend) return;
+        if (resendButton.disabled) return;
 
         try {
+            // Show loading state
+            const loadingAlert = Swal.fire({
+                title: 'Sending OTP...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             const response = await axios.post('/resendOtp');
             
+            // Close loading state
+            await loadingAlert.close();
+            
             if (response.data.success) {
+                // Update OTP expiry time and restart timers
+                otpExpiresAt = new Date(response.data.otpExpiresAt);
+                clearInterval(timerInterval);
+                clearInterval(resendTimerInterval);
+                timerInterval = setInterval(updateTimer, 1000);
+                resendTimerInterval = setInterval(updateResendTimer, 1000);
+                updateTimer();
+                updateResendTimer();
+
+                // Show success message
                 await Swal.fire({
                     icon: 'success',
                     title: 'Success',
                     text: 'New OTP sent successfully!',
                     confirmButtonColor: '#000'
                 });
-                
-                // Update OTP expiry time and restart timers
-                otpExpiresAt = new Date(response.data.otpExpiresAt);
-                startResendTimer();
             }
         } catch (error) {
+            // Close loading state if it's still open
+            if (Swal.isVisible()) {
+                await Swal.close();
+            }
+
+            console.log(error)
             const errorMessage = error.response?.data?.message || 'Error sending new OTP';
+            const secondsLeft = error.response?.data?.secondsLeft;
+            
+            if (secondsLeft) {
+                resendButton.disabled = true;
+                resendTimerElement.textContent = `(${secondsLeft}s)`;
+                resendTimerInterval = setInterval(updateResendTimer, 1000);
+            }
+            
+            // Show error message
             await Swal.fire({
                 icon: 'error',
                 title: 'Oops...',
                 text: errorMessage,
                 confirmButtonColor: '#000'
             });
+           
         }
     });
 </script>

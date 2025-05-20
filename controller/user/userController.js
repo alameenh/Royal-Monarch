@@ -43,7 +43,7 @@ const getSignup = (req, res) => {
 
 const postSignup = async (req, res) => {
     try {
-        const { firstName, lastName, email, password } = req.body;
+        const { firstName, lastName, email, password, confirmPassword } = req.body;
 
         // Trim and validate input data
         const trimmedFirstName = firstName?.trim();
@@ -51,27 +51,99 @@ const postSignup = async (req, res) => {
         const trimmedEmail = email?.trim();
 
         // Validate required fields
-        if (!trimmedFirstName || !trimmedLastName || !trimmedEmail || !password) {
+        if (!trimmedFirstName || !trimmedLastName || !trimmedEmail || !password || !confirmPassword) {
             return res.status(400).json({ 
                 success: false, 
-                message: 'All fields are required' 
+                message: 'Please fill in all required fields' 
             });
         }
 
-        // Validate name lengths
-        if (trimmedFirstName.length < 2 || trimmedLastName.length < 2) {
+        // Validate name lengths and characters
+        if (trimmedFirstName.length < 2 || trimmedFirstName.length > 50) {
             return res.status(400).json({
                 success: false,
-                message: 'First and last names must be at least 2 characters long'
+                message: 'First name must be between 2 and 50 characters'
             });
         }
 
-        // Validate email format
+        if (!/^[a-zA-Z\s]+$/.test(trimmedFirstName)) {
+            return res.status(400).json({
+                success: false,
+                message: 'First name should only contain letters'
+            });
+        }
+
+        if (trimmedLastName.length < 2 || trimmedLastName.length > 50) {
+            return res.status(400).json({
+                success: false,
+                message: 'Last name must be between 2 and 50 characters'
+            });
+        }
+
+        if (!/^[a-zA-Z\s]+$/.test(trimmedLastName)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Last name should only contain letters'
+            });
+        }
+
+        // Validate email format and length
+        if (trimmedEmail.length > 100) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email must be less than 100 characters'
+            });
+        }
+
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(trimmedEmail)) {
             return res.status(400).json({
                 success: false,
                 message: 'Please enter a valid email address'
+            });
+        }
+
+        // Validate password
+        if (password.length < 8 || password.length > 50) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be between 8 and 50 characters'
+            });
+        }
+
+        if (!/[A-Z]/.test(password)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must contain at least one uppercase letter'
+            });
+        }
+
+        if (!/[a-z]/.test(password)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must contain at least one lowercase letter'
+            });
+        }
+
+        if (!/[0-9]/.test(password)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must contain at least one number'
+            });
+        }
+
+        if (!/[!@#$%^&*]/.test(password)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must contain at least one special character (!@#$%^&*)'
+            });
+        }
+
+        // Validate password confirmation
+        if (password !== confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Passwords do not match'
             });
         }
 
@@ -85,7 +157,7 @@ const postSignup = async (req, res) => {
         if (existingUser) {
             return res.status(400).json({ 
                 success: false, 
-                message: 'Email already registered' 
+                message: 'This email is already registered. Please use a different email or try logging in.' 
             });
         }
 
@@ -95,6 +167,10 @@ const postSignup = async (req, res) => {
 
         // Generate OTP
         const otpValue = Math.floor(100000 + Math.random() * 900000).toString();
+        const twoMinutes = 2 * 60 * 1000; // OTP expires in 2 minutes
+        const thirtySeconds = 30 * 1000; // Resend cooldown is 30 seconds
+        const otpExpiryTime = new Date(Date.now() + twoMinutes);
+        const resendTimer = new Date(Date.now() + thirtySeconds);
 
         // Create new user
         const newUser = new userModel({
@@ -105,8 +181,9 @@ const postSignup = async (req, res) => {
             status: 'Pending',
             otp: {
                 otpValue,
-                otpExpiresAt: new Date(Date.now() + 2 * 60 * 1000),
-                otpAttempts: 0
+                otpExpiresAt: otpExpiryTime,
+                otpAttempts: 0,
+                resendTimer: resendTimer
             },
         });
 
@@ -141,11 +218,11 @@ const postSignup = async (req, res) => {
 
         // Set session data for OTP verification
         req.session.email = trimmedEmail;
-        req.session.otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000);
+        req.session.otpExpiresAt = otpExpiryTime;
 
         res.json({ 
             success: true, 
-            message: 'Signup successful, OTP sent to email',
+            message: 'Account created successfully! Please check your email for the OTP code.',
             redirect: '/otpPage'
         });
 
@@ -153,7 +230,7 @@ const postSignup = async (req, res) => {
         console.error('Signup Error:', error);
         return res.status(500).json({
             success: false,
-            message: 'Error during signup process'
+            message: 'Something went wrong. Please try again later.'
         });
     }
 };
@@ -1103,32 +1180,27 @@ const resendOTP = async (req, res) => {
             });
         }
 
-        // Check if enough time has passed since last OTP (2 minutes)
-        const lastOTPTime = user.otp?.otpExpiresAt || new Date(0);
+        // Check if enough time has passed since last OTP (30 seconds)
+        const lastOTPTime = user.otp?.resendTimer || new Date(0);
         const timeSinceLastOTP = Date.now() - lastOTPTime.getTime();
-        const twoMinutes = 2 * 60 * 1000;
+        const thirtySeconds = 30 * 1000;
 
-        if (timeSinceLastOTP < twoMinutes) {
-            const remainingTime = Math.ceil((twoMinutes - timeSinceLastOTP) / 1000);
+        if (timeSinceLastOTP < thirtySeconds) {
+            const remainingTime = Math.ceil((thirtySeconds - timeSinceLastOTP) / 1000);
             return res.status(400).json({
                 success: false,
-                message: `Please wait ${remainingTime} seconds before requesting a new OTP`
+                message: `Please wait ${remainingTime} seconds before requesting a new OTP`,
+                secondsLeft: remainingTime
             });
         }
 
         // Generate new OTP
         const otpValue = Math.floor(100000 + Math.random() * 900000).toString();
+        const twoMinutes = 2 * 60 * 1000; // OTP expires in 2 minutes
+        const otpExpiryTime = new Date(Date.now() + twoMinutes);
+        const resendTimer = new Date(Date.now() + thirtySeconds);
 
-        // Update user with new OTP
-        user.otp = {
-            otpValue,
-            otpExpiresAt: new Date(Date.now() + twoMinutes),
-            otpAttempts: 0
-        };
-
-        await user.save();
-
-        // Send new OTP email
+        // Create email transporter
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
@@ -1140,6 +1212,7 @@ const resendOTP = async (req, res) => {
             },
         });
 
+        // Prepare email options
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: email,
@@ -1153,24 +1226,81 @@ const resendOTP = async (req, res) => {
             `
         };
 
-        await transporter.sendMail(mailOptions);
+        // Send email first
+        try {
+            await transporter.sendMail(mailOptions);
+        } catch (emailError) {
+            console.error('Email sending error:', emailError);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to send OTP email. Please try again.'
+            });
+        }
+
+        // Only update user data if email was sent successfully
+        user.otp = {
+            otpValue,
+            otpExpiresAt: otpExpiryTime,
+            otpAttempts: 0,
+            resendTimer: resendTimer
+        };
+
+        await user.save();
 
         // Update session with new expiry time
-        req.session.otpExpiresAt = user.otp.otpExpiresAt;
+        req.session.otpExpiresAt = otpExpiryTime;
 
         res.json({
             success: true,
             message: 'New OTP sent successfully',
-            otpExpiresAt: user.otp.otpExpiresAt.toISOString()
+            otpExpiresAt: otpExpiryTime.toISOString()
         });
 
     } catch (error) {
         console.error('Resend OTP Error:', error);
         res.status(500).json({
             success: false,
-            message: 'Error sending new OTP'
+            message: 'Error sending new OTP. Please try again.'
         });
     }
 };
 
-export default { getLogin, getSignup, postSignup, postLogin, getOtpPage, verifyOtp, getHomePage, getLogout, getGoogle, getGoogleCallback, getForgotPassword, postForgotPassword, getResetPassword, postResetPassword, getChangePassword, postChangePassword, getProductImages, toggleWishlist, resendOTP };
+// Add new endpoint to check resend timer status
+const checkResendTimer = async (req, res) => {
+    try {
+        const email = req.session.email;
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Session expired'
+            });
+        }
+
+        const user = await userModel.findOne({ email });
+        if (!user || !user.otp) {
+            return res.status(404).json({
+                success: false,
+                message: 'User or OTP not found'
+            });
+        }
+
+        const now = new Date();
+        const timeLeft = user.otp.resendTimer ? user.otp.resendTimer - now : 0;
+        const secondsLeft = Math.max(0, Math.ceil(timeLeft / 1000));
+
+        res.json({
+            success: true,
+            secondsLeft,
+            canResend: secondsLeft === 0
+        });
+
+    } catch (error) {
+        console.error('Check Resend Timer Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error checking resend timer'
+        });
+    }
+};
+
+export default { getLogin, getSignup, postSignup, postLogin, getOtpPage, verifyOtp, getHomePage, getLogout, getGoogle, getGoogleCallback, getForgotPassword, postForgotPassword, getResetPassword, postResetPassword, getChangePassword, postChangePassword, getProductImages, toggleWishlist, resendOTP, checkResendTimer };

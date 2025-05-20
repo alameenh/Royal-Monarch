@@ -64,6 +64,7 @@
             if (!firstName) return 'First name is required';
             if (firstName.length < 2) return 'First name must be at least 2 characters';
             if (!/^[a-zA-Z\s]+$/.test(firstName)) return 'First name should only contain letters';
+            if (firstName.length > 50) return 'First name must be less than 50 characters';
             return '';
         }
 
@@ -71,6 +72,7 @@
             if (!lastName) return 'Last name is required';
             if (lastName.length < 2) return 'Last name must be at least 2 characters';
             if (!/^[a-zA-Z\s]+$/.test(lastName)) return 'Last name should only contain letters';
+            if (lastName.length > 50) return 'Last name must be less than 50 characters';
             return '';
         }
 
@@ -78,12 +80,14 @@
             if (!email) return 'Email is required';
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) return 'Please enter a valid email address';
+            if (email.length > 100) return 'Email must be less than 100 characters';
             return '';
         }
 
         function validatePassword(password) {
             if (!password) return 'Password is required';
             if (password.length < 8) return 'Password must be at least 8 characters';
+            if (password.length > 50) return 'Password must be less than 50 characters';
             if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter';
             if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter';
             if (!/[0-9]/.test(password)) return 'Password must contain at least one number';
@@ -97,21 +101,46 @@
             return '';
         }
 
+        // Function to check if all fields are valid
+        function isFormValid() {
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            return !validateFirstName(firstName) &&
+                   !validateLastName(lastName) &&
+                   !validateEmail(email) &&
+                   !validatePassword(password) &&
+                   !validateConfirmPassword(password, confirmPassword);
+        }
+
+        // Function to show validation error using SweetAlert
+        async function showValidationError(message) {
+            await Swal.fire({
+                icon: 'error',
+                title: 'Validation Error',
+                text: message,
+                confirmButtonColor: '#000'
+            });
+        }
+
         // Real-time validation
         document.getElementById('firstName').addEventListener('input', function(e) {
-            const error = validateFirstName(e.target.value);
+            const error = validateFirstName(e.target.value.trim());
             document.getElementById('firstNameError').textContent = error;
             document.getElementById('firstNameError').classList.toggle('hidden', !error);
         });
 
         document.getElementById('lastName').addEventListener('input', function(e) {
-            const error = validateLastName(e.target.value);
+            const error = validateLastName(e.target.value.trim());
             document.getElementById('lastNameError').textContent = error;
             document.getElementById('lastNameError').classList.toggle('hidden', !error);
         });
 
         document.getElementById('email').addEventListener('input', function(e) {
-            const error = validateEmail(e.target.value);
+            const error = validateEmail(e.target.value.trim());
             document.getElementById('emailError').textContent = error;
             document.getElementById('emailError').classList.toggle('hidden', !error);
         });
@@ -137,14 +166,88 @@
             document.getElementById('confirmPasswordError').classList.toggle('hidden', !error);
         });
 
-        document.getElementById('signupForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        // Function to handle keyboard navigation
+        function handleKeyboardNavigation(e) {
+            const currentField = e.target;
+            const fields = [
+                document.getElementById('firstName'),
+                document.getElementById('lastName'),
+                document.getElementById('email'),
+                document.getElementById('password'),
+                document.getElementById('confirmPassword')
+            ];
+            
+            const currentIndex = fields.indexOf(currentField);
+            
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault(); // Prevent default scrolling
+                
+                let nextIndex;
+                if (e.key === 'ArrowDown') {
+                    nextIndex = (currentIndex + 1) % fields.length;
+                } else {
+                    nextIndex = (currentIndex - 1 + fields.length) % fields.length;
+                }
+                
+                fields[nextIndex].focus();
+            }
+        }
+
+        // Add keyboard navigation to all input fields
+        document.getElementById('firstName').addEventListener('keydown', handleKeyboardNavigation);
+        document.getElementById('lastName').addEventListener('keydown', handleKeyboardNavigation);
+        document.getElementById('email').addEventListener('keydown', handleKeyboardNavigation);
+        document.getElementById('password').addEventListener('keydown', handleKeyboardNavigation);
+        document.getElementById('confirmPassword').addEventListener('keydown', handleKeyboardNavigation);
+
+        // Handle form submission
+        async function handleFormSubmit(e) {
+            if (e) {
+                e.preventDefault();
+            }
             
             const firstName = document.getElementById('firstName').value.trim();
             const lastName = document.getElementById('lastName').value.trim();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Final validation before submission
+            const firstNameError = validateFirstName(firstName);
+            const lastNameError = validateLastName(lastName);
+            const emailError = validateEmail(email);
+            const passwordError = validatePassword(password);
+            const confirmPasswordError = validateConfirmPassword(password, confirmPassword);
+
+            if (firstNameError) {
+                await showValidationError(firstNameError);
+                document.getElementById('firstName').focus();
+                return;
+            }
+
+            if (lastNameError) {
+                await showValidationError(lastNameError);
+                document.getElementById('lastName').focus();
+                return;
+            }
+
+            if (emailError) {
+                await showValidationError(emailError);
+                document.getElementById('email').focus();
+                return;
+            }
+
+            if (passwordError) {
+                await showValidationError(passwordError);
+                document.getElementById('password').focus();
+                return;
+            }
+
+            if (confirmPasswordError) {
+                await showValidationError(confirmPasswordError);
+                document.getElementById('confirmPassword').focus();
+                return;
+            }
 
             // Show loading state
             Swal.fire({
@@ -198,5 +301,21 @@
                     confirmButtonColor: '#000'
                 });
             }
+        }
+
+        // Add form submit event listener
+        document.getElementById('signupForm').addEventListener('submit', handleFormSubmit);
+
+        // Add click event listener to submit button
+        document.getElementById('signupButton').addEventListener('click', handleFormSubmit);
+
+        // Handle enter key in input fields
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleFormSubmit();
+                }
+            });
         });
     </script>

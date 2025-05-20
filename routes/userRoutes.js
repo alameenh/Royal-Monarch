@@ -98,4 +98,6 @@ router.post('/wallet/verify-payment', walletController.verifyPayment);
 // Product images route
 router.post('/api/products/images', userController.getProductImages);
 
+router.get('/checkResendTimer', userController.checkResendTimer);
+
 export default router;
