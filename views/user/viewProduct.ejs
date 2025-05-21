@@ -579,11 +579,17 @@ function initializeZoom() {
         e.preventDefault();
         if (window.innerWidth <= 768) return;
 
-        const pos = getCursorPos(e);
-        
-        // Calculate lens position
-        let x = pos.x - (lens.offsetWidth / 2);
-        let y = pos.y - (lens.offsetHeight / 2);
+        const rect = mainImage.getBoundingClientRect();
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+        // Get cursor position relative to image
+        const mouseX = e.pageX - (rect.left + scrollLeft);
+        const mouseY = e.pageY - (rect.top + scrollTop);
+
+        // Calculate lens position centered on cursor
+        let x = mouseX - (lens.offsetWidth / 2);
+        let y = mouseY - (lens.offsetHeight / 2);
 
         // Prevent lens from going outside image
         const maxX = mainImage.offsetWidth - lens.offsetWidth;
@@ -596,21 +602,16 @@ function initializeZoom() {
         lens.style.left = x + 'px';
         lens.style.top = y + 'px';
 
-        // Update lens preview background position
-        lensPreview.style.backgroundPosition = `-${x * 2}px -${y * 2}px`;
+        // Calculate background position for lens preview
+        const bgX = (mouseX / mainImage.offsetWidth) * 100;
+        const bgY = (mouseY / mainImage.offsetHeight) * 100;
+        lensPreview.style.backgroundPosition = `${bgX}% ${bgY}%`;
 
         // Calculate and set zoomed image position
         const zoomX = x * zoomRatio.x;
         const zoomY = y * zoomRatio.y;
         zoomedImg.style.left = `-${zoomX}px`;
         zoomedImg.style.top = `-${zoomY}px`;
-    }
-
-    function getCursorPos(e) {
-        const rect = mainImage.getBoundingClientRect();
-        const x = e.clientX - rect.left - window.scrollX;
-        const y = e.clientY - rect.top - window.scrollY;
-        return { x, y };
     }
 }
 
