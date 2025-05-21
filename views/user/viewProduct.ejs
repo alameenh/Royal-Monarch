@@ -28,6 +28,12 @@
                                 alt="<%= product.name %>" 
                                 class="w-full h-full object-cover rounded-xl"
                             >
+                            <div class="zoom-lens">
+                                <div class="zoom-lens-preview"></div>
+                            </div>
+                            <div class="zoom-result">
+                                <img src="<%= product.images[0].path %>" alt="Zoomed <%= product.name %>">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -239,6 +245,7 @@
     height: 550px;
     overflow: hidden;
     cursor: zoom-in;
+    border-radius: 0.75rem;
 }
 
 .image-zoom-container img {
@@ -254,24 +261,33 @@
     width: 150px;
     height: 150px;
     cursor: none;
-    background-color: rgba(139, 69, 19, 0.1);
     display: none;
     z-index: 10;
     pointer-events: none;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.zoom-lens-preview {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-repeat: no-repeat;
 }
 
 .zoom-result {
     position: absolute;
     top: 0;
-    left: 100%;
-    margin-left: 20px;
+    right: -470px;
     width: 450px;
     height: 450px;
     border: 2px solid #8B4513;
     background-color: white;
     display: none;
-    z-index: 10;
+    z-index: 20;
     overflow: hidden;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
 .zoom-result img {
@@ -313,10 +329,30 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(139, 69, 19, 0.1);
 }
+
+@media (max-width: 1200px) {
+    .zoom-result {
+        right: 0;
+        top: -470px;
+    }
+}
+
+@media (max-width: 768px) {
+    .zoom-lens, .zoom-result {
+        display: none !important;
+    }
+    
+    .image-zoom-container {
+        cursor: default;
+    }
+}
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize image zoom functionality
+    initializeZoom();
+    
     // Get the variant select element
     const variantSelect = document.getElementById('variantSelect');
     
@@ -424,100 +460,6 @@ document.addEventListener('DOMContentLoaded', function() {
         variantSelect.addEventListener('change', updateVariantDetails);
     }
     
-    // Initialize image zoom functionality
-    const mainImage = document.getElementById('mainImage');
-    const container = document.querySelector('.image-zoom-container');
-    
-    if (container && mainImage) {
-        // Create zoom lens
-        const zoomLens = document.createElement('div');
-        zoomLens.className = 'zoom-lens';
-        container.appendChild(zoomLens);
-
-        // Create zoom result container
-        const zoomResult = document.createElement('div');
-        zoomResult.className = 'zoom-result';
-        container.appendChild(zoomResult);
-
-        // Create zoomed image
-        const zoomedImg = document.createElement('img');
-        zoomedImg.src = mainImage.src;
-        zoomResult.appendChild(zoomedImg);
-
-        // Handle mouse movement
-        container.addEventListener('mousemove', function(e) {
-            const rect = container.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            // Calculate lens position
-            let lensX = x - zoomLens.offsetWidth / 2;
-            let lensY = y - zoomLens.offsetHeight / 2;
-            
-            // Keep lens within bounds
-            const maxX = rect.width - zoomLens.offsetWidth;
-            const maxY = rect.height - zoomLens.offsetHeight;
-            
-            lensX = Math.min(Math.max(0, lensX), maxX);
-            lensY = Math.min(Math.max(0, lensY), maxY);
-            
-            // Update lens position
-            zoomLens.style.left = lensX + 'px';
-            zoomLens.style.top = lensY + 'px';
-            
-            // Calculate zoomed image position
-            const zoomRatio = 6; // Increased zoom ratio for better visibility
-            const zoomedX = -(lensX * zoomRatio);
-            const zoomedY = -(lensY * zoomRatio);
-            
-            // Update zoomed image position
-            zoomedImg.style.transform = `translate(${zoomedX}px, ${zoomedY}px)`;
-        });
-        
-        // Show/hide zoom elements
-        container.addEventListener('mouseenter', function() {
-            zoomLens.style.display = 'block';
-            zoomResult.style.display = 'block';
-        });
-        
-        container.addEventListener('mouseleave', function() {
-            zoomLens.style.display = 'none';
-            zoomResult.style.display = 'none';
-        });
-
-        // Update zoom image when main image changes
-        function updateZoomImage(src) {
-            mainImage.src = src;
-            zoomedImg.src = src;
-            zoomedImg.style.transform = 'translate(0, 0)';
-        }
-
-        // Add click event to thumbnails
-        const thumbnails = document.querySelectorAll('.thumbnail-img');
-        thumbnails.forEach(thumb => {
-            thumb.addEventListener('click', function() {
-                updateZoomImage(this.src);
-            });
-        });
-
-        // Update zoom on window resize
-        window.addEventListener('resize', function() {
-            if (zoomLens.style.display === 'block') {
-                const rect = container.getBoundingClientRect();
-                const x = parseFloat(zoomLens.style.left);
-                const y = parseFloat(zoomLens.style.top);
-                
-                // Recalculate bounds
-                const maxX = rect.width - zoomLens.offsetWidth;
-                const maxY = rect.height - zoomLens.offsetHeight;
-                
-                // Update lens position if needed
-                zoomLens.style.left = Math.min(Math.max(0, x), maxX) + 'px';
-                zoomLens.style.top = Math.min(Math.max(0, y), maxY) + 'px';
-            }
-        });
-    }
-
     // Initialize similar products cart buttons
     document.querySelectorAll('.add-to-cart-btn').forEach(button => {
         const productId = button.getAttribute('data-product-id');
@@ -578,21 +520,121 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Function to update main image
+function initializeZoom() {
+    const container = document.querySelector('.image-zoom-container');
+    const mainImage = document.getElementById('mainImage');
+    const lens = document.querySelector('.zoom-lens');
+    const lensPreview = lens.querySelector('.zoom-lens-preview');
+    const result = document.querySelector('.zoom-result');
+    const zoomedImg = result.querySelector('img');
+
+    // Only initialize if all elements exist and not on mobile
+    if (!container || !mainImage || !lens || !result || !zoomedImg || window.innerWidth <= 768) return;
+
+    // Function to calculate zoom ratio
+    function calculateZoomRatio() {
+        return {
+            x: zoomedImg.offsetWidth / mainImage.offsetWidth,
+            y: zoomedImg.offsetHeight / mainImage.offsetHeight
+        };
+    }
+
+    let zoomRatio = calculateZoomRatio();
+
+    // Set initial background for lens preview
+    lensPreview.style.backgroundImage = `url(${mainImage.src})`;
+    lensPreview.style.backgroundSize = `${mainImage.offsetWidth * 2}px ${mainImage.offsetHeight * 2}px`;
+
+    // Recalculate zoom ratio on window resize
+    window.addEventListener('resize', () => {
+        zoomRatio = calculateZoomRatio();
+        lensPreview.style.backgroundSize = `${mainImage.offsetWidth * 2}px ${mainImage.offsetHeight * 2}px`;
+        
+        // Hide zoom elements on mobile
+        if (window.innerWidth <= 768) {
+            lens.style.display = 'none';
+            result.style.display = 'none';
+        }
+    });
+
+    // Add event listeners
+    container.addEventListener('mouseenter', () => {
+        if (window.innerWidth > 768) {
+            lens.style.display = 'block';
+            result.style.display = 'block';
+            zoomRatio = calculateZoomRatio();
+            lensPreview.style.backgroundSize = `${mainImage.offsetWidth * 2}px ${mainImage.offsetHeight * 2}px`;
+        }
+    });
+
+    container.addEventListener('mouseleave', () => {
+        lens.style.display = 'none';
+        result.style.display = 'none';
+    });
+
+    container.addEventListener('mousemove', moveLens);
+    lens.addEventListener('mousemove', moveLens);
+
+    function moveLens(e) {
+        e.preventDefault();
+        if (window.innerWidth <= 768) return;
+
+        const pos = getCursorPos(e);
+        
+        // Calculate lens position
+        let x = pos.x - (lens.offsetWidth / 2);
+        let y = pos.y - (lens.offsetHeight / 2);
+
+        // Prevent lens from going outside image
+        const maxX = mainImage.offsetWidth - lens.offsetWidth;
+        const maxY = mainImage.offsetHeight - lens.offsetHeight;
+
+        x = Math.min(Math.max(0, x), maxX);
+        y = Math.min(Math.max(0, y), maxY);
+
+        // Position lens
+        lens.style.left = x + 'px';
+        lens.style.top = y + 'px';
+
+        // Update lens preview background position
+        lensPreview.style.backgroundPosition = `-${x * 2}px -${y * 2}px`;
+
+        // Calculate and set zoomed image position
+        const zoomX = x * zoomRatio.x;
+        const zoomY = y * zoomRatio.y;
+        zoomedImg.style.left = `-${zoomX}px`;
+        zoomedImg.style.top = `-${zoomY}px`;
+    }
+
+    function getCursorPos(e) {
+        const rect = mainImage.getBoundingClientRect();
+        const x = e.clientX - rect.left - window.scrollX;
+        const y = e.clientY - rect.top - window.scrollY;
+        return { x, y };
+    }
+}
+
+// Update zoom when changing main image
 function updateMainImage(src) {
     const mainImage = document.getElementById('mainImage');
+    const zoomedImg = document.querySelector('.zoom-result img');
+    const lensPreview = document.querySelector('.zoom-lens-preview');
+    
     if (mainImage) {
         mainImage.src = src;
-        
-        // Update zoom image
-        const zoomedImg = document.querySelector('.zoom-result img');
         if (zoomedImg) {
             zoomedImg.src = src;
+            if (lensPreview) {
+                lensPreview.style.backgroundImage = `url(${src})`;
+                lensPreview.style.backgroundSize = `${mainImage.offsetWidth * 2}px ${mainImage.offsetHeight * 2}px`;
+            }
+            
+            // Hide zoom elements when changing image
+            const lens = document.querySelector('.zoom-lens');
+            const result = document.querySelector('.zoom-result');
+            if (lens) lens.style.display = 'none';
+            if (result) result.style.display = 'none';
         }
-        
-        // Hide zoom elements
-        const zoomLens = document.querySelector('.zoom-lens');
-        if (zoomLens) zoomLens.style.display = 'none';
     }
 }
 
@@ -822,4 +864,3 @@ async function toggleWishlist(productId, button = null) {
     }
 }
 </script>
-
